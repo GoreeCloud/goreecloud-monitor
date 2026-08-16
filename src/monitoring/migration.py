@@ -330,7 +330,9 @@ def map_kuma_monitor(raw: dict[str, Any]) -> KumaMonitorMapping:
 
     candidate = Monitor(**values)
     try:
-        candidate.full_clean(exclude=["heartbeat_token"])
+        # Mapping is deliberately database-independent. Field/model validation runs here;
+        # database uniqueness is enforced later by the transactional import/save path.
+        candidate.full_clean(exclude=["heartbeat_token"], validate_unique=False)
     except Exception as exc:
         _issue(issues, "error", "monitor-validation", f"Mapped definition failed GoreeCloud Monitor validation: {exc}")
         return KumaMonitorMapping(name, source_type, None, issues)
