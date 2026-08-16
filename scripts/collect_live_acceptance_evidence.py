@@ -73,6 +73,11 @@ def _json_from_stdout(result: dict[str, Any]) -> Any | None:
         return None
 
 
+def _git_revision() -> str | None:
+    result = _run("collector-revision", ["git", "-C", str(ROOT), "rev-parse", "HEAD"])
+    return _safe_stdout(result)
+
+
 def _read_os_release() -> dict[str, str]:
     allowed = {"ID", "VERSION_ID", "PRETTY_NAME"}
     values: dict[str, str] = {}
@@ -348,12 +353,21 @@ def main() -> int:
         for item in command_results
         if not item.get("ok")
     ]
+    config_export = kuma.get("config_export")
+    runtime_snapshot = kuma.get("runtime_snapshot")
+    ready_for_review = (
+        not failures
+        and isinstance(config_export, dict)
+        and bool(config_export.get("ok"))
+        and isinstance(runtime_snapshot, dict)
+        and bool(runtime_snapshot.get("ok"))
+    )
 
     evidence = {
         "schema": SCHEMA,
         "version": VERSION,
         "collected_at": now.isoformat(),
-        "collector_revision": "agent/live-acceptance-evidence",
+        "collector_revision": _git_revision() or "unknown",
         "safety": {
             "mode": "read-only-live-evidence",
             "sudo_invoked": False,
@@ -378,7 +392,7 @@ def main() -> int:
         "docker": docker,
         "uptime_kuma": kuma,
         "collection_failures": failures,
-        "ready_for_review": not failures and bool(kuma.get("config_export", {}).get("ok")) and bool(kuma.get("runtime_snapshot", {}).get("ok")),
+        "ready_for_review": ready_for_review,
     }
 
     evidence_path = output_dir / "target-evidence.json"
