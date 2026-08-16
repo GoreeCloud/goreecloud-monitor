@@ -65,8 +65,8 @@ class Monitor(models.Model):
     class Meta:
         ordering = ["name"]
         indexes = [
-            models.Index(fields=["enabled", "last_checked_at"], name="monitoring_m_enabled_8f03e2_idx"),
-            models.Index(fields=["state"], name="monitoring_m_state_35b6f1_idx"),
+            models.Index(fields=["enabled", "last_checked_at"], name="mon_enabled_checked_idx"),
+            models.Index(fields=["state"], name="mon_state_idx"),
         ]
 
     def __str__(self) -> str:
@@ -120,7 +120,7 @@ class CheckResult(models.Model):
 
     class Meta:
         ordering = ["-checked_at"]
-        indexes = [models.Index(fields=["monitor", "-checked_at"], name="monitoring_c_monitor_ef6d73_idx")]
+        indexes = [models.Index(fields=["monitor", "-checked_at"], name="check_monitor_checked_idx")]
 
 
 class Incident(models.Model):
@@ -132,7 +132,7 @@ class Incident(models.Model):
 
     class Meta:
         ordering = ["-started_at"]
-        indexes = [models.Index(fields=["ended_at", "started_at"], name="monitoring_i_ended_a_4c4bcb_idx")]
+        indexes = [models.Index(fields=["ended_at", "started_at"], name="incident_open_started_idx")]
 
     @property
     def is_active(self) -> bool:

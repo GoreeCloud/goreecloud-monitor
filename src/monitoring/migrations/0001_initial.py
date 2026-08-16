@@ -85,8 +85,8 @@ class Migration(migrations.Migration):
             ],
             options={"ordering": ["-starts_at"]},
         ),
-        migrations.AddIndex(model_name="monitor", index=models.Index(fields=["enabled", "last_checked_at"], name="monitoring_m_enabled_8f03e2_idx")),
-        migrations.AddIndex(model_name="monitor", index=models.Index(fields=["state"], name="monitoring_m_state_35b6f1_idx")),
-        migrations.AddIndex(model_name="checkresult", index=models.Index(fields=["monitor", "-checked_at"], name="monitoring_c_monitor_ef6d73_idx")),
-        migrations.AddIndex(model_name="incident", index=models.Index(fields=["ended_at", "started_at"], name="monitoring_i_ended_a_4c4bcb_idx")),
+        migrations.AddIndex(model_name="monitor", index=models.Index(fields=["enabled", "last_checked_at"], name="mon_enabled_checked_idx")),
+        migrations.AddIndex(model_name="monitor", index=models.Index(fields=["state"], name="mon_state_idx")),
+        migrations.AddIndex(model_name="checkresult", index=models.Index(fields=["monitor", "-checked_at"], name="check_monitor_checked_idx")),
+        migrations.AddIndex(model_name="incident", index=models.Index(fields=["ended_at", "started_at"], name="incident_open_started_idx")),
     ]
