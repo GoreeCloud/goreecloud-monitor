@@ -89,8 +89,13 @@ def _sanitize_url(value: Any) -> tuple[Any, list[str]]:
     netloc = parsed.netloc
     if parsed.username is not None or parsed.password is not None:
         host = parsed.hostname or ""
-        if parsed.port is not None:
-            host = f"{host}:{parsed.port}"
+        try:
+            port = parsed.port
+        except ValueError:
+            port = None
+            redactions.append("url-invalid-port")
+        if port is not None:
+            host = f"{host}:{port}"
         netloc = host
         redactions.append("url-credentials")
 
