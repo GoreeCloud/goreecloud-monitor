@@ -158,6 +158,8 @@ jobs:
         run: docker compose config --quiet
       - name: Build application image
         run: docker build --pull --tag goreecloud-monitor:ci .
+      - name: Verify application image runs as non-root monitor user
+        run: test "$(docker image inspect goreecloud-monitor:ci --format '{{.Config.User}}')" = "monitor"
       - name: Verify runtime image excludes development and secret-bearing files
         run: >-
           docker run --rm --entrypoint sh goreecloud-monitor:ci -c
@@ -183,3 +185,110 @@ jobs:
           -e DATABASE_ENGINE=sqlite
           goreecloud-monitor:ci
           python manage.py check --deploy
+
+  production-topology:
+    name: Disposable production topology
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build traceable application image
+        run: docker build --pull --tag goreecloud-monitor:deployment-ci .
+      - name: Resolve exact PostgreSQL image digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull postgres:17.10-bookworm
+          repo_digest="$(docker image inspect postgres:17.10-bookworm --format '{{index .RepoDigests 0}}')"
+          digest="${repo_digest#*@}"
+          test "$digest" != "$repo_digest"
+          echo "POSTGRES_IMAGE=postgres:17.10-bookworm@$digest" >> "$GITHUB_ENV"
+      - name: Prepare isolated production configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/goreecloud-monitor-db"
+          cat > "$RUNNER_TEMP/database.env" <<'EOF'
+          POSTGRES_DB=goreecloud_monitor
+          POSTGRES_USER=goreecloud_monitor
+          POSTGRES_PASSWORD=ci-production-database-password
+          POSTGRES_PORT=5432
+          EOF
+          cat > "$RUNNER_TEMP/monitor.env" <<'EOF'
+          DJANGO_DEBUG=false
+          DJANGO_SECRET_KEY=ci-production-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz
+          DJANGO_ALLOWED_HOSTS=monitor.example.invalid
+          DJANGO_CSRF_TRUSTED_ORIGINS=https://monitor.example.invalid
+          DJANGO_SECURE_SSL_REDIRECT=true
+          DJANGO_HSTS_SECONDS=31536000
+          MONITOR_MAX_CONCURRENCY=4
+          MONITOR_MAX_RESPONSE_BYTES=1048576
+          MONITOR_CHECK_RETENTION_DAYS=30
+          MONITOR_POLL_SECONDS=1
+          MONITOR_ALLOW_PUBLIC_TARGETS=true
+          MONITOR_ALLOWED_NETWORKS=127.0.0.0/8,::1/128
+          MANAGER_API_TOKEN=
+          NTFY_BASE_URL=
+          NTFY_TOPIC=
+          NTFY_TOKEN=
+          EOF
+          echo "GOREECLOUD_MONITOR_IMAGE=goreecloud-monitor:deployment-ci" >> "$GITHUB_ENV"
+          echo "MONITOR_DB_ENV_FILE=$RUNNER_TEMP/database.env" >> "$GITHUB_ENV"
+          echo "MONITOR_APP_ENV_FILE=$RUNNER_TEMP/monitor.env" >> "$GITHUB_ENV"
+          echo "MONITOR_DATABASE_PATH=$RUNNER_TEMP/goreecloud-monitor-db" >> "$GITHUB_ENV"
+          echo "CADDY_NETWORK=goreecloud-monitor-ci-proxy" >> "$GITHUB_ENV"
+      - name: Create disposable external proxy network
+        run: docker network create goreecloud-monitor-ci-proxy
+      - name: Validate resolved production Compose contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f compose.production.yml config --format json > "$RUNNER_TEMP/production-compose.json"
+          python scripts/validate_production_compose.py < "$RUNNER_TEMP/production-compose.json"
+      - name: Start disposable production topology
+        run: docker compose -f compose.production.yml up -d
+      - name: Verify long-running production services
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            web_id="$(docker compose -f compose.production.yml ps -q web)"
+            worker_id="$(docker compose -f compose.production.yml ps -q worker)"
+            db_id="$(docker compose -f compose.production.yml ps -q db)"
+            if [ -n "$web_id" ] && [ -n "$worker_id" ] && [ -n "$db_id" ]; then
+              web_health="$(docker inspect "$web_id" --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}')"
+              if [ "$web_health" = "healthy" ] && [ "$(docker inspect "$worker_id" --format '{{.State.Running}}')" = "true" ] && [ "$(docker inspect "$db_id" --format '{{.State.Running}}')" = "true" ]; then
+                break
+              fi
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              docker compose -f compose.production.yml ps
+              docker compose -f compose.production.yml logs --no-color
+              exit 1
+            fi
+            sleep 2
+          done
+          test "$(docker inspect "$web_id" --format '{{.HostConfig.ReadonlyRootfs}}')" = "true"
+          test "$(docker inspect "$worker_id" --format '{{.HostConfig.ReadonlyRootfs}}')" = "true"
+          test "$(docker inspect "$web_id" --format '{{.Config.User}}')" = "monitor"
+          test "$(docker inspect "$worker_id" --format '{{.Config.User}}')" = "monitor"
+          test -z "$(docker port "$web_id")"
+          test -z "$(docker port "$worker_id")"
+          test -z "$(docker port "$db_id")"
+      - name: Run target preflight inside disposable production web container
+        run: docker compose -f compose.production.yml exec -T web python manage.py targetpreflight --json
+      - name: Verify one-shot migration completed successfully
+        shell: bash
+        run: |
+          set -euo pipefail
+          migrate_id="$(docker compose -f compose.production.yml ps -a -q migrate)"
+          test -n "$migrate_id"
+          test "$(docker inspect "$migrate_id" --format '{{.State.ExitCode}}')" = "0"
+          test "$(docker inspect "$migrate_id" --format '{{.HostConfig.ReadonlyRootfs}}')" = "true"
+          test "$(docker inspect "$migrate_id" --format '{{.Config.User}}')" = "monitor"
+      - name: Tear down disposable production topology
+        if: always()
+        shell: bash
+        run: |
+          docker compose -f compose.production.yml down --remove-orphans || true
+          docker network rm goreecloud-monitor-ci-proxy 2>/dev/null || true
