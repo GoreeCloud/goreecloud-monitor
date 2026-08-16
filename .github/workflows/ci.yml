@@ -145,6 +145,10 @@ jobs:
         run: docker compose config --quiet
       - name: Build application image
         run: docker build --pull --tag goreecloud-monitor:ci .
+      - name: Verify runtime image excludes development and secret-bearing files
+        run: >-
+          docker run --rm --entrypoint sh goreecloud-monitor:ci -c
+          'test ! -e /app/.env && test ! -d /app/.git && test ! -d /app/tests && ! command -v pip'
       - name: Scan image for fixed HIGH or CRITICAL vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:

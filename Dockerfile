@@ -15,7 +15,12 @@ RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip uninstall --yes pip \
     && rm -rf /usr/local/lib/python3.13/ensurepip /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.13
 
-COPY . .
+COPY manage.py ./
+COPY src ./src
+COPY templates ./templates
+COPY static ./static
+COPY scripts/entrypoint.sh ./scripts/entrypoint.sh
+
 RUN chmod +x scripts/entrypoint.sh && chown -R monitor:monitor /app
 USER monitor
 
