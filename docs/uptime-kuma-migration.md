@@ -112,6 +112,38 @@ The comparison classifies definitions as:
 
 This is a configuration comparison, not proof of runtime equivalence.
 
+## Compare live runtime state
+
+During parallel operation, capture Uptime Kuma's current monitor list without notification configuration:
+
+```bash
+kuma monitors list --json > uptime-kuma-live.json
+```
+
+Then compare Uptime Kuma's heartbeat state and response-time snapshot with the current GoreeCloud Monitor database:
+
+```bash
+python manage.py compareuptimestate uptime-kuma-live.json
+```
+
+A machine-readable report is also available:
+
+```bash
+python manage.py compareuptimestate uptime-kuma-live.json --json
+```
+
+The default absolute response-time tolerance is 250 milliseconds. Override it when the acceptance plan defines a different tolerance:
+
+```bash
+python manage.py compareuptimestate uptime-kuma-live.json --latency-tolerance-ms 500
+```
+
+Uptime Kuma heartbeat states are normalized as follows: Down -> Down, Up -> Up, Pending -> Unknown, Maintenance -> Maintenance, and inactive -> Paused. A GoreeCloud Monitor Degraded state intentionally does not collapse into Uptime Kuma Up; the difference remains visible for review.
+
+The runtime report contains monitor names, normalized states, response times, and deltas only. Source URLs, request headers, notification assignments, and reusable secrets are not copied to the report.
+
+A single snapshot is not acceptance evidence by itself. Parallel validation should collect repeated comparisons across healthy operation plus controlled failure, recovery, TLS-warning, maintenance, and notification scenarios.
+
 ## Parallel acceptance
 
 Before cutover:
@@ -124,10 +156,12 @@ Before cutover:
 6. Configure notification delivery separately; notification assignments are not migrated automatically.
 7. Activate approved Monitor definitions.
 8. Run Monitor and Uptime Kuma in parallel.
-9. Compare actual state transitions, latency, TLS behavior, outage/recovery behavior, and notifications.
-10. Prove backup and restore in the target environment.
-11. Validate private Caddy, DNS, NetBird, firewall, and monitoring-source behavior.
-12. Approve cutover explicitly.
-13. Preserve Uptime Kuma rollback data until Monitor has passed the agreed acceptance period.
+9. Capture repeated `kuma monitors list --json` snapshots and run `compareuptimestate` to compare normalized state and response time.
+10. Compare controlled state transitions, latency, TLS behavior, outage/recovery behavior, and notifications.
+11. Prove backup and restore in the target environment.
+12. Validate private Caddy, DNS, NetBird, firewall, and monitoring-source behavior.
+13. Resolve every baseline monitor that the importer reports as unsupported; unsupported coverage is a cutover blocker.
+14. Approve cutover explicitly.
+15. Preserve Uptime Kuma rollback data until Monitor has passed the agreed acceptance period.
 
 The migration tools do not modify Uptime Kuma and do not authorize its retirement.
