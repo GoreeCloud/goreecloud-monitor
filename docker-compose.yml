@@ -17,6 +17,20 @@ services:
       retries: 5
       start_period: 10s
 
+  migrate:
+    build: .
+    restart: "no"
+    env_file: .env
+    environment:
+      DATABASE_ENGINE: postgres
+      POSTGRES_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    networks:
+      - backend
+
   web:
     build: .
     restart: unless-stopped
@@ -25,8 +39,8 @@ services:
       DATABASE_ENGINE: postgres
       POSTGRES_HOST: db
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     command: ["gunicorn", "goreecloud_monitor.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--timeout", "30", "--access-logfile", "-", "--error-logfile", "-"]
     ports:
       - "127.0.0.1:8000:8000"
@@ -48,8 +62,8 @@ services:
       DATABASE_ENGINE: postgres
       POSTGRES_HOST: db
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     command: ["python", "manage.py", "runmonitor"]
     networks:
       - backend

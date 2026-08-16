@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
+# Schema migration is an explicit one-shot Compose responsibility. Keeping the
+# long-running entrypoint side-effect free allows web and worker root filesystems
+# to remain read-only in the production topology.
 exec "$@"

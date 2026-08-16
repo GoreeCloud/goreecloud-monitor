@@ -21,7 +21,15 @@ COPY templates ./templates
 COPY static ./static
 COPY scripts/entrypoint.sh ./scripts/entrypoint.sh
 
-RUN chmod +x scripts/entrypoint.sh && chown -R monitor:monitor /app
+# Production static assets are part of the immutable image. Runtime containers do
+# not need to write into /app merely to collect assets on every restart.
+RUN DJANGO_DEBUG=false \
+    DJANGO_SECRET_KEY=build-only-static-asset-key-not-used-at-runtime \
+    DJANGO_ALLOWED_HOSTS=build.invalid \
+    python manage.py collectstatic --noinput \
+    && chmod +x scripts/entrypoint.sh \
+    && chown -R monitor:monitor /app
+
 USER monitor
 
 ENTRYPOINT ["/app/scripts/entrypoint.sh"]
