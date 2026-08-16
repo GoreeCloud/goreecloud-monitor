@@ -96,6 +96,19 @@ jobs:
         run: >-
           python manage.py shell -c
           "from monitoring.models import Monitor; Monitor.objects.update_or_create(name='restore-proof', defaults={'kind':'PUSH','interval_seconds':60})"
+      - name: Production-style target preflight against PostgreSQL
+        env:
+          DJANGO_DEBUG: "false"
+          DJANGO_SECRET_KEY: ci-production-key-not-used-outside-ci-0123456789
+          DJANGO_ALLOWED_HOSTS: monitor.example.invalid
+          DJANGO_SECURE_SSL_REDIRECT: "true"
+          DJANGO_HSTS_SECONDS: "31536000"
+          MONITOR_ALLOWED_NETWORKS: 10.20.30.0/24,fd00:1234::/64
+          NTFY_BASE_URL: http://ntfy:80
+          NTFY_TOPIC: goreecloud-uptime
+          NTFY_TOKEN: ci-write-only-publisher-token
+          MANAGER_API_TOKEN: ci-manager-token
+        run: python manage.py targetpreflight --json
       - name: Create logical PostgreSQL backup
         run: >-
           docker run --rm --network host
