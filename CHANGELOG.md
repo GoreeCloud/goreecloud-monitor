@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased - Cutover and rollback readiness
+
+- Added a sanitized documented Uptime Kuma baseline manifest reconciled from the GoreeCloud monitor inventory and later retirement records rather than treating the older written inventory as live authority.
+- Recorded 21 documented expected-active monitors after applying the recorded Flatnotes, Linkding, and Termix retirements, while preserving those three names as expected-retired reconciliation checks.
+- Added `reconcileuptimebaseline` to compare a fresh live kuma-cli export with the documented baseline and fail closed on expected-missing, retired-present, unexpected-live, duplicate/invalid source entries, unsupported mappings, migration review items, and documented cutover blockers.
+- Kept reconciliation reports sanitized so target URLs, private addresses, request headers, notification assignments, and reusable credentials are not copied into acceptance artifacts.
+- Preserved GoreeCloud VPS Ping as an explicit cutover blocker because its private NetBird layer-3 reachability semantics are not identical to TCP 22/443 checks.
+- Added explicit manual-review gates for the documented Cloudflare DNS and Google DNS checks because the written scope is resolver-specific and Monitor v0.1 does not automatically preserve custom Uptime Kuma resolver semantics.
+- Added `docs/cutover-and-rollback.md` defining the release unit, parallel-acceptance prerequisites, required rollback bundle, cutover order, rollback triggers, rollback sequence, observation boundary, and database-schema rollback rule.
+- Added an immediate-predecessor rollback-compatibility GitHub Actions workflow pinned to frozen deployment candidate `992e64072602a02513bc07a1dd4631e47e87035a`.
+- The rollback gate requires an unchanged Django migration set for direct application rollback evidence, builds both exact application revisions, seeds PostgreSQL through the predecessor, reads and updates the state through the candidate, then proves the predecessor can read the candidate-written state again.
+- Explicitly limits that rollback proof to immediate-predecessor application/database compatibility; future migration-bearing releases must prove backward compatibility or use a verified pre-upgrade database restore/downgrade path.
+- Expanded the automated application suite from 55 to 60 tests on both SQLite and PostgreSQL 17 with documented-baseline reconciliation coverage.
+
 ## Unreleased - Deployment candidate
 
 - Added a separate source-controlled production Compose topology while preserving the development Compose topology.
