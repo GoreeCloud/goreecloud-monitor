@@ -35,6 +35,20 @@ class ViewTests(TestCase):
         response = self.client.get(reverse("monitoring:settings"))
         self.assertEqual(response.status_code, 302)
 
+    @override_settings(NTFY_BASE_URL="http://ntfy:80", NTFY_TOPIC="goreecloud-uptime", NTFY_TOKEN="")
+    def test_settings_does_not_claim_partial_ntfy_configuration(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("monitoring:settings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["ntfy_enabled"])
+
+    @override_settings(NTFY_BASE_URL="http://ntfy:80", NTFY_TOPIC="goreecloud-uptime", NTFY_TOKEN="write-only-token")
+    def test_settings_reports_complete_ntfy_configuration(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("monitoring:settings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["ntfy_enabled"])
+
     def test_staff_can_rotate_push_token(self):
         monitor = Monitor.objects.create(name="rotate", kind=Monitor.Kind.PUSH, interval_seconds=60)
         old_token = monitor.heartbeat_token
