@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased - Deployment candidate
+
+- Added a separate source-controlled production Compose topology while preserving the development Compose topology.
+- Moved production static-asset collection into the immutable application image and made the runtime entrypoint side-effect free.
+- Added an explicit one-shot `migrate` service so web and worker startup is blocked until schema migration completes successfully.
+- Added traceable application-image requirements and digest-pinned PostgreSQL enforcement for the production topology.
+- Added purpose-specific production deployment templates for Compose interpolation, Monitor application configuration, and PostgreSQL credentials.
+- Added explicit PostgreSQL bind-mounted persistence under the GoreeCloud Docker data model.
+- Added an internal-only database network and externally supplied Caddy proxy network with no production host-published Monitor or PostgreSQL ports.
+- Hardened production application services with non-root image execution, read-only root filesystems, bounded tmpfs, `cap_drop: ALL`, and `no-new-privileges`.
+- Kept privileged mode, host networking, device mappings, Docker socket access, and added Linux capabilities out of the production topology.
+- Added `validate_production_compose.py` to fail closed on production Compose contract violations.
+- Added a disposable production-topology CI job that resolves a PostgreSQL digest, creates isolated production-style configuration and storage, creates a disposable external proxy network, starts the complete stack, verifies runtime health/security/no-port invariants, runs target preflight inside the deployed web container, verifies one-shot migration success, and tears the stack down.
+- Documented the ICMP/Ping baseline as distinct network-layer evidence rather than silently treating TCP 22/443 as exact parity.
+- Deliberately retained ICMP/Ping as a cutover blocker instead of adding privileged mode, `CAP_NET_RAW`, host networking, or an unnecessary sidecar.
+
 ## Unreleased - Migration readiness
 
 - Added sanitized audit support for kuma-cli/Uptime Kuma JSON exports.
