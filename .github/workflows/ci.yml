@@ -36,6 +36,12 @@ jobs:
           DJANGO_SECRET_KEY: ci-only
           MANAGER_API_TOKEN: ci-manager-token
         run: python manage.py test -v 2
+      - name: Production static asset build
+        env:
+          DJANGO_DEBUG: "false"
+          DJANGO_SECRET_KEY: ci-production-key-not-used-outside-ci
+          DJANGO_ALLOWED_HOSTS: monitor.example.invalid
+        run: python manage.py collectstatic --noinput
       - name: Deployment security checks
         env:
           DJANGO_DEBUG: "false"
