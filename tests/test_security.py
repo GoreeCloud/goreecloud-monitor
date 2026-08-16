@@ -1,0 +1,22 @@
+from unittest.mock import patch
+
+from django.core.exceptions import ValidationError
+from django.test import SimpleTestCase, override_settings
+
+from monitoring.validators import resolve_and_validate_network_target
+
+
+class TargetPolicyTests(SimpleTestCase):
+    @override_settings(MONITOR_ALLOWED_NETWORKS=["127.0.0.0/8"], MONITOR_ALLOW_PUBLIC_TARGETS=True)
+    async def test_private_target_is_blocked_when_not_allowlisted(self):
+        fake_info = [(2, 1, 6, "", ("10.10.0.5", 443))]
+        with patch("socket.getaddrinfo", return_value=fake_info):
+            with self.assertRaises(ValidationError):
+                await resolve_and_validate_network_target("internal.example", 443)
+
+    @override_settings(MONITOR_ALLOWED_NETWORKS=["10.10.0.0/24"], MONITOR_ALLOW_PUBLIC_TARGETS=False)
+    async def test_explicit_private_network_is_allowed(self):
+        fake_info = [(2, 1, 6, "", ("10.10.0.5", 443))]
+        with patch("socket.getaddrinfo", return_value=fake_info):
+            addresses = await resolve_and_validate_network_target("internal.example", 443)
+        self.assertEqual(addresses, ["10.10.0.5"])

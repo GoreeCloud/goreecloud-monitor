@@ -1,0 +1,10 @@
+{% extends "monitoring/base.html" %}
+{% block title %}Settings · GoreeCloud Monitor{% endblock %}
+{% block content %}
+<section class="hero"><div><div class="eyebrow">Runtime posture</div><h1>Settings</h1><p class="muted">Security-sensitive values remain in protected environment configuration. This page reports state without exposing secret values.</p></div></section>
+<div class="two-column">
+<section class="panel section-panel"><h2>Notifications</h2><div class="settings-list"><div><span>ntfy transition publishing</span><strong>{% if ntfy_enabled %}Configured{% else %}Disabled{% endif %}</strong></div><div><span>Manager read-only API</span><strong>{% if manager_api_enabled %}Configured{% else %}Disabled{% endif %}</strong></div></div></section>
+<section class="panel section-panel"><h2>Worker</h2><div class="settings-list"><div><span>Max concurrency</span><strong>{{ max_concurrency }}</strong></div><div><span>Check retention</span><strong>{{ retention_days }} days</strong></div><div><span>Public targets</span><strong>{% if public_targets %}Allowed{% else %}Blocked{% endif %}</strong></div></div></section>
+</div>
+<section class="panel section-panel"><h2>Private network allowlist</h2><p class="muted">Only add networks Monitor actually requires. Smaller service/Docker/NetBird CIDRs are preferred over broad private ranges.</p><div class="chip-list">{% for network in allowed_networks %}<span class="pill">{{ network }}</span>{% empty %}<span class="muted">No private networks allowed.</span>{% endfor %}</div></section>
+{% endblock %}

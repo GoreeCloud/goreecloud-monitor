@@ -1,0 +1,6 @@
+{% extends "monitoring/base.html" %}
+{% block title %}Maintenance · GoreeCloud Monitor{% endblock %}
+{% block content %}
+<section class="hero"><div><div class="eyebrow">Planned change windows</div><h1>Maintenance</h1><p class="muted">Approved windows suppress ordinary incident generation while work is intentionally in progress.</p></div>{% if user.is_staff %}<a class="button primary" href="{% url 'monitoring:maintenance-create' %}">Schedule maintenance</a>{% endif %}</section>
+<section class="panel section-panel"><div class="stack">{% for window in windows %}<div class="row-link static"><span class="status-dot maintenance"></span><span><strong>{{ window.name }}</strong><small>{{ window.starts_at|date:"M j H:i" }} → {{ window.ends_at|date:"M j H:i" }} UTC · {{ window.monitors.count }} monitor(s)</small></span>{% if user.is_staff %}<span class="actions"><a class="button quiet" href="{% url 'monitoring:maintenance-update' window.pk %}">Edit</a><a class="button quiet" href="{% url 'monitoring:maintenance-delete' window.pk %}">Delete</a></span>{% endif %}</div>{% empty %}<div class="empty">No maintenance windows scheduled.</div>{% endfor %}</div></section>
+{% endblock %}

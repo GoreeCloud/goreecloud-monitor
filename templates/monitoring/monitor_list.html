@@ -1,0 +1,6 @@
+{% extends "monitoring/base.html" %}
+{% block title %}Monitors · GoreeCloud Monitor{% endblock %}
+{% block content %}
+<section class="hero"><div><div class="eyebrow">Configuration</div><h1>Monitors</h1><p class="muted">Each monitor has a narrow purpose, explicit target, bounded timeout, and state threshold.</p></div>{% if user.is_staff %}<a class="button primary" href="{% url 'monitoring:monitor-create' %}">Add monitor</a>{% endif %}</section>
+<section class="panel section-panel"><div class="stack">{% for monitor in monitors %}<a class="row-link" href="{% url 'monitoring:monitor-detail' monitor.pk %}"><span class="status-dot {{ monitor.state|lower }}"></span><span><strong>{{ monitor.name }}</strong><small>{{ monitor.kind }} · every {{ monitor.interval_seconds }}s</small></span><span class="pill {{ monitor.state|lower }}">{{ monitor.get_state_display }}</span></a>{% empty %}<div class="empty">No monitors configured.</div>{% endfor %}</div></section>
+{% endblock %}

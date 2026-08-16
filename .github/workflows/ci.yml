@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - name: Django system checks
+        env:
+          DJANGO_DEBUG: "true"
+          DJANGO_SECRET_KEY: ci-only
+        run: python manage.py check
+      - name: Migration drift
+        env:
+          DJANGO_DEBUG: "true"
+          DJANGO_SECRET_KEY: ci-only
+        run: python manage.py makemigrations --check --dry-run
+      - name: Tests
+        env:
+          DJANGO_DEBUG: "true"
+          DJANGO_SECRET_KEY: ci-only
+          MANAGER_API_TOKEN: ci-manager-token
+        run: python manage.py test -v 2
+      - name: Deployment security checks
+        env:
+          DJANGO_DEBUG: "false"
+          DJANGO_SECRET_KEY: ci-production-key-not-used-outside-ci
+          DJANGO_ALLOWED_HOSTS: monitor.example.invalid
+          DJANGO_SECURE_SSL_REDIRECT: "true"
+          DJANGO_HSTS_SECONDS: "31536000"
+        run: python manage.py check --deploy

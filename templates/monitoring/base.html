@@ -1,0 +1,35 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}GoreeCloud Monitor{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'monitoring/css/glaze.css' %}">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="{% url 'monitoring:dashboard' %}" aria-label="GoreeCloud Monitor home">
+        <span class="brand-mark" aria-hidden="true">G</span>
+        <span><strong>GoreeCloud</strong><small>Monitor</small></span>
+      </a>
+      {% if user.is_authenticated %}
+      <nav class="nav" aria-label="Primary navigation">
+        <a href="{% url 'monitoring:dashboard' %}">Overview</a>
+        <a href="{% url 'monitoring:monitor-list' %}">Monitors</a>
+        <a href="{% url 'monitoring:maintenance-list' %}">Maintenance</a>
+        <a href="{% url 'monitoring:settings' %}">Settings</a>
+        {% if user.is_staff %}<a href="/admin/">Admin</a>{% endif %}
+      </nav>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="button quiet" type="submit">Sign out</button></form>
+      {% endif %}
+    </header>
+    <main class="content">
+      {% for message in messages %}<div class="notice">{{ message }}</div>{% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>
