@@ -114,6 +114,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Prepare disposable Compose environment
+        run: cp .env.example .env
       - name: Validate Compose definition
         env:
           POSTGRES_PASSWORD: ci-postgres-password
