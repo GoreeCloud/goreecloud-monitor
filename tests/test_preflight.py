@@ -33,6 +33,11 @@ class PreflightConfigurationTests(SimpleTestCase):
         errors = [finding for finding in configuration_findings() if finding.severity == "error"]
         self.assertEqual(errors, [])
 
+    @override_settings(**{**SAFE_SETTINGS, "DATABASES": {"default": {"ENGINE": "django.db.backends.sqlite3"}}})
+    def test_non_postgresql_database_is_blocking(self):
+        codes = {finding.code for finding in configuration_findings() if finding.severity == "error"}
+        self.assertIn("database-engine", codes)
+
     @override_settings(**{**SAFE_SETTINGS, "DEBUG": True})
     def test_debug_is_blocking(self):
         codes = {finding.code for finding in configuration_findings() if finding.severity == "error"}
@@ -55,13 +60,15 @@ class PreflightConfigurationTests(SimpleTestCase):
 
 
 class PreflightCommandTests(TestCase):
-    def test_default_test_sqlite_environment_fails_closed_without_secrets_in_report(self):
+    def test_insecure_ci_configuration_fails_closed_without_secrets_in_report(self):
         out = StringIO()
         with self.assertRaises(CommandError):
             call_command("targetpreflight", json=True, stdout=out)
         report = json.loads(out.getvalue())
         self.assertFalse(report["ready"])
-        self.assertIn("database-engine", {finding["code"] for finding in report["findings"]})
+        codes = {finding["code"] for finding in report["findings"]}
+        self.assertTrue({"debug-enabled", "secret-key", "https-redirect"} & codes)
         serialized = json.dumps(report)
         self.assertNotIn("ci-only", serialized)
+        self.assertNotIn("ci-postgres-password", serialized)
         self.assertNotIn("POSTGRES_PASSWORD", serialized)
