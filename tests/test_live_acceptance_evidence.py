@@ -8,13 +8,21 @@ from django.test import SimpleTestCase
 
 from monitoring.kuma_sanitize import (
     REDACTED_PRESENT,
+    SENSITIVE_MONITOR_FIELDS as SANITIZER_SENSITIVE_FIELDS,
     sanitize_config_document,
     sanitize_runtime_document,
 )
-from monitoring.migration import load_kuma_monitors, map_kuma_monitor
+from monitoring.migration import (
+    SENSITIVE_MONITOR_FIELDS as MIGRATION_SENSITIVE_FIELDS,
+    load_kuma_monitors,
+    map_kuma_monitor,
+)
 
 
 class UptimeKumaEvidenceSanitizationTests(SimpleTestCase):
+    def test_sensitive_field_policy_matches_migration_importer(self):
+        self.assertEqual(SANITIZER_SENSITIVE_FIELDS, MIGRATION_SENSITIVE_FIELDS)
+
     def test_sensitive_configuration_is_redacted_but_remains_blocking(self):
         source = {
             "version": "2.5.0",
@@ -64,6 +72,29 @@ class UptimeKumaEvidenceSanitizationTests(SimpleTestCase):
             set(report["monitors"][0]["redacted_fields"]),
             {"url-credentials", "url-fragment", "url-query"},
         )
+        self.assertFalse(map_kuma_monitor(monitor).supported)
+
+    def test_malformed_port_with_url_credentials_does_not_crash_or_leak(self):
+        sanitized, report = sanitize_config_document(
+            {
+                "monitors": [
+                    {
+                        "name": "Malformed signed URL",
+                        "type": "http",
+                        "url": "https://user:password@example.test:notaport/health?token=secret",
+                        "interval": 60,
+                        "timeout": 10,
+                    }
+                ]
+            }
+        )
+        monitor = sanitized["monitors"][0]
+        serialized = json.dumps(sanitized)
+        self.assertNotIn("password", serialized)
+        self.assertNotIn("token=secret", serialized)
+        self.assertEqual(monitor["url"], "https://example.test/health?goreecloud_redacted=1")
+        self.assertEqual(monitor["headers"], REDACTED_PRESENT)
+        self.assertIn("url-invalid-port", report["monitors"][0]["redacted_fields"])
         self.assertFalse(map_kuma_monitor(monitor).supported)
 
     def test_unknown_nonempty_fields_are_omitted_by_name_without_copying_value(self):
