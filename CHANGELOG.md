@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased - Live acceptance evidence readiness
+
+- Added `scripts/collect_live_acceptance_evidence.py` as a read-only operator workflow for collecting the first live GoreeCloud Monitor/Uptime Kuma target-environment evidence before any Monitor deployment.
+- The collector does not invoke `sudo`, change Uptime Kuma, alter Docker networks, modify Caddy, change DNS/NetBird/firewall state, or deploy Monitor.
+- Added host evidence for identity, operating-system version, interface addresses, routes, listening sockets, Docker/Compose versions, running container identities/states, and Uptime Kuma network context.
+- Added file fingerprinting for the current Uptime Kuma Compose file and production Caddyfile without copying either file's contents into the evidence bundle.
+- Added a pure-Python Uptime Kuma configuration sanitizer that retains only migration/reconciliation-relevant fields and replaces authentication material, request content, certificate material, connection strings, and other known sensitive values with a non-secret presence sentinel.
+- The redaction sentinel remains non-empty so the existing migration importer continues to fail closed with manual-authentication/configuration review instead of treating the sanitized monitor as credential-free.
+- Added URL sanitization for user information, query strings, and fragments; sanitized URL material also forces the existing sensitive-configuration blocker.
+- Added malformed URL-port handling so hostile or malformed source configuration cannot crash credential redaction.
+- Added a test invariant requiring the evidence sanitizer's sensitive-field policy to remain exactly synchronized with the migration importer's sensitive-field policy.
+- Unknown non-empty Uptime Kuma source fields are omitted by value and recorded by field name for later review rather than being copied blindly into evidence.
+- Added a minimal runtime sanitizer retaining only monitor ID/name/type/active state plus heartbeat status and response time; target URLs and heartbeat diagnostic messages are excluded.
+- Raw `kuma config export` data is created only in a restrictive temporary directory and deleted after sanitization; command stderr is not retained because errors may echo protected configuration.
+- Added restrictive evidence-directory/archive permissions, SHA-256 file checksums, collection-failure reporting, and exact collector-revision capture when the collector is run from a Git checkout.
+- Added `docs/live-acceptance-evidence.md` defining the preferred NetBird SSH execution path, default documented VPS paths, override rules, evidence contents, sanitization boundary, review steps, classification, and explicit limits on what collection proves.
+- Expanded the automated application suite from 60 to 68 tests with sanitizer secrecy, importer fail-closed compatibility, future sensitive-field policy drift, malformed URL handling, minimal runtime evidence, loader compatibility, and collector import/parser coverage.
+- Opened stacked draft PR #5 against the frozen cutover-readiness candidate so this source-only evidence layer can be validated independently without modifying production.
+
 ## Unreleased - Cutover and rollback readiness
 
 - Added a sanitized documented Uptime Kuma baseline manifest reconciled from the GoreeCloud monitor inventory and later retirement records rather than treating the older written inventory as live authority.
