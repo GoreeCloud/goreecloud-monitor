@@ -147,6 +147,7 @@ MONITOR_ALLOWED_NETWORKS = env_list("MONITOR_ALLOWED_NETWORKS", "127.0.0.0/8,::1
 MANAGER_API_TOKEN = os.getenv("MANAGER_API_TOKEN", "")
 NTFY_BASE_URL = os.getenv("NTFY_BASE_URL", "").rstrip("/")
 NTFY_TOPIC = os.getenv("NTFY_TOPIC", "")
+NTFY_TOKEN = os.getenv("NTFY_TOKEN", "")
 
 LOGGING = {
     "version": 1,
