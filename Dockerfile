@@ -9,7 +9,10 @@ RUN groupadd --system monitor && useradd --system --gid monitor --home-dir /app 
 WORKDIR /app
 
 COPY requirements.txt ./
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip uninstall --yes msgpack setuptools \
+    && pip check
 
 COPY . .
 RUN chmod +x scripts/entrypoint.sh && chown -R monitor:monitor /app
