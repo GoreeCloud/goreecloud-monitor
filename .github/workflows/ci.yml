@@ -9,7 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  sqlite-tests:
+    name: SQLite source tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -50,3 +51,83 @@ jobs:
           DJANGO_SECURE_SSL_REDIRECT: "true"
           DJANGO_HSTS_SECONDS: "31536000"
         run: python manage.py check --deploy
+
+  postgres-tests:
+    name: PostgreSQL 17 integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.10-bookworm
+        env:
+          POSTGRES_DB: goreecloud_monitor
+          POSTGRES_USER: goreecloud_monitor
+          POSTGRES_PASSWORD: ci-postgres-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U goreecloud_monitor -d goreecloud_monitor"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DJANGO_DEBUG: "true"
+      DJANGO_SECRET_KEY: ci-only
+      DATABASE_ENGINE: postgres
+      POSTGRES_DB: goreecloud_monitor
+      POSTGRES_USER: goreecloud_monitor
+      POSTGRES_PASSWORD: ci-postgres-password
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      MANAGER_API_TOKEN: ci-manager-token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - name: Apply migrations to PostgreSQL
+        run: python manage.py migrate --noinput
+      - name: Run tests on PostgreSQL
+        run: python manage.py test -v 2
+
+  dependency-audit:
+    name: Python dependency vulnerability audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements-dev.txt
+      - name: Fail on known vulnerable Python dependencies
+        run: pip-audit -r requirements.txt
+
+  container-build:
+    name: Container build and production smoke check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate Compose definition
+        env:
+          POSTGRES_PASSWORD: ci-postgres-password
+        run: docker compose config --quiet
+      - name: Build application image
+        run: docker build --pull --tag goreecloud-monitor:ci .
+      - name: Run production-mode container smoke check
+        run: >-
+          docker run --rm
+          -e DJANGO_DEBUG=false
+          -e DJANGO_SECRET_KEY=ci-production-key-not-used-outside-ci
+          -e DJANGO_ALLOWED_HOSTS=monitor.example.invalid
+          -e DJANGO_SECURE_SSL_REDIRECT=true
+          -e DJANGO_HSTS_SECONDS=31536000
+          -e DATABASE_ENGINE=sqlite
+          goreecloud-monitor:ci
+          python manage.py check --deploy
