@@ -53,9 +53,9 @@ jobs:
         run: python manage.py check --deploy
 
   postgres-tests:
-    name: PostgreSQL 17 integration tests
+    name: PostgreSQL 17 tests and recovery proof
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:17.10-bookworm
@@ -92,6 +92,27 @@ jobs:
         run: python manage.py migrate --noinput
       - name: Run tests on PostgreSQL
         run: python manage.py test -v 2
+      - name: Seed database recovery proof
+        run: >-
+          python manage.py shell -c
+          "from monitoring.models import Monitor; Monitor.objects.update_or_create(name='restore-proof', defaults={'kind':'PUSH','interval_seconds':60})"
+      - name: Create logical PostgreSQL backup
+        run: >-
+          docker run --rm --network host
+          -e PGPASSWORD=ci-postgres-password
+          -v "$RUNNER_TEMP:/backup"
+          postgres:17.10-bookworm
+          pg_dump -h 127.0.0.1 -U goreecloud_monitor -Fc -f /backup/monitor.dump goreecloud_monitor
+      - name: Restore backup into empty PostgreSQL database
+        run: |
+          docker run --rm --network host -e PGPASSWORD=ci-postgres-password postgres:17.10-bookworm createdb -h 127.0.0.1 -U goreecloud_monitor goreecloud_monitor_restore
+          docker run --rm --network host -e PGPASSWORD=ci-postgres-password -v "$RUNNER_TEMP:/backup" postgres:17.10-bookworm pg_restore --no-owner --no-privileges -h 127.0.0.1 -U goreecloud_monitor -d goreecloud_monitor_restore /backup/monitor.dump
+      - name: Verify restored state through Django
+        env:
+          POSTGRES_DB: goreecloud_monitor_restore
+        run: >-
+          python manage.py shell -c
+          "from monitoring.models import Monitor; assert Monitor.objects.filter(name='restore-proof', kind='PUSH').exists(); print('PostgreSQL restore verified')"
 
   dependency-audit:
     name: Python dependency vulnerability audit
@@ -105,13 +126,15 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements-dev.txt
+      - name: Verify installed dependency consistency
+        run: pip check
       - name: Fail on known vulnerable Python dependencies
         run: pip-audit -r requirements.txt
 
   container-build:
-    name: Container build and production smoke check
+    name: Container build, scan, and production smoke check
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Prepare disposable Compose environment
@@ -122,6 +145,16 @@ jobs:
         run: docker compose config --quiet
       - name: Build application image
         run: docker build --pull --tag goreecloud-monitor:ci .
+      - name: Scan image for fixed HIGH or CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: goreecloud-monitor:ci
+          version: v0.72.0
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
       - name: Run production-mode container smoke check
         run: >-
           docker run --rm
