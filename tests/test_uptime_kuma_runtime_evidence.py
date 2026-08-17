@@ -54,13 +54,29 @@ class UptimeKumaRuntimeEvidenceTests(SimpleTestCase):
     def test_protected_token_file_rejects_group_or_other_permissions(self):
         module = load_collector()
         with tempfile.TemporaryDirectory() as tempdir:
-            path = Path(tempdir) / "auth.txt"
+            root = Path(tempdir)
+            os.chmod(root, 0o700)
+            path = root / "auth.txt"
             path.write_text("secret-token\n", encoding="utf-8")
             os.chmod(path, 0o640)
             with self.assertRaises(ValueError):
                 module._load_protected_token(path)
 
             os.chmod(path, 0o600)
+            self.assertEqual(module._load_protected_token(path), "secret-token")
+
+    def test_protected_token_file_rejects_nonprivate_parent_directory(self):
+        module = load_collector()
+        with tempfile.TemporaryDirectory() as tempdir:
+            root = Path(tempdir)
+            path = root / "auth.txt"
+            path.write_text("secret-token\n", encoding="utf-8")
+            os.chmod(path, 0o600)
+            os.chmod(root, 0o750)
+            with self.assertRaises(ValueError):
+                module._load_protected_token(path)
+
+            os.chmod(root, 0o700)
             self.assertEqual(module._load_protected_token(path), "secret-token")
 
     def test_active_monitor_without_heartbeat_fails_closed(self):
@@ -119,6 +135,23 @@ class UptimeKumaRuntimeEvidenceTests(SimpleTestCase):
                             "type": "http",
                             "active": True,
                             "heartbeat": {"status": 9, "ping": 12.0},
+                        }
+                    ]
+                }
+            )
+
+    def test_boolean_ping_is_rejected(self):
+        module = load_collector()
+        with self.assertRaises(ValueError):
+            module._validate_runtime_completeness(
+                {
+                    "data": [
+                        {
+                            "id": 2,
+                            "name": "Web",
+                            "type": "http",
+                            "active": True,
+                            "heartbeat": {"status": 1, "ping": True},
                         }
                     ]
                 }
