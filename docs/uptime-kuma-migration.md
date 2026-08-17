@@ -4,28 +4,40 @@ GoreeCloud Monitor replaces Uptime Kuma only through a staged, reversible migrat
 
 ## Supported source
 
-The preferred migration source is a JSON configuration export from `kuma-cli`:
+The live GoreeCloud VPS currently uses `kuma-cli v2.0.0`. That CLI exposes monitor configuration with `kuma monitor list`; it does not expose the older assumed `kuma config export` command. Its JSON output is an object keyed by monitor ID.
+
+Do not redirect raw live `kuma monitor list` output into a normal working file. Depending on monitor configuration, the output can contain operational targets or reusable secret-bearing fields.
+
+Use the reviewed live-evidence collector instead:
 
 ```bash
-kuma config export --output uptime-kuma-export.json
+python3 scripts/collect_live_acceptance_evidence.py
 ```
 
-A direct monitor list or a single monitor JSON object can also be audited, but the configuration export is preferred because it contains the monitor definitions used for migration review.
+The collector authenticates through the existing protected kuma-cli session, validates the ID-keyed monitor map, removes or marks sensitive configuration, and writes only the sanitized migration source:
 
-Do not commit a Uptime Kuma export to Git. Export files may contain configuration that should be treated as sensitive even when notification secrets are obfuscated.
+```text
+uptime-kuma-config.sanitized.json
+```
+
+The migration loader continues to accept its normalized `monitors` list format, a direct monitor list, or a single monitor JSON object. The sanitized collector output is the preferred live source because it applies the GoreeCloud secrecy and fail-closed rules before data is persisted.
+
+Do not commit raw or sanitized live evidence to Git. Sanitized bundles are still Internal operational artifacts.
 
 ## Audit before import
 
 Run the compatibility audit first:
 
 ```bash
-python manage.py audituptimekuma uptime-kuma-export.json
+python manage.py audituptimekuma /path/to/uptime-kuma-config.sanitized.json
 ```
 
 For machine-readable review:
 
 ```bash
-python manage.py audituptimekuma uptime-kuma-export.json --json
+python manage.py audituptimekuma \
+  /path/to/uptime-kuma-config.sanitized.json \
+  --json
 ```
 
 The report is sanitized. It identifies support, warnings, and blockers without echoing credential values.
@@ -61,13 +73,15 @@ Some compatible definitions can still produce warnings. Examples include Uptime 
 Dry-run the complete migration:
 
 ```bash
-python manage.py importuptimekuma uptime-kuma-export.json --dry-run
+python manage.py importuptimekuma \
+  /path/to/uptime-kuma-config.sanitized.json \
+  --dry-run
 ```
 
 Import supported definitions:
 
 ```bash
-python manage.py importuptimekuma uptime-kuma-export.json
+python manage.py importuptimekuma /path/to/uptime-kuma-config.sanitized.json
 ```
 
 Imported monitors are paused by default. This prevents duplicate checks and notifications while Uptime Kuma remains authoritative.
@@ -75,13 +89,16 @@ Imported monitors are paused by default. This prevents duplicate checks and noti
 If the source contains unsupported monitors, the default behavior is to reject the entire import. To create only compatible definitions:
 
 ```bash
-python manage.py importuptimekuma uptime-kuma-export.json --allow-partial
+python manage.py importuptimekuma \
+  /path/to/uptime-kuma-config.sanitized.json \
+  --allow-partial
 ```
 
 A sanitized report can be written separately:
 
 ```bash
-python manage.py importuptimekuma uptime-kuma-export.json \
+python manage.py importuptimekuma \
+  /path/to/uptime-kuma-config.sanitized.json \
   --allow-partial \
   --report monitor-migration-report.json
 ```
@@ -90,16 +107,18 @@ python manage.py importuptimekuma uptime-kuma-export.json \
 
 ## Compare definitions
 
-After review, compare the source definitions with the Monitor database:
+After review, compare the sanitized source definitions with the Monitor database:
 
 ```bash
-python manage.py compareuptimekuma uptime-kuma-export.json
+python manage.py compareuptimekuma /path/to/uptime-kuma-config.sanitized.json
 ```
 
 Machine-readable comparison:
 
 ```bash
-python manage.py compareuptimekuma uptime-kuma-export.json --json
+python manage.py compareuptimekuma \
+  /path/to/uptime-kuma-config.sanitized.json \
+  --json
 ```
 
 The comparison classifies definitions as:
@@ -114,33 +133,33 @@ This is a configuration comparison, not proof of runtime equivalence.
 
 ## Compare live runtime state
 
-During parallel operation, capture Uptime Kuma's current monitor list without notification configuration:
+`kuma-cli v2.0.0` `monitor list` output is configuration-only. Live validation confirmed it does not contain heartbeat, status, or ping values, so it must **not** be used as input to `compareuptimestate`.
+
+The runtime comparison command remains available for a separately validated sanitized runtime snapshot:
 
 ```bash
-kuma monitors list --json > uptime-kuma-live.json
-```
-
-Then compare Uptime Kuma's heartbeat state and response-time snapshot with the current GoreeCloud Monitor database:
-
-```bash
-python manage.py compareuptimestate uptime-kuma-live.json
+python manage.py compareuptimestate /path/to/uptime-kuma-runtime.sanitized.json
 ```
 
 A machine-readable report is also available:
 
 ```bash
-python manage.py compareuptimestate uptime-kuma-live.json --json
+python manage.py compareuptimestate \
+  /path/to/uptime-kuma-runtime.sanitized.json \
+  --json
 ```
 
 The default absolute response-time tolerance is 250 milliseconds. Override it when the acceptance plan defines a different tolerance:
 
 ```bash
-python manage.py compareuptimestate uptime-kuma-live.json --latency-tolerance-ms 500
+python manage.py compareuptimestate \
+  /path/to/uptime-kuma-runtime.sanitized.json \
+  --latency-tolerance-ms 500
 ```
 
-Uptime Kuma heartbeat states are normalized as follows: Down -> Down, Up -> Up, Pending -> Unknown, Maintenance -> Maintenance, and inactive -> Paused. A GoreeCloud Monitor Degraded state intentionally does not collapse into Uptime Kuma Up; the difference remains visible for review.
+A separately validated runtime collector must retain only the source fields required for comparison: monitor ID/name/type/active state plus heartbeat status and ping. Target URLs and heartbeat diagnostic messages must be excluded.
 
-The runtime report contains monitor names, normalized states, response times, and deltas only. Source URLs, request headers, notification assignments, and reusable secrets are not copied to the report.
+Uptime Kuma heartbeat states are normalized as follows: Down -> Down, Up -> Up, Pending -> Unknown, Maintenance -> Maintenance, and inactive -> Paused. A GoreeCloud Monitor Degraded state intentionally does not collapse into Uptime Kuma Up; the difference remains visible for review.
 
 A single snapshot is not acceptance evidence by itself. Parallel validation should collect repeated comparisons across healthy operation plus controlled failure, recovery, TLS-warning, maintenance, and notification scenarios.
 
@@ -149,19 +168,20 @@ A single snapshot is not acceptance evidence by itself. Parallel validation shou
 Before cutover:
 
 1. Keep Uptime Kuma active and authoritative.
-2. Audit the source export.
-3. Import compatible definitions into a non-production or isolated Monitor target.
-4. Correct every warning and unsupported definition manually or by a later approved mapper.
-5. Configure new Monitor push tokens at their senders.
-6. Configure notification delivery separately; notification assignments are not migrated automatically.
-7. Activate approved Monitor definitions.
-8. Run Monitor and Uptime Kuma in parallel.
-9. Capture repeated `kuma monitors list --json` snapshots and run `compareuptimestate` to compare normalized state and response time.
-10. Compare controlled state transitions, latency, TLS behavior, outage/recovery behavior, and notifications.
-11. Prove backup and restore in the target environment.
-12. Validate private Caddy, DNS, NetBird, firewall, and monitoring-source behavior.
-13. Resolve every baseline monitor that the importer reports as unsupported; unsupported coverage is a cutover blocker.
-14. Approve cutover explicitly.
-15. Preserve Uptime Kuma rollback data until Monitor has passed the agreed acceptance period.
+2. Collect and review a fresh sanitized live configuration snapshot with the reviewed evidence collector.
+3. Audit and reconcile that snapshot against the documented baseline.
+4. Import compatible definitions into a non-production or isolated Monitor target, paused by default.
+5. Correct every warning and unsupported definition manually or by a later approved mapper.
+6. Configure new Monitor push tokens at their senders.
+7. Configure notification delivery separately; notification assignments are not migrated automatically.
+8. Activate approved Monitor definitions deliberately.
+9. Run Monitor and Uptime Kuma in parallel using distinct conflict-free monitoring identities.
+10. Collect repeated runtime snapshots through a separately validated runtime-state source and run `compareuptimestate`.
+11. Compare controlled state transitions, latency, TLS behavior, outage/recovery behavior, maintenance, and notifications.
+12. Prove backup and restore in the target environment.
+13. Validate private Caddy, DNS, NetBird, firewall, and monitoring-source behavior.
+14. Resolve every baseline monitor that the importer reports as unsupported; unsupported coverage is a cutover blocker.
+15. Approve cutover explicitly.
+16. Preserve Uptime Kuma rollback data until Monitor has passed the agreed acceptance period.
 
 The migration tools do not modify Uptime Kuma and do not authorize its retirement.
