@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased - Uptime Kuma runtime evidence readiness
+
+- Reviewed the Uptime Kuma 2.5.0 server implementation and confirmed authenticated clients receive the monitor list plus per-monitor heartbeat lists after login, providing a narrow read-only source for runtime-state evidence separate from kuma-cli configuration output.
+- Added `scripts/collect_uptime_kuma_runtime_evidence.py` as a minimized runtime-state collector using the existing Uptime Kuma container and its installed `socket.io-client` runtime dependency rather than adding a new host-side package or long-lived service.
+- Reused the existing protected AutoKuma/kuma-cli login token and pass it only through standard input to the temporary in-container helper; the token is not placed in argv, environment variables, evidence files, or evidence metadata.
+- Added strict token-file ownership and permission checks that reject group/other access rather than broadening credentials merely to make collection succeed.
+- Limited the helper output to monitor ID, name, type, active state, latest heartbeat status, and latest response time. Raw heartbeat histories, diagnostic messages, monitor targets, credentials, and notification configuration are not persisted.
+- Added fail-closed runtime completeness validation for missing/duplicate identities, invalid active states, missing heartbeat history on active monitors, invalid heartbeat states, and invalid response-time values.
+- Reused the existing GoreeCloud runtime sanitizer before any runtime snapshot is written and added checksum-protected Internal evidence packaging with restrictive permissions.
+- Added `docs/uptime-kuma-runtime-evidence.md` defining the source mechanism, authentication prerequisite, collection workflow, evidence format, completeness rules, comparison boundary, and security/operational limits.
+- Added five runtime-evidence tests covering stdin-only token transfer, token-file permission enforcement, missing heartbeat rejection, inactive/no-history handling, and invalid heartbeat-state rejection. The complete source suite now contains 77 tests.
+- Kept live execution, runtime-state acceptance, Monitor activation, Uptime Kuma changes, monitoring-source identity changes, and cutover outside this source-only layer.
+
 ## Unreleased - Verified live baseline reconciliation
 
 - Verified the uploaded Internal schema-v2 live-evidence archive against its previously recorded outer SHA-256 and all three internal `SHA256SUMS` entries.
@@ -36,7 +49,7 @@
 - Added file fingerprinting for the current Uptime Kuma Compose file and production Caddyfile without copying either file's contents into the evidence bundle.
 - Added a pure-Python Uptime Kuma configuration sanitizer that retains only migration/reconciliation-relevant fields and replaces authentication material, request content, certificate material, connection strings, and other known sensitive values with a non-secret presence sentinel.
 - The redaction sentinel remains non-empty so the existing migration importer continues to fail closed with manual-authentication/configuration review instead of treating the sanitized monitor as credential-free.
-- Added URL sanitization for user information, query strings, and fragments; sanitized URL material also forces the existing sensitive-configuration blocker.
+- Added URL sanitization for user information, URL query strings, and URL fragments; sanitized URL material also forces the existing sensitive-configuration blocker.
 - Added malformed URL-port handling so hostile or malformed source configuration cannot crash credential redaction.
 - Added a test invariant requiring the evidence sanitizer's sensitive-field policy to remain exactly synchronized with the migration importer's sensitive-field policy.
 - Unknown non-empty Uptime Kuma source fields are omitted by value and recorded by field name for later review rather than being copied blindly into evidence.
