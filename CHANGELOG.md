@@ -5,12 +5,13 @@
 - Reviewed the Uptime Kuma 2.5.0 server implementation and confirmed authenticated clients receive the monitor list plus per-monitor heartbeat lists after login, providing a narrow read-only source for runtime-state evidence separate from kuma-cli configuration output.
 - Added `scripts/collect_uptime_kuma_runtime_evidence.py` as a minimized runtime-state collector using the existing Uptime Kuma container and its installed `socket.io-client` runtime dependency rather than adding a new host-side package or long-lived service.
 - Reused the existing protected AutoKuma/kuma-cli login token and pass it only through standard input to the temporary in-container helper; the token is not placed in argv, environment variables, evidence files, or evidence metadata.
-- Added strict token-file ownership and permission checks that reject group/other access rather than broadening credentials merely to make collection succeed.
+- Added strict token-file and immediate parent-directory ownership and permission checks that reject group/other access rather than broadening credentials merely to make collection succeed.
 - Limited the helper output to monitor ID, name, type, active state, latest heartbeat status, and latest response time. Raw heartbeat histories, diagnostic messages, monitor targets, credentials, and notification configuration are not persisted.
-- Added fail-closed runtime completeness validation for missing/duplicate identities, invalid active states, missing heartbeat history on active monitors, invalid heartbeat states, and invalid response-time values.
+- Added fail-closed runtime completeness validation for missing/duplicate identities, invalid active states, missing heartbeat history on active monitors, invalid heartbeat states, boolean/non-numeric response-time values, and other malformed runtime data.
+- Delayed evidence-directory creation until authenticated collection, completeness validation, and sanitization have succeeded so failed collection attempts do not leave partial evidence bundles.
 - Reused the existing GoreeCloud runtime sanitizer before any runtime snapshot is written and added checksum-protected Internal evidence packaging with restrictive permissions.
 - Added `docs/uptime-kuma-runtime-evidence.md` defining the source mechanism, authentication prerequisite, collection workflow, evidence format, completeness rules, comparison boundary, and security/operational limits.
-- Added five runtime-evidence tests covering stdin-only token transfer, token-file permission enforcement, missing heartbeat rejection, inactive/no-history handling, and invalid heartbeat-state rejection. The complete source suite now contains 77 tests.
+- Added seven runtime-evidence tests covering stdin-only token transfer, token-file permissions, parent-directory permissions, missing heartbeat rejection, inactive/no-history handling, invalid heartbeat states, and invalid boolean response-time values. The complete source suite now contains 79 tests.
 - Kept live execution, runtime-state acceptance, Monitor activation, Uptime Kuma changes, monitoring-source identity changes, and cutover outside this source-only layer.
 
 ## Unreleased - Verified live baseline reconciliation
