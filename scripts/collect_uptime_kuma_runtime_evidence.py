@@ -139,9 +139,17 @@ def _default_token_file() -> Path:
 
 def _load_protected_token(path: Path) -> str:
     try:
+        parent_metadata = path.parent.stat()
         metadata = path.stat()
     except OSError as exc:
         raise ValueError("protected kuma-cli token file is unavailable") from exc
+
+    if not stat.S_ISDIR(parent_metadata.st_mode):
+        raise ValueError("protected kuma-cli token parent is not a directory")
+    if parent_metadata.st_uid != os.getuid():
+        raise ValueError("protected kuma-cli token directory is not owned by the current user")
+    if parent_metadata.st_mode & 0o077:
+        raise ValueError("protected kuma-cli token directory has group or other permissions")
 
     if not stat.S_ISREG(metadata.st_mode):
         raise ValueError("protected kuma-cli token path is not a regular file")
@@ -281,10 +289,10 @@ def _validate_runtime_completeness(document: dict[str, Any]) -> dict[str, int]:
         if not isinstance(heartbeat, dict):
             raise ValueError("runtime evidence contains an invalid heartbeat")
         status_value = heartbeat.get("status")
-        if not isinstance(status_value, int) or status_value not in {0, 1, 2, 3}:
+        if type(status_value) is not int or status_value not in {0, 1, 2, 3}:
             raise ValueError("runtime evidence contains an invalid heartbeat status")
         ping = heartbeat.get("ping")
-        if ping is not None and not isinstance(ping, (int, float)):
+        if ping is not None and (isinstance(ping, bool) or not isinstance(ping, (int, float))):
             raise ValueError("runtime evidence contains an invalid heartbeat response time")
         heartbeat_present += 1
 
@@ -334,8 +342,9 @@ def main() -> int:
     ).expanduser().resolve()
 
     try:
-        output_dir.mkdir(parents=True, exist_ok=False)
-        os.chmod(output_dir, 0o700)
+        if output_dir.exists():
+            raise ValueError("evidence output path already exists")
+
         token_file = Path(args.token_file).expanduser() if args.token_file else _default_token_file()
         token = _load_protected_token(token_file)
         raw_document = _collect_raw_runtime(args.uptime_container, token)
@@ -346,6 +355,11 @@ def main() -> int:
 
         summary = _validate_runtime_completeness(raw_document)
         sanitized = sanitize_runtime_document(raw_document)
+
+        # Create evidence storage only after collection and validation succeed so
+        # failed authentication/collection attempts do not leave partial bundles.
+        output_dir.mkdir(parents=True, exist_ok=False)
+        os.chmod(output_dir, 0o700)
         runtime_path = output_dir / "uptime-kuma-runtime.sanitized.json"
         runtime_path.write_text(json.dumps(sanitized, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
