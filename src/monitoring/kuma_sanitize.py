@@ -161,6 +161,30 @@ def sanitize_config_monitor(raw: dict[str, Any]) -> tuple[dict[str, Any], dict[s
     return safe, report
 
 
+def _monitor_map_to_list(value: dict[Any, Any]) -> list[dict[str, Any]] | None:
+    """Normalize kuma-cli v2's ID-keyed monitor map without trusting its keys blindly."""
+
+    normalized: list[tuple[int, dict[str, Any]]] = []
+    for key, raw in value.items():
+        if not isinstance(raw, dict):
+            return None
+        try:
+            key_id = int(str(key))
+        except (TypeError, ValueError):
+            return None
+        raw_id = raw.get("id")
+        if raw_id is not None:
+            try:
+                if int(raw_id) != key_id:
+                    raise ValueError("monitor map key does not match monitor id")
+            except (TypeError, ValueError) as exc:
+                raise ValueError("monitor map contains an invalid or mismatched monitor id") from exc
+        normalized.append((key_id, raw))
+
+    normalized.sort(key=lambda item: item[0])
+    return [raw for _, raw in normalized]
+
+
 def _extract_config_document(document: Any) -> tuple[list[dict[str, Any]], Any, str]:
     value = document
     source_format = "unknown"
@@ -182,6 +206,12 @@ def _extract_config_document(document: Any) -> tuple[list[dict[str, Any]], Any, 
     elif isinstance(value, dict) and value.get("type"):
         source_format = "single-monitor"
         monitors = [value]
+    elif isinstance(value, dict):
+        mapped = _monitor_map_to_list(value)
+        if mapped is None:
+            raise ValueError("JSON is not a recognized kuma-cli configuration or monitor export")
+        source_format = "kuma-cli-v2-monitor-map"
+        monitors = mapped
     else:
         raise ValueError("JSON is not a recognized kuma-cli configuration or monitor export")
 
@@ -234,15 +264,17 @@ def sanitize_runtime_document(document: Any) -> dict[str, Any]:
     elif isinstance(value, list):
         monitors = value
     else:
-        raise ValueError("JSON is not a recognized kuma-cli monitor-list result")
+        raise ValueError("JSON is not a recognized kuma-cli runtime snapshot")
 
     sanitized: list[dict[str, Any]] = []
+    heartbeat_seen = False
     for raw in monitors:
         if not isinstance(raw, dict):
-            raise ValueError("Uptime Kuma monitor-list entries must be JSON objects")
+            raise ValueError("Uptime Kuma runtime entries must be JSON objects")
         heartbeat = raw.get("heartbeat")
         safe_heartbeat = None
         if isinstance(heartbeat, dict):
+            heartbeat_seen = True
             safe_heartbeat = {
                 "status": heartbeat.get("status"),
                 "ping": heartbeat.get("ping"),
@@ -256,6 +288,9 @@ def sanitize_runtime_document(document: Any) -> dict[str, Any]:
                 "heartbeat": safe_heartbeat,
             }
         )
+
+    if monitors and not heartbeat_seen:
+        raise ValueError("runtime snapshot contains no heartbeat data")
 
     return {
         "data": sanitized,
