@@ -117,6 +117,49 @@ class UptimeKumaEvidenceSanitizationTests(SimpleTestCase):
         self.assertIn("futureSecretLikeSetting", report["monitors"][0]["omitted_fields"])
         self.assertIn("futureSecretLikeSetting", sanitized["monitors"][0]["__goreecloud_omitted_fields"])
 
+    def test_kuma_cli_v2_id_keyed_monitor_map_is_sanitized_and_sorted(self):
+        sanitized, report = sanitize_config_document(
+            {
+                "23": {
+                    "id": 23,
+                    "name": "Second",
+                    "type": "http",
+                    "url": "https://second.example.test/",
+                    "interval": 60,
+                    "timeout": 10,
+                },
+                "2": {
+                    "id": 2,
+                    "name": "First",
+                    "type": "http",
+                    "url": "https://first.example.test/",
+                    "interval": 60,
+                    "timeout": 10,
+                },
+            }
+        )
+        self.assertEqual(report["source_format"], "kuma-cli-v2-monitor-map")
+        self.assertEqual(report["source_monitors"], 2)
+        self.assertEqual([monitor["id"] for monitor in sanitized["monitors"]], [2, 23])
+
+        temp = self.enterContext(self._temporary_json(sanitized))
+        monitors, metadata = load_kuma_monitors(temp)
+        self.assertEqual(metadata["source_format"], "kuma-cli-config-export")
+        self.assertEqual([monitor["id"] for monitor in monitors], [2, 23])
+
+    def test_kuma_cli_v2_monitor_map_rejects_mismatched_monitor_id(self):
+        with self.assertRaises(ValueError):
+            sanitize_config_document(
+                {
+                    "2": {
+                        "id": 3,
+                        "name": "Mismatch",
+                        "type": "http",
+                        "url": "https://example.test/",
+                    }
+                }
+            )
+
     def test_runtime_snapshot_keeps_only_comparison_fields(self):
         sanitized = sanitize_runtime_document(
             {
@@ -151,6 +194,20 @@ class UptimeKumaEvidenceSanitizationTests(SimpleTestCase):
             },
         )
 
+    def test_config_only_monitor_list_is_not_runtime_evidence(self):
+        with self.assertRaises(ValueError):
+            sanitize_runtime_document(
+                [
+                    {
+                        "id": 5,
+                        "name": "Service",
+                        "type": "http",
+                        "active": True,
+                        "url": "https://example.test/",
+                    }
+                ]
+            )
+
     def test_sanitized_export_remains_compatible_with_existing_loader(self):
         sanitized, _ = sanitize_config_document(
             {
@@ -182,6 +239,20 @@ class UptimeKumaEvidenceSanitizationTests(SimpleTestCase):
         rows = module._parse_docker_ps("uptime-kuma\timage:tag\tUp 1 hour\t3001/tcp\tproxy\n")
         self.assertEqual(rows[0]["name"], "uptime-kuma")
         self.assertEqual(rows[0]["networks"], "proxy")
+
+        url, source = module._derive_kuma_url(
+            {
+                "uptime_kuma": {
+                    "networks": [
+                        {"name": "manager-uptime", "uptime_ipv4": "172.20.0.2"},
+                        {"name": "proxy", "uptime_ipv4": "172.19.0.50"},
+                    ]
+                }
+            },
+            None,
+        )
+        self.assertEqual(url, "http://172.19.0.50:3001")
+        self.assertEqual(source, "docker-proxy-network")
 
     class _temporary_json:
         def __init__(self, document):
