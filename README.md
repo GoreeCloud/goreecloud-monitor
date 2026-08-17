@@ -2,7 +2,7 @@
 
 GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-health, heartbeat, TLS-certificate, incident, and recovery-monitoring application.
 
-> **Current state:** source-stable live-acceptance evidence candidate. The source foundation, Uptime Kuma migration tooling, hardened production Compose topology, disposable production-stack validation, documented-baseline reconciliation, recovery proof, immediate-predecessor rollback compatibility, and sanitized read-only live-evidence collection tooling are implemented. Uptime Kuma remains the production monitoring platform until GoreeCloud Monitor completes live target-environment evidence collection and review, publication, live-export reconciliation, parallel acceptance, the ICMP/Ping and resolver-specific DNS decisions, target recovery/notification testing, and an explicit cutover.
+> **Current state:** source-stable live-acceptance evidence compatibility candidate. The source foundation, Uptime Kuma migration tooling, hardened production Compose topology, disposable production-stack validation, documented-baseline reconciliation, recovery proof, immediate-predecessor rollback compatibility, and sanitized read-only live target/configuration evidence tooling are implemented. The live GoreeCloud kuma-cli v2 interface is now handled explicitly rather than assuming older command shapes. Runtime heartbeat/state collection remains a separate acceptance gate. Uptime Kuma remains the production monitoring platform until GoreeCloud Monitor completes live configuration review, publication, parallel runtime acceptance, the ICMP/Ping and resolver-specific DNS decisions, target recovery/notification testing, and an explicit cutover.
 
 ## What v0.1 includes
 
@@ -21,8 +21,8 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Maintenance windows, configurable check-history retention, and heartbeat-token rotation
 - Health endpoints, CI, tests, backup/recovery documentation
 - Conservative Uptime Kuma/kuma-cli audit, paused-by-default import, definition comparison, and live state/latency comparison tooling
-- Sanitized documented-baseline reconciliation against a fresh live Uptime Kuma export
-- Read-only live target/Uptime Kuma evidence collection with secret-preserving fail-closed sanitization
+- Sanitized documented-baseline reconciliation against a fresh live Uptime Kuma configuration snapshot
+- Read-only live target/Uptime Kuma configuration evidence collection with kuma-cli v2 ID-keyed monitor-map support and fail-closed sanitization
 - Fail-closed production target preflight
 - Production Compose contract validation with zero host-published application/database ports
 - Immediate-predecessor PostgreSQL application rollback-compatibility proof when the migration set is unchanged
@@ -66,19 +66,21 @@ It is not authorization to deploy. See `docs/production-deployment.md` for the t
 
 ## Live acceptance evidence
 
-Before deploying Monitor, collect the first live target/Uptime Kuma evidence through the approved administrative path from an exact reviewed checkout:
+Before deploying Monitor, collect the first live target/Uptime Kuma configuration evidence through the approved administrative path from an exact reviewed checkout:
 
 ```bash
 python3 scripts/collect_live_acceptance_evidence.py
 ```
 
-The collector is read-only with respect to the live service environment. It does not invoke `sudo`, modify Uptime Kuma, modify Docker networks, copy Caddy/Compose contents, change DNS/NetBird/firewall state, or retain the raw Uptime Kuma configuration export. The sanitized evidence bundle remains Internal and must not be committed or published.
+The collector is read-only with respect to the live service environment. It does not invoke `sudo`, modify Uptime Kuma, modify Docker networks, copy Caddy/Compose contents, change DNS/NetBird/firewall state, or write unsanitized `kuma monitor list` output to disk. It uses an authenticated kuma-cli v2 session, validates the ID-keyed monitor map, and sanitizes the configuration immediately. The sanitized evidence bundle remains Internal and must not be committed or published.
+
+`ready_for_review` means the target-environment and configuration evidence is complete enough for review. It does **not** mean runtime heartbeat/state evidence is available. Runtime comparison remains a separate later acceptance gate because kuma-cli v2 monitor-list output is configuration-only.
 
 See `docs/live-acceptance-evidence.md` for the exact boundary and review procedure.
 
 ## Uptime Kuma migration and cutover
 
-A fresh live Uptime Kuma export—not the written inventory alone—is the migration authority for an acceptance session. After live evidence is collected, reconcile the sanitized configuration copy with:
+A fresh live Uptime Kuma configuration snapshot—not the written inventory alone—is the migration authority for an acceptance session. After live evidence is collected, reconcile the sanitized configuration copy with:
 
 ```bash
 python manage.py reconcileuptimebaseline \
@@ -88,6 +90,8 @@ python manage.py reconcileuptimebaseline \
 ```
 
 The command fails closed on missing expected coverage, reappeared retired monitors, unexpected live monitors, unsupported migration semantics, unresolved review items, and documented cutover blockers. The current documented blockers/reviews include ICMP/Ping network-layer coverage and resolver-specific DNS semantics.
+
+Do not use the configuration snapshot with `compareuptimestate`. Parallel state/latency comparison requires a separately validated sanitized runtime snapshot with heartbeat status and ping values.
 
 See `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, and `docs/cutover-and-rollback.md`.
 
