@@ -1,6 +1,6 @@
 # Documented Uptime Kuma Baseline Reconciliation
 
-This document is a cutover aid, not a substitute for a live Uptime Kuma export.
+This document is a cutover aid, not a substitute for a fresh live Uptime Kuma configuration snapshot.
 
 ## Why reconciliation is required
 
@@ -17,20 +17,30 @@ No private NetBird address, credential, notification token, or response content 
 
 ## Live authority
 
-Immediately before migration work, obtain a fresh configuration export from the running Uptime Kuma instance using the approved kuma-cli workflow. The live export becomes the migration source for that acceptance session.
+Immediately before migration work, obtain a fresh sanitized configuration snapshot from the running Uptime Kuma instance using the reviewed live-evidence collector:
 
-Do not edit the live export to make it match this document. Reconcile differences instead. A documented expected monitor that is absent may have been intentionally retired after this baseline was written. An unexpected live monitor may be valid new coverage. Either condition requires the GoreeCloud records and migration plan to be updated before cutover.
+```bash
+python3 scripts/collect_live_acceptance_evidence.py
+```
+
+On the current GoreeCloud VPS, the collector uses authenticated `kuma-cli v2.0.0` `monitor list` output, validates the ID-keyed monitor map, and writes only `uptime-kuma-config.sanitized.json`. Raw monitor-list output is not written to disk.
+
+The sanitized live snapshot becomes the migration source for that acceptance session. Do not edit it to make it match this document. A documented expected monitor that is absent may have been intentionally retired after this baseline was written. An unexpected live monitor may be valid new coverage. Either condition requires the GoreeCloud records and migration plan to be updated before cutover.
 
 ## Command
 
 ```bash
-python manage.py reconcileuptimebaseline uptime-kuma-export.json
+python manage.py reconcileuptimebaseline \
+  /path/to/uptime-kuma-config.sanitized.json
 ```
 
 For a sanitized JSON report that does not fail the shell while unresolved items are being reviewed:
 
 ```bash
-python manage.py reconcileuptimebaseline uptime-kuma-export.json --json --no-fail
+python manage.py reconcileuptimebaseline \
+  /path/to/uptime-kuma-config.sanitized.json \
+  --json \
+  --no-fail
 ```
 
 The normal command fails closed until there are zero unresolved reviews and zero blockers.
@@ -55,7 +65,11 @@ The Ping monitor verifies private NetBird network-layer reachability. TCP 22 and
 
 ### Cloudflare DNS and Google DNS
 
-The written inventory describes these as resolver-specific checks through `1.1.1.1` and `8.8.8.8`. The live Uptime Kuma export must confirm the queried hostname, record type, resolver field, and any other settings. Monitor v0.1 currently uses its configured resolver and therefore cannot claim exact resolver-specific parity without an approved design change or documented replacement requirement.
+The written inventory describes these as resolver-specific checks through `1.1.1.1` and `8.8.8.8`. The live sanitized Uptime Kuma configuration snapshot must confirm the record type, resolver field, and any other relevant settings without exposing unrelated sensitive values. Monitor v0.1 currently uses its configured resolver and therefore cannot claim exact resolver-specific parity without an approved design change or documented replacement requirement.
+
+## Runtime-state boundary
+
+Baseline reconciliation is configuration reconciliation. The current kuma-cli v2 monitor list does not contain heartbeat/status/ping values and cannot prove runtime equivalence. Runtime-state comparison remains a separate later acceptance gate using a separately validated sanitized runtime snapshot.
 
 ## Retirement rule
 
