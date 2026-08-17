@@ -10,7 +10,6 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -19,11 +18,11 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from monitoring.kuma_sanitize import sanitize_config_document, sanitize_runtime_document  # noqa: E402
+from monitoring.kuma_sanitize import sanitize_config_document  # noqa: E402
 
 
 SCHEMA = "goreecloud-monitor-live-acceptance-evidence"
-VERSION = 1
+VERSION = 2
 
 
 def _run(label: str, args: list[str], *, timeout: int = 30) -> dict[str, Any]:
@@ -51,9 +50,10 @@ def _run(label: str, args: list[str], *, timeout: int = 30) -> dict[str, Any]:
     if completed.returncode == 0:
         result["stdout"] = completed.stdout.strip()
     else:
-        # stderr is intentionally not copied into the evidence bundle because
-        # command errors can echo connection/configuration material.
-        result["error"] = "command-failed-stderr-omitted"
+        # stderr and failed-command stdout are intentionally not copied into
+        # the evidence bundle because errors can echo configuration or auth
+        # material. Only a generic failure classification is retained.
+        result["error"] = "command-failed-output-omitted"
     return result
 
 
@@ -210,75 +210,98 @@ def _docker_evidence(uptime_container: str, uptime_compose: Path) -> tuple[dict[
     return evidence, commands
 
 
-def _collect_kuma(output_dir: Path, kuma_bin: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def _derive_kuma_url(docker: dict[str, Any], explicit_url: str | None) -> tuple[str | None, str | None]:
+    if explicit_url:
+        return explicit_url, "explicit"
+
+    networks = docker.get("uptime_kuma", {}).get("networks", [])
+    if not isinstance(networks, list):
+        return None, None
+
+    candidates: list[tuple[str, str]] = []
+    for network in networks:
+        if not isinstance(network, dict):
+            continue
+        name = str(network.get("name") or "")
+        address = str(network.get("uptime_ipv4") or "")
+        if not address:
+            continue
+        if name == "proxy":
+            return f"http://{address}:3001", "docker-proxy-network"
+        candidates.append((name, address))
+
+    if len(candidates) == 1:
+        return f"http://{candidates[0][1]}:3001", "single-docker-network"
+    return None, None
+
+
+def _collect_kuma(
+    output_dir: Path,
+    kuma_bin: str,
+    kuma_url: str | None,
+    kuma_url_source: str | None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     commands: list[dict[str, Any]] = []
     result: dict[str, Any] = {
         "available": shutil.which(kuma_bin) is not None,
+        "connection": {
+            "url_source": kuma_url_source,
+            "url_retained": False,
+            "credentials_retained": False,
+        },
         "config_export": None,
-        "runtime_snapshot": None,
+        "runtime_snapshot": {
+            "collected": False,
+            "required_for_bundle_review": False,
+            "reason": "kuma-cli-v2-monitor-list-is-configuration-only",
+        },
     }
     if not result["available"]:
         return result, commands
+    if not kuma_url:
+        result["config_export"] = {"ok": False, "error": "kuma-url-unavailable"}
+        return result, commands
 
-    with tempfile.TemporaryDirectory(prefix="goreecloud-monitor-kuma-") as temp_name:
-        temp_dir = Path(temp_name)
-        raw_export = temp_dir / "uptime-kuma-export.sensitive.json"
-        export = _run(
-            "kuma-config-export",
-            [kuma_bin, "config", "export", "--output", str(raw_export)],
-            timeout=90,
+    monitor_list = _run(
+        "kuma-monitor-list",
+        [kuma_bin, "--url", kuma_url, "--format", "json", "monitor", "list"],
+        timeout=90,
+    )
+    commands.append(monitor_list)
+    raw_document = _json_from_stdout(monitor_list)
+    if raw_document is None:
+        result["config_export"] = {
+            "ok": False,
+            "error": monitor_list.get("error", "monitor-list-json-unavailable"),
+        }
+        return result, commands
+
+    try:
+        sanitized, sanitization_report = sanitize_config_document(raw_document)
+        config_path = output_dir / "uptime-kuma-config.sanitized.json"
+        config_path.write_text(json.dumps(sanitized, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        report_path = output_dir / "uptime-kuma-sanitization-report.json"
+        report_path.write_text(
+            json.dumps(sanitization_report, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
         )
-        commands.append(export)
-        if export.get("ok") and raw_export.exists():
-            try:
-                raw_document = json.loads(raw_export.read_text(encoding="utf-8"))
-                sanitized, sanitization_report = sanitize_config_document(raw_document)
-                config_path = output_dir / "uptime-kuma-config.sanitized.json"
-                config_path.write_text(json.dumps(sanitized, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-                report_path = output_dir / "uptime-kuma-sanitization-report.json"
-                report_path.write_text(
-                    json.dumps(sanitization_report, indent=2, sort_keys=True) + "\n",
-                    encoding="utf-8",
+        result["config_export"] = {
+            "ok": True,
+            "file": config_path.name,
+            "sanitization_report": report_path.name,
+            "source_command": "kuma monitor list",
+            "summary": {
+                key: sanitization_report[key]
+                for key in (
+                    "source_format",
+                    "source_monitors",
+                    "monitors_with_redactions",
+                    "monitors_with_omissions",
                 )
-                result["config_export"] = {
-                    "ok": True,
-                    "file": config_path.name,
-                    "sanitization_report": report_path.name,
-                    "summary": {
-                        key: sanitization_report[key]
-                        for key in (
-                            "source_format",
-                            "source_monitors",
-                            "monitors_with_redactions",
-                            "monitors_with_omissions",
-                        )
-                    },
-                }
-            except (OSError, json.JSONDecodeError, ValueError):
-                result["config_export"] = {"ok": False, "error": "export-sanitization-failed"}
-        else:
-            result["config_export"] = {"ok": False, "error": export.get("error", "export-failed")}
-
-        runtime = _run("kuma-monitor-list", [kuma_bin, "monitors", "list", "--json"], timeout=90)
-        commands.append(runtime)
-        runtime_document = _json_from_stdout(runtime)
-        if runtime_document is not None:
-            try:
-                sanitized_runtime = sanitize_runtime_document(runtime_document)
-                runtime_path = output_dir / "uptime-kuma-runtime.sanitized.json"
-                runtime_path.write_text(
-                    json.dumps(sanitized_runtime, indent=2, sort_keys=True) + "\n",
-                    encoding="utf-8",
-                )
-                result["runtime_snapshot"] = {
-                    "ok": True,
-                    "file": runtime_path.name,
-                    "source_monitors": sanitized_runtime["__goreecloud_sanitization"]["source_monitors"],
-                }
-            except ValueError:
-                result["runtime_snapshot"] = {"ok": False, "error": "runtime-sanitization-failed"}
-        else:
-            result["runtime_snapshot"] = {"ok": False, "error": runtime.get("error", "runtime-export-failed")}
+            },
+        }
+    except (OSError, ValueError):
+        result["config_export"] = {"ok": False, "error": "monitor-list-sanitization-failed"}
 
     return result, commands
 
@@ -318,7 +341,14 @@ def main() -> int:
     )
     parser.add_argument("--uptime-container", default="uptime-kuma", help="Uptime Kuma container name")
     parser.add_argument("--kuma-bin", default="kuma", help="kuma-cli executable name/path")
-    parser.add_argument("--skip-kuma", action="store_true", help="Skip kuma-cli export/snapshot collection")
+    parser.add_argument(
+        "--kuma-url",
+        help=(
+            "Verified Uptime Kuma URL for kuma-cli. If omitted, the collector prefers the container's "
+            "Docker network named 'proxy', or a single unambiguous attached network. The URL is not retained."
+        ),
+    )
+    parser.add_argument("--skip-kuma", action="store_true", help="Skip kuma-cli configuration collection")
     parser.add_argument("--no-archive", action="store_true", help="Do not create a tar.gz copy of the bundle")
     args = parser.parse_args()
 
@@ -342,10 +372,21 @@ def main() -> int:
     docker, docker_commands = _docker_evidence(args.uptime_container, uptime_compose)
     command_results.extend(docker_commands)
 
+    kuma_url, kuma_url_source = _derive_kuma_url(docker, args.kuma_url)
     if args.skip_kuma:
-        kuma = {"available": None, "skipped": True, "config_export": None, "runtime_snapshot": None}
+        kuma = {
+            "available": None,
+            "skipped": True,
+            "connection": {"url_source": kuma_url_source, "url_retained": False, "credentials_retained": False},
+            "config_export": None,
+            "runtime_snapshot": {
+                "collected": False,
+                "required_for_bundle_review": False,
+                "reason": "kuma-collection-skipped",
+            },
+        }
     else:
-        kuma, kuma_commands = _collect_kuma(output_dir, args.kuma_bin)
+        kuma, kuma_commands = _collect_kuma(output_dir, args.kuma_bin, kuma_url, kuma_url_source)
         command_results.extend(kuma_commands)
 
     failures = [
@@ -359,8 +400,10 @@ def main() -> int:
         not failures
         and isinstance(config_export, dict)
         and bool(config_export.get("ok"))
-        and isinstance(runtime_snapshot, dict)
-        and bool(runtime_snapshot.get("ok"))
+    )
+    runtime_ready_for_comparison = (
+        isinstance(runtime_snapshot, dict)
+        and bool(runtime_snapshot.get("collected"))
     )
 
     evidence = {
@@ -371,10 +414,17 @@ def main() -> int:
         "safety": {
             "mode": "read-only-live-evidence",
             "sudo_invoked": False,
-            "raw_uptime_export_retained": False,
+            "raw_uptime_configuration_retained": False,
             "stderr_retained": False,
+            "failed_command_stdout_retained": False,
             "caddyfile_content_retained": False,
             "compose_content_retained": False,
+            "kuma_url_retained": False,
+            "kuma_credentials_retained": False,
+        },
+        "acceptance_scope": {
+            "target_environment_and_configuration_ready_for_review": ready_for_review,
+            "runtime_state_ready_for_comparison": runtime_ready_for_comparison,
         },
         "host": {
             "hostname": _safe_stdout(hostname),
@@ -404,6 +454,7 @@ def main() -> int:
     if archive is not None:
         print(f"Evidence archive:   {archive}")
     print(f"Ready for review:   {evidence['ready_for_review']}")
+    print(f"Runtime comparison: {'ready' if runtime_ready_for_comparison else 'not collected'}")
     if failures:
         print("Some read-only evidence commands failed; inspect collection_failures in target-evidence.json.")
     return 0 if evidence["ready_for_review"] else 2
