@@ -26,18 +26,19 @@ Do not roll back only an application image while silently retaining incompatible
 1. Deploy Monitor under a unique, conflict-free runtime identity. Do not reuse Uptime Kuma's live source IP.
 2. Validate target storage ownership, permissions, capacity, backup scope, Caddy network name, and zero host-published Monitor/database ports.
 3. Run `targetpreflight` in the target web container and preserve the sanitized result.
-4. Export the live Uptime Kuma configuration with the approved kuma-cli workflow and preserve the original securely.
+4. Collect a fresh sanitized live Uptime Kuma configuration snapshot with the reviewed live-evidence collector. On the current GoreeCloud VPS this uses authenticated kuma-cli v2 `monitor list` output and does not persist the raw monitor map.
 5. Run `reconcileuptimebaseline`; resolve every missing, unexpected, retired-present, unsupported, review, duplicate, or baseline-blocker result.
-6. Run `audituptimekuma` and preserve the sanitized report.
+6. Run `audituptimekuma` against the sanitized configuration snapshot and preserve the sanitized report.
 7. Import compatible definitions paused into an empty Monitor database.
 8. Review every imported definition, new push token, notification assignment, target allowlist, private-network path, and TLS requirement before enabling checks.
 9. Keep Uptime Kuma active and authoritative during this work.
+10. Establish a separately validated runtime-state evidence path before claiming state/latency parity. The current kuma-cli v2 monitor list is configuration-only and does not contain heartbeat/status/ping values.
 
 ## Parallel acceptance
 
 Run both systems long enough to exercise normal operation and controlled transitions. At minimum preserve evidence for:
 
-- repeated healthy state comparisons;
+- repeated healthy state comparisons from a separately validated runtime snapshot source;
 - controlled DOWN transition;
 - configured failure threshold behavior;
 - controlled RECOVERED transition;
@@ -53,7 +54,7 @@ Run both systems long enough to exercise normal operation and controlled transit
 - Monitor restart/recreation without uncontrolled duplicate alerts;
 - PostgreSQL backup and isolated restore using target storage.
 
-Use repeated `compareuptimestate` snapshots for state/latency evidence. One matching snapshot is not sufficient acceptance evidence.
+Use repeated `compareuptimestate` snapshots for state/latency evidence only after the runtime snapshot source has been separately validated and sanitized. One matching snapshot is not sufficient acceptance evidence.
 
 ## Required rollback bundle before cutover
 
@@ -62,18 +63,20 @@ Before changing production authority, preserve:
 1. the exact currently accepted Monitor release unit;
 2. the immediately previous Monitor release unit if Monitor is already in production;
 3. a verified pre-cutover Monitor PostgreSQL backup;
-4. a fresh Uptime Kuma configuration/database backup and the preserved live export used for migration;
+4. a fresh Uptime Kuma configuration/database backup plus the sanitized live configuration snapshot and reconciliation reports used for migration;
 5. the current Uptime Kuma Docker/Compose configuration needed to restart it;
 6. current Caddy/DNS/NetBird/firewall configuration evidence;
 7. current ntfy publisher/ACL configuration evidence;
 8. the cutover acceptance report and timestamps.
+
+Raw Uptime Kuma monitor-list output, credentials, and auth tokens are not general rollback artifacts and must not be copied into Git or public evidence. Preserve sensitive source data only through the approved protected backup/configuration mechanisms that already own that responsibility.
 
 A file existing is not sufficient. The required database restore path must have been proven against the target environment before authority changes.
 
 ## Cutover sequence
 
 1. Confirm all cutover gates are green and the ICMP/Ping or replacement requirement is resolved.
-2. Record the live Uptime Kuma and Monitor state immediately before authority change.
+2. Record the live Uptime Kuma and Monitor state immediately before authority change through the approved sanitized runtime-state path.
 3. Create final pre-cutover backups and verify their identities.
 4. Prevent configuration drift during the authority-change window.
 5. Switch only the minimum required monitoring/notification/network identity configuration.
@@ -119,4 +122,4 @@ Until that evidence exists, the safe rollback boundary for a migration-bearing r
 
 ## Current boundary
 
-The repository can prove source behavior, disposable production topology, PostgreSQL recovery, and immediate-predecessor compatibility in CI. It cannot prove live Caddy, DNS, NetBird, firewall, production ntfy ACLs, the actual Uptime Kuma export, real parallel observations, target backup storage, or administrator alert receipt without the target environment. Those remain mandatory before Uptime Kuma retirement.
+The repository can prove source behavior, disposable production topology, PostgreSQL recovery, immediate-predecessor compatibility, and sanitized target/configuration evidence collection in CI. Live target validation has now shown the actual kuma-cli v2 command and data shape, but runtime heartbeat/state collection still requires a separately validated path. The repository still cannot prove live Caddy, DNS, NetBird, firewall, production ntfy ACLs, real parallel observations, target backup storage, or administrator alert receipt without the target environment. Those remain mandatory before Uptime Kuma retirement.
