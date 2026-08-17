@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased - kuma-cli v2 live evidence compatibility
+
+- Live target validation confirmed the installed `kuma-cli v2.0.0` interface uses `kuma monitor list`; the previously assumed `kuma config export` and `kuma monitors list --json` commands are not available on the GoreeCloud VPS.
+- Confirmed the authenticated v2 monitor-list response is a JSON object keyed by monitor ID. The live probe returned 23 monitor definitions.
+- Added fail-closed normalization for the v2 ID-keyed monitor map, including numeric-key validation, monitor-ID/key agreement checks, and deterministic numeric ordering before sanitization.
+- Updated the collector to derive the internal Uptime Kuma URL from verified Docker metadata, preferring the attached `proxy` network, while retaining neither the URL nor kuma-cli credentials in the evidence bundle.
+- Updated the collector to use the existing protected kuma-cli authentication context and `kuma monitor list` rather than accepting passwords, MFA secrets, or auth tokens as collector arguments.
+- Raw monitor-list JSON is now held only in process memory and is sanitized before any Uptime Kuma configuration data is written to disk.
+- Live validation confirmed v2 monitor-list output is configuration-only and does not contain heartbeat, status, or ping values. The collector no longer fabricates or requires a runtime snapshot from that source.
+- Bumped the evidence schema to version 2 and separated `target_environment_and_configuration_ready_for_review` from `runtime_state_ready_for_comparison`. `ready_for_review` now means the target/configuration bundle is complete enough for review, not that runtime parity has been proven.
+- Tightened runtime sanitization so configuration-only lists with no heartbeat data are rejected rather than silently converted into all-unknown runtime evidence.
+- Updated migration, baseline, cutover, README, and live-evidence documentation to remove invalid v2 commands and keep runtime comparison as a separate later acceptance gate.
+- Expanded the automated application suite from 68 to 71 tests with v2 monitor-map normalization, mismatched-ID rejection, and configuration-only/runtime-separation coverage.
+- Preserved the frozen live-evidence candidate in PR #5 unchanged and continued the correction on a new stacked compatibility branch.
+
 ## Unreleased - Live acceptance evidence readiness
 
 - Added `scripts/collect_live_acceptance_evidence.py` as a read-only operator workflow for collecting the first live GoreeCloud Monitor/Uptime Kuma target-environment evidence before any Monitor deployment.
@@ -13,7 +28,7 @@
 - Added a test invariant requiring the evidence sanitizer's sensitive-field policy to remain exactly synchronized with the migration importer's sensitive-field policy.
 - Unknown non-empty Uptime Kuma source fields are omitted by value and recorded by field name for later review rather than being copied blindly into evidence.
 - Added a minimal runtime sanitizer retaining only monitor ID/name/type/active state plus heartbeat status and response time; target URLs and heartbeat diagnostic messages are excluded.
-- Raw `kuma config export` data is created only in a restrictive temporary directory and deleted after sanitization; command stderr is not retained because errors may echo protected configuration.
+- The original candidate assumed a raw `kuma config export` temporary-file path and a separate monitor-list runtime snapshot; the later kuma-cli v2 compatibility section above supersedes those live-command assumptions while preserving this frozen source layer for traceability.
 - Added restrictive evidence-directory/archive permissions, SHA-256 file checksums, collection-failure reporting, and exact collector-revision capture when the collector is run from a Git checkout.
 - Added `docs/live-acceptance-evidence.md` defining the preferred NetBird SSH execution path, default documented VPS paths, override rules, evidence contents, sanitization boundary, review steps, classification, and explicit limits on what collection proves.
 - Expanded the automated application suite from 60 to 68 tests with sanitizer secrecy, importer fail-closed compatibility, future sensitive-field policy drift, malformed URL handling, minimal runtime evidence, loader compatibility, and collector import/parser coverage.
@@ -22,11 +37,11 @@
 ## Unreleased - Cutover and rollback readiness
 
 - Added a sanitized documented Uptime Kuma baseline manifest reconciled from the GoreeCloud monitor inventory and later retirement records rather than treating the older written inventory as live authority.
-- Recorded 21 documented expected-active monitors after applying the recorded Flatnotes, Linkding, and Termix retirements, while preserving those three names as expected-retired reconciliation checks.
-- Added `reconcileuptimebaseline` to compare a fresh live kuma-cli export with the documented baseline and fail closed on expected-missing, retired-present, unexpected-live, duplicate/invalid source entries, unsupported mappings, migration review items, and documented cutover blockers.
+- Recorded 21 monitors documented as expected active after applying the recorded Flatnotes, Linkding, and Termix retirements, while preserving those three names as expected-retired reconciliation checks.
+- Added `reconcileuptimebaseline` to compare a fresh live sanitized Uptime Kuma configuration snapshot with the documented baseline and fail closed on expected-missing, retired-present, unexpected-live, duplicate/invalid source entries, unsupported mappings, migration review items, and documented cutover blockers.
 - Kept reconciliation reports sanitized so target URLs, private addresses, request headers, notification assignments, and reusable credentials are not copied into acceptance artifacts.
 - Preserved GoreeCloud VPS Ping as an explicit cutover blocker because its private NetBird layer-3 reachability semantics are not identical to TCP 22/443 checks.
-- Added explicit manual-review gates for the documented Cloudflare DNS and Google DNS checks because the written scope is resolver-specific and Monitor v0.1 does not automatically preserve custom Uptime Kuma resolver semantics.
+- Added explicit manual-review gates for the documented Cloudflare DNS and Google DNS checks because the written scope is resolver-specific and Monitor v0.1 does not automatically preserve Uptime Kuma custom-resolver behavior.
 - Added `docs/cutover-and-rollback.md` defining the release unit, parallel-acceptance prerequisites, required rollback bundle, cutover order, rollback triggers, rollback sequence, observation boundary, and database-schema rollback rule.
 - Added an immediate-predecessor rollback-compatibility GitHub Actions workflow pinned to frozen deployment candidate `992e64072602a02513bc07a1dd4631e47e87035a`.
 - The rollback gate requires an unchanged Django migration set for direct application rollback evidence, builds both exact application revisions, seeds PostgreSQL through the predecessor, reads and updates the state through the candidate, then proves the predecessor can read the candidate-written state again.
@@ -51,12 +66,12 @@
 
 ## Unreleased - Migration readiness
 
-- Added sanitized audit support for kuma-cli/Uptime Kuma JSON exports.
+- Added sanitized audit support for kuma-cli/Uptime Kuma JSON configuration snapshots.
 - Added conservative mapping for HTTP/HTTPS, keyword, simple JSON-query, TCP/port, DNS, and push monitors.
 - Added paused-by-default Uptime Kuma import with atomic strict mode, optional partial import, dry-run support, and sanitized migration reports.
 - Added explicit blockers for unsupported monitor semantics, embedded sensitive request configuration, per-monitor proxies, disabled TLS verification, and other unsafe or non-equivalent settings.
 - Added definition comparison tooling for staged Uptime Kuma-to-Monitor review.
-- Added live parallel runtime-state and response-time comparison from `kuma monitors list --json`, including explicit mismatch, missing, duplicate, and Monitor-only classifications.
+- Added live parallel runtime-state and response-time comparison tooling for separately validated sanitized runtime snapshots, including explicit mismatch, missing, duplicate, and Monitor-only classifications.
 - Added fail-closed target-environment preflight for production configuration, PostgreSQL connectivity, migration state, constrained target allowlists, HTTPS/cookie posture, and complete notification configuration.
 - Added PostgreSQL CI execution of the production-style target preflight before backup/restore proof.
 - Hardened ntfy transition publishing to require the dedicated write-only bearer token, reject partial configuration, and disable environment proxy/netrc credential inheritance.
