@@ -8,7 +8,7 @@ Wardveil is the platform-wide security identity and presentation layer. It does 
 
 ## Scope
 
-GoreeCloud Monitor is security-sensitive because it authenticates administrators, stores operational history, accepts heartbeat tokens, makes outbound network requests, publishes minimized transition alerts, and exposes a read-only platform summary API.
+GoreeCloud Monitor is security-sensitive because it authenticates administrators, stores operational history, accepts heartbeat tokens, makes outbound network requests, publishes minimized transition alerts, exposes a read-only platform summary API, and now has first-party Linux/Android client packaging that renders the private Monitor web service.
 
 ## Core controls
 
@@ -27,6 +27,24 @@ GoreeCloud Monitor is security-sensitive because it authenticates administrators
 - Security-relevant authentication and privileged configuration actions emit minimized structured Wardveil events without copying secrets, target URLs, client IP addresses, request bodies, or raw diagnostics.
 - Production secrets belong in protected environment/secrets storage, never the repository.
 - CI performs Django deployment checks, dependency consistency and vulnerability auditing, PostgreSQL recovery validation, non-root/runtime-minimized container validation, fixed HIGH/CRITICAL container vulnerability scanning, disposable production-topology validation, and immediate-predecessor rollback compatibility.
+- Core CI and rollback jobs check out the exact pull-request head with persisted GitHub credentials disabled and verify the checked-out SHA before producing source/recovery evidence.
+
+## Native client boundary
+
+The Linux and Android clients are deliberately thin Tauri 2 shells. Django/PostgreSQL remains the only Monitor application, authentication, authorization, monitoring, incident, and configuration authority.
+
+- The client permits navigation only to the canonical HTTPS origin `https://monitor.goreecloud.com` on the default HTTPS port and to `about:blank` for webview initialization.
+- HTTP, alternate ports, URL userinfo, lookalike hosts, unrelated origins, and new webview windows are denied.
+- Remote Monitor content receives no global Tauri API and no native command/IPC capability.
+- Denied-navigation Wardveil diagnostics contain only the event type, URL scheme, and hostname; paths, query strings, fragments, cookies, and credentials are excluded.
+- The packaged local fallback contains only local Glaze UI assets and has a restrictive content policy with scripts and network connections disabled.
+- The client does not introduce a local monitoring database, synchronization engine, native API token, separate authentication stack, or committed signing credential.
+- Launcher artwork for Linux and Android is generated from the same source-controlled canonical Monitor SVG used by the web product.
+- The native build workflow checks out the exact PR head with persisted credentials disabled and emits source revision, artifact checksums, and canonical-icon provenance.
+- Unsigned/debug Android artifacts are acceptance builds only. Stable Android release signing must use separately protected signing material and complete real-device acceptance; signing secrets must never be committed.
+- The native Rust dependency graph must be frozen and reviewed before Stable client classification; direct version pins alone do not replace a reviewed lockfile/release dependency record.
+
+Any future GoreeCloud Identity/SSO redirect origin must be added only after the Identity integration contract, CSRF/session behavior, callback path, navigation policy, and recovery behavior are explicitly reviewed and tested. Do not broaden the client allowlist preemptively.
 
 ## SSRF policy
 
