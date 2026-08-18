@@ -29,7 +29,8 @@ def configuration_findings() -> list[PreflightFinding]:
     if not hosts: add("error", "allowed-hosts-empty", "DJANGO_ALLOWED_HOSTS must contain the approved Monitor hostname.")
     if "*" in hosts: add("error", "allowed-hosts-wildcard", "Wildcard ALLOWED_HOSTS is not approved for GoreeCloud Monitor.")
     secret_key = str(getattr(settings, "SECRET_KEY", ""))
-    if len(secret_key) < 32 or secret_key.startswith("development-only"): add("error", "secret-key", "DJANGO_SECRET_KEY must be a strong protected production value.")
+    if len(secret_key) < 50 or len(set(secret_key)) < 5 or secret_key.startswith(("development-only", "django-insecure-")):
+        add("error", "secret-key", "DJANGO_SECRET_KEY must be at least 50 characters, contain adequate character diversity, and be a protected production value.")
     if not getattr(settings, "SECURE_SSL_REDIRECT", False): add("error", "https-redirect", "DJANGO_SECURE_SSL_REDIRECT must be enabled behind the approved HTTPS gateway.")
     if int(getattr(settings, "SECURE_HSTS_SECONDS", 0)) < 31536000: add("error", "hsts", "HSTS must be enabled for at least one year after the approved HTTPS route is validated.")
     if not getattr(settings, "SESSION_COOKIE_SECURE", False): add("error", "session-cookie-secure", "Session cookies must be Secure.")

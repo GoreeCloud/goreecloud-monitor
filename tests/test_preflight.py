@@ -12,7 +12,7 @@ from monitoring.models import Monitor
 
 SAFE_SETTINGS = {
     "DEBUG": False, "DATABASES": {"default": {"ENGINE": "django.db.backends.postgresql"}}, "ALLOWED_HOSTS": ["monitor.example.test"],
-    "SECRET_KEY": "x" * 64, "SECURE_SSL_REDIRECT": True, "SECURE_HSTS_SECONDS": 31536000,
+    "SECRET_KEY": "Monitor-ci-preflight-key-2026-abcdefghijklmnopqrstuvwxyz-0123456789", "SECURE_SSL_REDIRECT": True, "SECURE_HSTS_SECONDS": 31536000,
     "SESSION_COOKIE_SECURE": True, "SESSION_COOKIE_HTTPONLY": True, "SESSION_COOKIE_SAMESITE": "Lax",
     "CSRF_COOKIE_SECURE": True, "CSRF_COOKIE_SAMESITE": "Lax", "X_FRAME_OPTIONS": "DENY", "SECURE_CROSS_ORIGIN_OPENER_POLICY": "same-origin",
     "MONITOR_CONTENT_SECURITY_POLICY": "default-src 'self'; object-src 'none'", "MONITOR_PERMISSIONS_POLICY": "camera=(), microphone=()",
@@ -29,6 +29,12 @@ class PreflightConfigurationTests(SimpleTestCase):
     def test_debug_is_blocking(self): self.assertIn("debug-enabled", {f.code for f in configuration_findings() if f.severity == "error"})
     @override_settings(**{**SAFE_SETTINGS, "ALLOWED_HOSTS": ["*"]})
     def test_wildcard_host_is_blocking(self): self.assertIn("allowed-hosts-wildcard", {f.code for f in configuration_findings() if f.severity == "error"})
+    @override_settings(**{**SAFE_SETTINGS, "SECRET_KEY": "short-but-diverse"})
+    def test_short_secret_key_is_blocking(self): self.assertIn("secret-key", {f.code for f in configuration_findings() if f.severity == "error"})
+    @override_settings(**{**SAFE_SETTINGS, "SECRET_KEY": "x" * 64})
+    def test_low_diversity_secret_key_is_blocking(self): self.assertIn("secret-key", {f.code for f in configuration_findings() if f.severity == "error"})
+    @override_settings(**{**SAFE_SETTINGS, "SECRET_KEY": "django-insecure-abcdefghijklmnopqrstuvwxyz-0123456789-ABCDEFGHIJ"})
+    def test_django_insecure_secret_key_is_blocking(self): self.assertIn("secret-key", {f.code for f in configuration_findings() if f.severity == "error"})
     @override_settings(**{**SAFE_SETTINGS, "MONITOR_ALLOWED_NETWORKS": ["0.0.0.0/0"]})
     def test_all_addresses_target_allowlist_is_blocking(self): self.assertIn("allowed-network-broad", {f.code for f in configuration_findings() if f.severity == "error"})
     @override_settings(**{**SAFE_SETTINGS, "NTFY_TOKEN": ""})
