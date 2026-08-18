@@ -18,6 +18,7 @@ urlpatterns = [
     path("maintenance/<int:pk>/edit/", views.MaintenanceUpdateView.as_view(), name="maintenance-update"),
     path("maintenance/<int:pk>/delete/", views.MaintenanceDeleteView.as_view(), name="maintenance-delete"),
     path("notifications/", views.notifications_view, name="notifications"),
+    path("security/", views.security_view, name="security"),
     path("settings/", views.settings_view, name="settings"),
     path("push/<str:token>/", views.push_heartbeat, name="push-heartbeat"),
     path("health/live/", views.health_live, name="health-live"),
