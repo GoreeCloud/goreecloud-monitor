@@ -117,6 +117,31 @@ This comparison is meaningful only after an isolated GoreeCloud Monitor target h
 
 A single runtime snapshot is not production acceptance. Parallel acceptance still requires repeated observations plus controlled DOWN, RECOVERED, TLS-warning, maintenance, and notification scenarios. The Ping/ICMP and resolver-specific DNS design gates also remain separate from simple status matching.
 
+## Repeated parallel-comparison acceptance
+
+Store each sanitized `compareuptimestate --json` result as a separate Internal evidence file. After at least three independent observations, assess the series with:
+
+```bash
+python manage.py assessparallel \
+  /path/to/comparison-01.json \
+  /path/to/comparison-02.json \
+  /path/to/comparison-03.json \
+  --minimum-observations 3 \
+  --json \
+  --require-ready
+```
+
+`assessparallel` fails closed when:
+
+- fewer than the required number of observations are supplied;
+- any observation contains a state difference, latency difference, missing monitor, Monitor-only monitor, unknown source state, duplicate source record, or invalid source record;
+- the set of compared monitor names changes between observations; or
+- a supplied report has an unsupported schema/version or malformed result structure.
+
+The acceptance output contains only monitor names, comparison-status counts, observation counts, coverage-drift information, and blocker descriptions. It does not reintroduce target URLs, heartbeat messages, request configuration, notification assignments, or reusable credentials.
+
+A `ready=true` series proves only that the supplied repeated state/latency comparisons were complete and equivalent within the selected comparison tolerance. It does **not** satisfy the separate controlled DOWN/RECOVERED, TLS-warning, maintenance, notification, Ping/ICMP, resolver-specific DNS, target restore, live rollback, source-identity, or explicit cutover gates.
+
 ## Security and operational limits
 
 The collector is read-only by intent, but it depends on authenticated Uptime Kuma's internal Socket.IO behavior. That interface is not treated as a permanent public API contract. Every Uptime Kuma version change that can affect this mechanism requires source review and target revalidation before relying on new runtime evidence.
@@ -135,4 +160,4 @@ The collector does not:
 - persist the login token;
 - authorize cutover or Uptime Kuma retirement.
 
-Runtime evidence remains **Internal** even after sanitization. Do not commit a live runtime bundle to Git or attach it to a public issue or pull request.
+Runtime evidence remains **Internal** even after sanitization. Do not commit a live runtime bundle or parallel-comparison evidence to Git or attach it to a public issue or pull request.
