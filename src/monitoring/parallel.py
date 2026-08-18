@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Any
 
@@ -13,6 +13,21 @@ KUMA_STATUS_TO_MONITOR = {
     2: Monitor.State.UNKNOWN,
     3: Monitor.State.MAINTENANCE,
 }
+
+COMPARISON_SCHEMA = "goreecloud-monitor-uptime-kuma-runtime-comparison"
+COMPARISON_VERSION = 1
+ACCEPTANCE_SCHEMA = "goreecloud-monitor-parallel-acceptance"
+ACCEPTANCE_VERSION = 1
+STATUS_ORDER = (
+    "match",
+    "state-different",
+    "latency-different",
+    "missing",
+    "monitor-only",
+    "source-unknown",
+    "source-duplicate",
+    "source-invalid",
+)
 
 
 @dataclass(slots=True)
@@ -170,23 +185,143 @@ def compare_runtime_snapshots(
             }
         )
 
-    status_order = (
-        "match",
-        "state-different",
-        "latency-different",
-        "missing",
-        "monitor-only",
-        "source-unknown",
-        "source-duplicate",
-        "source-invalid",
-    )
-    summary = {status: sum(1 for result in results if result["status"] == status) for status in status_order}
+    summary = {status: sum(1 for result in results if result["status"] == status) for status in STATUS_ORDER}
     summary["compared"] = len(results)
 
     return {
-        "schema": "goreecloud-monitor-uptime-kuma-runtime-comparison",
-        "version": 1,
+        "schema": COMPARISON_SCHEMA,
+        "version": COMPARISON_VERSION,
         "latency_tolerance_ms": latency_tolerance_ms,
         "summary": summary,
         "monitors": results,
+    }
+
+
+def _validate_comparison_report(report: Any, observation: int) -> list[dict[str, Any]]:
+    if not isinstance(report, dict):
+        raise ValueError(f"observation {observation} is not a JSON object")
+    if report.get("schema") != COMPARISON_SCHEMA or report.get("version") != COMPARISON_VERSION:
+        raise ValueError(f"observation {observation} has an unsupported comparison schema or version")
+
+    monitors = report.get("monitors")
+    if not isinstance(monitors, list) or not monitors:
+        raise ValueError(f"observation {observation} has no monitor comparison records")
+
+    validated: list[dict[str, Any]] = []
+    for index, result in enumerate(monitors, start=1):
+        if not isinstance(result, dict):
+            raise ValueError(f"observation {observation} result {index} is not an object")
+        name = str(result.get("name") or "").strip()
+        status = result.get("status")
+        if not name:
+            raise ValueError(f"observation {observation} result {index} has no monitor name")
+        if status not in STATUS_ORDER:
+            raise ValueError(f"observation {observation} result {index} has unsupported status {status!r}")
+        validated.append({"name": name, "status": status})
+    return validated
+
+
+def evaluate_parallel_series(
+    reports: list[dict[str, Any]],
+    *,
+    minimum_observations: int = 3,
+) -> dict[str, Any]:
+    """Evaluate repeated sanitized runtime-comparison reports without retaining target data.
+
+    This gate proves only repeated state/latency comparison consistency. Controlled outage,
+    recovery, TLS, maintenance, notification, Ping/ICMP, resolver-specific DNS, restore,
+    rollback, and explicit cutover evidence remain separate acceptance requirements.
+    """
+
+    if minimum_observations < 1:
+        raise ValueError("minimum observations must be at least one")
+    if not reports:
+        raise ValueError("at least one comparison report is required")
+
+    blockers: list[str] = []
+    status_totals = Counter({status: 0 for status in STATUS_ORDER})
+    per_monitor: dict[str, Counter[str]] = defaultdict(Counter)
+    baseline_names: set[str] | None = None
+    parity_observations = 0
+    coverage_drift_observations = 0
+
+    for observation, report in enumerate(reports, start=1):
+        results = _validate_comparison_report(report, observation)
+        names = [result["name"] for result in results]
+        duplicate_names = sorted(name for name, count in Counter(names).items() if count > 1)
+        current_names = set(names)
+
+        if duplicate_names:
+            blockers.append(f"observation-{observation}: duplicate result names: {', '.join(duplicate_names)}")
+
+        if baseline_names is None:
+            baseline_names = current_names
+        elif current_names != baseline_names:
+            coverage_drift_observations += 1
+            missing = sorted(baseline_names - current_names)
+            added = sorted(current_names - baseline_names)
+            detail: list[str] = []
+            if missing:
+                detail.append(f"missing={','.join(missing)}")
+            if added:
+                detail.append(f"added={','.join(added)}")
+            blockers.append(f"observation-{observation}: coverage drift ({'; '.join(detail)})")
+
+        observation_has_blocker = bool(duplicate_names)
+        for result in results:
+            name = result["name"]
+            status = result["status"]
+            status_totals[status] += 1
+            per_monitor[name]["observations"] += 1
+            per_monitor[name][status] += 1
+            if status != "match":
+                observation_has_blocker = True
+
+        if not observation_has_blocker and (baseline_names is None or current_names == baseline_names):
+            parity_observations += 1
+
+    observation_count = len(reports)
+    if observation_count < minimum_observations:
+        blockers.append(
+            f"insufficient observations: {observation_count} collected, {minimum_observations} required"
+        )
+
+    non_match_total = sum(status_totals[status] for status in STATUS_ORDER if status != "match")
+    if non_match_total:
+        blockers.append(f"non-parity comparison results: {non_match_total}")
+
+    ready = (
+        observation_count >= minimum_observations
+        and parity_observations == observation_count
+        and coverage_drift_observations == 0
+        and non_match_total == 0
+        and not any("duplicate result names" in blocker for blocker in blockers)
+    )
+
+    monitor_summaries = []
+    for name in sorted(per_monitor):
+        counts = per_monitor[name]
+        monitor_summaries.append(
+            {
+                "name": name,
+                "observations": counts["observations"],
+                **{status: counts[status] for status in STATUS_ORDER},
+            }
+        )
+
+    return {
+        "schema": ACCEPTANCE_SCHEMA,
+        "version": ACCEPTANCE_VERSION,
+        "minimum_observations": minimum_observations,
+        "observation_count": observation_count,
+        "ready": ready,
+        "blockers": blockers,
+        "summary": {
+            "monitor_count": len(baseline_names or set()),
+            "parity_observations": parity_observations,
+            "non_parity_observations": observation_count - parity_observations,
+            "coverage_drift_observations": coverage_drift_observations,
+            "status_totals": {status: status_totals[status] for status in STATUS_ORDER},
+        },
+        "monitors": monitor_summaries,
     }
