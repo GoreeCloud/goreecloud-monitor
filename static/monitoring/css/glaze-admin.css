@@ -1,0 +1,279 @@
+:root {
+  --glaze-canvas: #eef3f9;
+  --glaze-canvas-accent: #f8fbff;
+  --glaze-surface: rgba(255, 255, 255, .82);
+  --glaze-surface-strong: rgba(255, 255, 255, .97);
+  --glaze-surface-muted: rgba(244, 247, 251, .92);
+  --glaze-text: #172033;
+  --glaze-muted: #67748a;
+  --glaze-line: rgba(95, 116, 146, .18);
+  --glaze-accent: #366cf6;
+  --glaze-accent-2: #7c5cff;
+  --glaze-success: #197a4b;
+  --glaze-warning: #a15c00;
+  --glaze-danger: #b42318;
+  --glaze-radius-md: 14px;
+  --glaze-radius-control: 16px;
+  --glaze-radius-lg: 22px;
+  --glaze-radius-xl: 28px;
+  --glaze-target-min: 44px;
+  --glaze-blur: 22px;
+  --glaze-shadow-soft: 0 8px 30px rgba(37, 55, 82, .06);
+  --glaze-shadow-raised: 0 18px 48px rgba(37, 55, 82, .10);
+  --glaze-focus-width: 3px;
+  --glaze-focus-offset: 2px;
+
+  /* Map Django admin semantics onto the same Glaze UI foundation. */
+  --primary: var(--glaze-accent);
+  --secondary: var(--glaze-accent-2);
+  --accent: var(--glaze-accent);
+  --primary-fg: #fff;
+  --body-fg: var(--glaze-text);
+  --body-bg: var(--glaze-canvas);
+  --body-quiet-color: var(--glaze-muted);
+  --body-medium-color: var(--glaze-muted);
+  --body-loud-color: var(--glaze-text);
+  --header-color: var(--glaze-text);
+  --header-branding-color: var(--glaze-text);
+  --header-bg: transparent;
+  --header-link-color: var(--glaze-text);
+  --breadcrumbs-fg: var(--glaze-muted);
+  --breadcrumbs-link-fg: var(--glaze-text);
+  --breadcrumbs-bg: transparent;
+  --link-fg: var(--glaze-accent);
+  --link-hover-color: var(--glaze-accent-2);
+  --link-selected-fg: var(--glaze-accent-2);
+  --hairline-color: var(--glaze-line);
+  --border-color: var(--glaze-line);
+  --error-fg: var(--glaze-danger);
+  --message-success-bg: color-mix(in srgb, var(--glaze-success) 10%, var(--glaze-surface-strong));
+  --message-warning-bg: color-mix(in srgb, var(--glaze-warning) 10%, var(--glaze-surface-strong));
+  --message-error-bg: color-mix(in srgb, var(--glaze-danger) 10%, var(--glaze-surface-strong));
+  --darkened-bg: var(--glaze-surface-muted);
+  --selected-bg: color-mix(in srgb, var(--glaze-accent) 10%, var(--glaze-surface-muted));
+  --selected-row: color-mix(in srgb, var(--glaze-accent) 7%, var(--glaze-surface-strong));
+  --button-fg: #fff;
+  --button-bg: var(--glaze-accent);
+  --button-hover-bg: var(--glaze-accent-2);
+  --default-button-bg: var(--glaze-accent);
+  --default-button-hover-bg: var(--glaze-accent-2);
+  --close-button-bg: var(--glaze-muted);
+  --close-button-hover-bg: var(--glaze-text);
+  --delete-button-bg: var(--glaze-danger);
+  --delete-button-hover-bg: #8e1c13;
+}
+
+html[data-theme="dark"] {
+  --glaze-canvas: #0d1119;
+  --glaze-canvas-accent: #121824;
+  --glaze-surface: rgba(25, 32, 45, .86);
+  --glaze-surface-strong: rgba(24, 31, 44, .98);
+  --glaze-surface-muted: rgba(31, 39, 54, .92);
+  --glaze-text: #f3f6fb;
+  --glaze-muted: #a1aec0;
+  --glaze-line: rgba(193, 207, 229, .14);
+  --glaze-accent: #7aa2ff;
+  --glaze-accent-2: #a594ff;
+  --glaze-success: #73d9a2;
+  --glaze-warning: #f7c36c;
+  --glaze-danger: #ff8a80;
+  --glaze-shadow-raised: 0 18px 54px rgba(0, 0, 0, .28);
+  --button-fg: #10141d;
+  --primary-fg: #10141d;
+  --delete-button-hover-bg: #ffaaa2;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme="auto"] {
+    --glaze-canvas: #0d1119;
+    --glaze-canvas-accent: #121824;
+    --glaze-surface: rgba(25, 32, 45, .86);
+    --glaze-surface-strong: rgba(24, 31, 44, .98);
+    --glaze-surface-muted: rgba(31, 39, 54, .92);
+    --glaze-text: #f3f6fb;
+    --glaze-muted: #a1aec0;
+    --glaze-line: rgba(193, 207, 229, .14);
+    --glaze-accent: #7aa2ff;
+    --glaze-accent-2: #a594ff;
+    --glaze-success: #73d9a2;
+    --glaze-warning: #f7c36c;
+    --glaze-danger: #ff8a80;
+    --glaze-shadow-raised: 0 18px 54px rgba(0, 0, 0, .28);
+    --button-fg: #10141d;
+    --primary-fg: #10141d;
+  }
+}
+
+html, body { min-height: 100%; }
+body {
+  color: var(--glaze-text);
+  background:
+    radial-gradient(circle at 16% -10%, color-mix(in srgb, var(--glaze-accent) 14%, transparent), transparent 32rem),
+    radial-gradient(circle at 85% 5%, color-mix(in srgb, var(--glaze-accent-2) 10%, transparent), transparent 30rem),
+    linear-gradient(180deg, var(--glaze-canvas-accent), var(--glaze-canvas));
+  background-attachment: fixed;
+}
+
+#container { min-height: 100vh; background: transparent; }
+#header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  min-height: 68px;
+  padding: 10px clamp(14px, 3vw, 30px);
+  color: var(--glaze-text);
+  background: color-mix(in srgb, var(--glaze-surface-strong) 82%, transparent);
+  border-bottom: 1px solid var(--glaze-line);
+  box-shadow: var(--glaze-shadow-soft);
+  -webkit-backdrop-filter: blur(var(--glaze-blur)) saturate(135%);
+  backdrop-filter: blur(var(--glaze-blur)) saturate(135%);
+}
+
+.goreecloud-admin-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--glaze-target-min);
+  color: var(--glaze-text) !important;
+  text-decoration: none !important;
+}
+.goreecloud-admin-brand img { width: 42px; height: 42px; border-radius: 14px; box-shadow: 0 10px 24px color-mix(in srgb, var(--glaze-accent) 24%, transparent); }
+.goreecloud-admin-brand span { display: flex; flex-direction: column; line-height: 1.08; }
+.goreecloud-admin-brand strong { font-size: .98rem; letter-spacing: -.01em; }
+.goreecloud-admin-brand small { margin-top: 3px; color: var(--glaze-muted); font-size: .72rem; font-weight: 650; }
+#user-tools { color: var(--glaze-muted); }
+#user-tools a { min-height: var(--glaze-target-min); display: inline-flex; align-items: center; border-radius: var(--glaze-radius-control); padding: 0 8px; }
+.theme-toggle { min-width: var(--glaze-target-min); min-height: var(--glaze-target-min); border-radius: var(--glaze-radius-control); }
+
+div.breadcrumbs {
+  margin: 14px clamp(14px, 3vw, 30px) 0;
+  padding: 12px 16px;
+  color: var(--glaze-muted);
+  background: var(--glaze-surface);
+  border: 1px solid var(--glaze-line);
+  border-radius: var(--glaze-radius-lg);
+  box-shadow: var(--glaze-shadow-soft);
+  -webkit-backdrop-filter: blur(var(--glaze-blur));
+  backdrop-filter: blur(var(--glaze-blur));
+}
+
+#content {
+  width: min(1440px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: clamp(22px, 4vw, 42px) 0 64px;
+}
+#content h1 { color: var(--glaze-text); font-size: clamp(1.9rem, 4vw, 3rem); letter-spacing: -.045em; }
+#content h2, #content h3 { color: var(--glaze-text); }
+
+.module,
+.inline-group,
+#changelist-filter,
+.submit-row,
+.selector,
+.calendarbox,
+.clockbox,
+.login #content-main,
+.object-tools a,
+.messagelist li {
+  border: 1px solid var(--glaze-line) !important;
+  border-radius: var(--glaze-radius-lg) !important;
+  background: var(--glaze-surface) !important;
+  box-shadow: var(--glaze-shadow-raised);
+  -webkit-backdrop-filter: blur(var(--glaze-blur)) saturate(135%);
+  backdrop-filter: blur(var(--glaze-blur)) saturate(135%);
+}
+
+.module h2,
+.module caption,
+.inline-group h2 {
+  padding: 12px 16px;
+  color: var(--glaze-text);
+  background: var(--glaze-surface-muted);
+  border-radius: var(--glaze-radius-lg) var(--glaze-radius-lg) 0 0;
+}
+
+#changelist .actions,
+#changelist .results,
+#toolbar,
+.paginator,
+.form-row,
+fieldset.module { border-color: var(--glaze-line); }
+#toolbar { padding: 12px; border-radius: var(--glaze-radius-control); background: var(--glaze-surface-muted); }
+#toolbar form input[type="submit"] { min-height: var(--glaze-target-min); }
+
+input, textarea, select, .vTextField {
+  min-height: var(--glaze-target-min);
+  color: var(--glaze-text);
+  background: var(--glaze-surface-strong);
+  border: 1px solid var(--glaze-line);
+  border-radius: var(--glaze-radius-control);
+}
+textarea { min-height: 112px; }
+input[type="checkbox"], input[type="radio"] { min-height: auto; }
+
+.button,
+input[type="submit"],
+input[type="button"],
+.submit-row input,
+a.button {
+  min-height: var(--glaze-target-min);
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--glaze-radius-control);
+  box-shadow: none;
+  font-weight: 700;
+}
+.object-tools a { display: inline-flex; align-items: center; min-height: var(--glaze-target-min); padding: 0 14px; }
+.deletelink { display: inline-flex; align-items: center; min-height: var(--glaze-target-min); border-radius: var(--glaze-radius-control); }
+
+#changelist table { border-radius: var(--glaze-radius-lg); overflow: hidden; }
+#changelist table thead th { background: var(--glaze-surface-muted); }
+#changelist table tbody tr:hover { background: color-mix(in srgb, var(--glaze-accent) 6%, var(--glaze-surface-strong)); }
+
+.login { padding: 24px; }
+.login #container { width: min(460px, 100%); margin: clamp(48px, 10vh, 100px) auto 0; background: transparent; border: 0; }
+.login #header { position: static; border-radius: var(--glaze-radius-xl) var(--glaze-radius-xl) 0 0; }
+.login #content { width: 100%; padding: 0; }
+.login #content-main { padding: 26px; border-radius: 0 0 var(--glaze-radius-xl) var(--glaze-radius-xl) !important; }
+.login .form-row { padding: 10px 0; }
+.login .submit-row { padding: 16px 0 0 !important; background: transparent !important; border: 0 !important; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+:where(a, button, input, textarea, select):focus-visible {
+  outline: var(--glaze-focus-width) solid color-mix(in srgb, var(--glaze-accent) 58%, transparent) !important;
+  outline-offset: var(--glaze-focus-offset);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  #header, div.breadcrumbs, .module, .inline-group, #changelist-filter, .submit-row, .selector, .calendarbox, .clockbox, .login #content-main, .messagelist li { background: var(--glaze-surface-strong) !important; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  #header, div.breadcrumbs, .module, .inline-group, #changelist-filter, .submit-row, .selector, .calendarbox, .clockbox, .login #content-main, .messagelist li {
+    background: var(--glaze-surface-strong) !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+@media (forced-colors: active) {
+  body, #header, div.breadcrumbs, .module, .inline-group, #changelist-filter, .submit-row, .selector, .calendarbox, .clockbox, .login #content-main, .messagelist li, input, textarea, select {
+    color: CanvasText !important;
+    background: Canvas !important;
+    border-color: ButtonText !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (max-width: 767px) {
+  #header { position: static; align-items: flex-start; gap: 8px; }
+  #user-tools { width: 100%; margin: 0; }
+  div.breadcrumbs { margin-inline: 10px; }
+  #content { width: calc(100% - 20px); }
+  .goreecloud-admin-brand small { display: none; }
+}
