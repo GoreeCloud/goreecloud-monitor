@@ -16,14 +16,21 @@ SAFE_SETTINGS = {
     "ALLOWED_HOSTS": ["monitor.example.test"],
     "SECRET_KEY": "x" * 64,
     "SECURE_SSL_REDIRECT": True,
+    "SECURE_HSTS_SECONDS": 31536000,
     "SESSION_COOKIE_SECURE": True,
+    "SESSION_COOKIE_HTTPONLY": True,
+    "SESSION_COOKIE_SAMESITE": "Lax",
     "CSRF_COOKIE_SECURE": True,
+    "CSRF_COOKIE_SAMESITE": "Lax",
+    "X_FRAME_OPTIONS": "DENY",
+    "SECURE_CROSS_ORIGIN_OPENER_POLICY": "same-origin",
+    "MONITOR_CONTENT_SECURITY_POLICY": "default-src 'self'; object-src 'none'",
+    "MONITOR_PERMISSIONS_POLICY": "camera=(), microphone=()",
     "MONITOR_ALLOWED_NETWORKS": ["10.20.30.0/24", "fd00:1234::/64"],
     "NTFY_BASE_URL": "http://ntfy:80",
     "NTFY_TOPIC": "goreecloud-uptime",
     "NTFY_TOKEN": "protected-test-token",
     "MANAGER_API_TOKEN": "manager-test-token",
-    "SECURE_HSTS_SECONDS": 31536000,
 }
 
 
@@ -57,6 +64,21 @@ class PreflightConfigurationTests(SimpleTestCase):
     def test_partial_ntfy_configuration_is_blocking(self):
         codes = {finding.code for finding in configuration_findings() if finding.severity == "error"}
         self.assertIn("ntfy-partial", codes)
+
+    @override_settings(**{**SAFE_SETTINGS, "SECURE_HSTS_SECONDS": 0})
+    def test_hsts_is_blocking_for_target_acceptance(self):
+        codes = {finding.code for finding in configuration_findings() if finding.severity == "error"}
+        self.assertIn("hsts", codes)
+
+    @override_settings(**{**SAFE_SETTINGS, "SESSION_COOKIE_SAMESITE": None})
+    def test_missing_session_samesite_is_blocking(self):
+        codes = {finding.code for finding in configuration_findings() if finding.severity == "error"}
+        self.assertIn("session-cookie-samesite", codes)
+
+    @override_settings(**{**SAFE_SETTINGS, "MONITOR_CONTENT_SECURITY_POLICY": ""})
+    def test_missing_content_security_policy_is_blocking(self):
+        codes = {finding.code for finding in configuration_findings() if finding.severity == "error"}
+        self.assertIn("content-security-policy", codes)
 
 
 class PreflightCommandTests(TestCase):
