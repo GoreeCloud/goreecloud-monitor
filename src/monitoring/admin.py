@@ -8,19 +8,11 @@ class MonitorAdmin(admin.ModelAdmin):
     list_display = ("name", "kind", "state", "enabled", "last_checked_at", "response_time_ms")
     list_filter = ("kind", "state", "enabled")
     search_fields = ("name", "target")
+    exclude = ("heartbeat_token",)
     readonly_fields = (
-        "heartbeat_token",
-        "state",
-        "consecutive_failures",
-        "consecutive_successes",
-        "last_checked_at",
-        "last_success_at",
-        "last_failure_at",
-        "response_time_ms",
-        "tls_expires_at",
-        "last_message",
-        "created_at",
-        "updated_at",
+        "state", "consecutive_failures", "consecutive_successes", "last_checked_at",
+        "last_success_at", "last_failure_at", "response_time_ms", "tls_expires_at",
+        "last_message", "created_at", "updated_at",
     )
 
 

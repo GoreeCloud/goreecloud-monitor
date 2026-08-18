@@ -1,0 +1,11 @@
+{% extends "monitoring/base.html" %}
+{% block title %}Heartbeat credential · GoreeCloud Monitor{% endblock %}
+{% block content %}
+<section class="hero"><div class="hero-copy"><div class="eyebrow">Wardveil protected credential</div><h1>Heartbeat credential issued</h1><p>This secret is shown once. Monitor stores only a one-way verifier and cannot recover the value after you leave this page.</p></div><span class="pill up">Issued</span></section>
+<section class="panel section-panel">
+  <div class="callout"><strong>Store this credential before continuing</strong><p>Place it only in the approved sender's protected secret store. Do not put it in URLs, documentation, screenshots, shell history, or ordinary logs. If it is lost, rotate it.</p></div>
+  <div class="field-stack"><label>Bearer credential<input type="text" readonly value="{{ heartbeat_token }}" autocomplete="off" spellcheck="false"></label><label>Heartbeat endpoint<input type="text" readonly value="{{ heartbeat_endpoint }}" autocomplete="off" spellcheck="false"></label></div>
+  <div class="callout"><strong>Submission contract</strong><p>Send an HTTPS POST to the endpoint with <code>Authorization: Bearer &lt;credential&gt;</code>. A successful submission returns only the acceptance state and receipt time.</p></div>
+  <div class="actions"><a class="button primary" href="{% url 'monitoring:monitor-detail' monitor.pk %}">I stored the credential</a></div>
+</section>
+{% endblock %}

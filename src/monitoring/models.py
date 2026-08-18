@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import re
 import secrets
 
 from django.core.exceptions import ValidationError
@@ -8,9 +10,21 @@ from django.utils import timezone
 
 from .validators import ALLOWED_DNS_TYPES, validate_target_syntax
 
+_HEARTBEAT_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def hash_heartbeat_token(raw_token: str) -> str:
+    """Return the one-way verifier persisted for a push heartbeat credential."""
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
+def heartbeat_token_is_digest(value: str) -> bool:
+    return bool(_HEARTBEAT_DIGEST_RE.fullmatch(value or ""))
+
 
 def generate_heartbeat_token() -> str:
-    return secrets.token_urlsafe(32)
+    """Generate only a verifier for ORM-created monitors; raw credentials are issued explicitly."""
+    return hash_heartbeat_token(secrets.token_urlsafe(32))
 
 
 class Monitor(models.Model):
@@ -47,6 +61,8 @@ class Monitor(models.Model):
     tls_warning_days = models.PositiveIntegerField(default=14)
     dns_record_type = models.CharField(max_length=8, default="A")
     expected_dns_answer = models.CharField(max_length=500, blank=True)
+    # The historical field name is retained to avoid a schema migration in the pre-production
+    # rollback chain. New/rotated values are SHA-256 verifiers, never reusable raw credentials.
     heartbeat_token = models.CharField(max_length=64, unique=True, default=generate_heartbeat_token)
     heartbeat_grace_seconds = models.PositiveIntegerField(default=60)
     last_heartbeat_at = models.DateTimeField(null=True, blank=True)
@@ -94,12 +110,19 @@ class Monitor(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.heartbeat_token:
-            self.heartbeat_token = secrets.token_urlsafe(32)
+            self.heartbeat_token = generate_heartbeat_token()
         if not self.enabled:
             self.state = self.State.PAUSED
         elif self.state == self.State.PAUSED:
             self.state = self.State.UNKNOWN
         super().save(*args, **kwargs)
+
+    def issue_heartbeat_token(self) -> str:
+        """Rotate the verifier and return the reusable secret exactly once to the caller."""
+        raw_token = secrets.token_urlsafe(32)
+        self.heartbeat_token = hash_heartbeat_token(raw_token)
+        self.save(update_fields=["heartbeat_token", "updated_at"])
+        return raw_token
 
     def is_due(self, now=None) -> bool:
         if not self.enabled:
