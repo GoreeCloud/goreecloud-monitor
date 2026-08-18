@@ -1,0 +1,132 @@
+name: GoreeCloud Monitor native clients
+
+on:
+  pull_request:
+    paths:
+      - "assets/app-icon/**"
+      - "clients/goreecloud-monitor/**"
+      - ".github/workflows/native-clients.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-monitor-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  TAURI_CLI_VERSION: "2.11.4"
+  RUST_TOOLCHAIN: "1.97.1"
+
+jobs:
+  linux:
+    name: Linux AppImage and Debian package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify exact pull-request head
+        if: github.event_name == 'pull_request'
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Install Linux prerequisites
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - name: Install pinned Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.cargo/bin/rustup" toolchain install "$RUST_TOOLCHAIN" --profile minimal
+          "$HOME/.cargo/bin/rustc" "+$RUST_TOOLCHAIN" --version
+      - name: Install pinned Tauri CLI
+        run: cargo "+$RUST_TOOLCHAIN" install tauri-cli --version "$TAURI_CLI_VERSION" --locked
+      - name: Generate launcher assets from canonical icon
+        working-directory: clients/goreecloud-monitor
+        run: cargo "+$RUST_TOOLCHAIN" tauri icon ../../assets/app-icon/goreecloud-monitor.svg
+      - name: Run native shell tests
+        run: cargo "+$RUST_TOOLCHAIN" test --manifest-path clients/goreecloud-monitor/src-tauri/Cargo.toml
+      - name: Build Linux AppImage and Debian package
+        working-directory: clients/goreecloud-monitor
+        run: cargo "+$RUST_TOOLCHAIN" tauri build --bundles appimage,deb
+      - name: Write artifact provenance
+        run: |
+          set -euo pipefail
+          mkdir -p release-evidence/linux
+          find clients/goreecloud-monitor/src-tauri/target/release/bundle -type f \( -name '*.AppImage' -o -name '*.deb' \) -print0 | sort -z | xargs -0 sha256sum > release-evidence/linux/SHA256SUMS
+          test -s release-evidence/linux/SHA256SUMS
+          printf 'source_revision=%s\nworkflow_run=%s\nplatform=linux-x86_64\ncanonical_icon_sha256=1ef53ba769bdabc37e752b2206e0839845057157406fd416032da461a4132f4b\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > release-evidence/linux/SOURCE_REVISION
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: goreecloud-monitor-linux-x86_64
+          if-no-files-found: error
+          path: |
+            clients/goreecloud-monitor/src-tauri/target/release/bundle/appimage/*.AppImage
+            clients/goreecloud-monitor/src-tauri/target/release/bundle/deb/*.deb
+            release-evidence/linux/*
+
+  android:
+    name: Android ARM64 debug APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify exact pull-request head
+        if: github.event_name == 'pull_request'
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Set up Java 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install pinned Rust toolchain and Android target
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.cargo/bin/rustup" toolchain install "$RUST_TOOLCHAIN" --profile minimal
+          "$HOME/.cargo/bin/rustup" target add --toolchain "$RUST_TOOLCHAIN" aarch64-linux-android
+      - name: Select installed Android NDK
+        run: |
+          set -euo pipefail
+          NDK_DIR="${ANDROID_NDK_LATEST_HOME:-}"
+          if [ -z "$NDK_DIR" ] && [ -d "$ANDROID_HOME/ndk" ]; then NDK_DIR="$(find "$ANDROID_HOME/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"; fi
+          test -n "$NDK_DIR"
+          test -f "$NDK_DIR/source.properties"
+          echo "NDK_HOME=$NDK_DIR" >> "$GITHUB_ENV"
+      - name: Install pinned Tauri CLI
+        run: cargo "+$RUST_TOOLCHAIN" install tauri-cli --version "$TAURI_CLI_VERSION" --locked
+      - name: Initialize Android project
+        working-directory: clients/goreecloud-monitor
+        run: cargo "+$RUST_TOOLCHAIN" tauri android init --ci --skip-targets-install
+      - name: Generate Android launcher assets from canonical icon
+        working-directory: clients/goreecloud-monitor
+        run: cargo "+$RUST_TOOLCHAIN" tauri icon ../../assets/app-icon/goreecloud-monitor.svg
+      - name: Run native shell tests
+        run: cargo "+$RUST_TOOLCHAIN" test --manifest-path clients/goreecloud-monitor/src-tauri/Cargo.toml
+      - name: Build unsigned ARM64 development APK
+        working-directory: clients/goreecloud-monitor
+        run: cargo "+$RUST_TOOLCHAIN" tauri android build --debug --apk --target aarch64
+      - name: Write artifact provenance
+        run: |
+          set -euo pipefail
+          mkdir -p release-evidence/android
+          find clients/goreecloud-monitor/src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' -print0 | sort -z | xargs -0 sha256sum > release-evidence/android/SHA256SUMS
+          test -s release-evidence/android/SHA256SUMS
+          printf 'source_revision=%s\nworkflow_run=%s\nplatform=android-arm64-debug\ncanonical_icon_sha256=1ef53ba769bdabc37e752b2206e0839845057157406fd416032da461a4132f4b\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > release-evidence/android/SOURCE_REVISION
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: goreecloud-monitor-android-arm64-debug
+          if-no-files-found: error
+          path: |
+            clients/goreecloud-monitor/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+            release-evidence/android/*

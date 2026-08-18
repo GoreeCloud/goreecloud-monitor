@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "product": "GoreeCloud Monitor",
+  "canonical_source": "assets/app-icon/goreecloud-monitor.svg",
+  "canonical_sha256": "1ef53ba769bdabc37e752b2206e0839845057157406fd416032da461a4132f4b",
+  "web": {
+    "source": "static/monitoring/img/goreecloud-monitor.svg",
+    "format": "image/svg+xml",
+    "sizes": "any",
+    "purpose": "any maskable"
+  },
+  "native_generation": {
+    "source": "assets/app-icon/goreecloud-monitor.svg",
+    "command": "cargo tauri icon ../../assets/app-icon/goreecloud-monitor.svg",
+    "platforms": [
+      "Linux AppImage",
+      "Linux Debian",
+      "Android APK"
+    ]
+  }
+}

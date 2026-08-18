@@ -1,0 +1,19 @@
+{
+  "name": "GoreeCloud Monitor",
+  "short_name": "Monitor",
+  "description": "Private service availability, incident, heartbeat, DNS, and TLS monitoring for GoreeCloud.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0d1119",
+  "theme_color": "#366cf6",
+  "icons": [
+    {
+      "src": "/static/monitoring/img/goreecloud-monitor.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+[package]
+name = "goreecloud-monitor-client"
+version = "0.1.0"
+description = "First-party Linux and Android client for GoreeCloud Monitor"
+authors = ["GoreeCloud"]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/GoreeCloud/goreecloud-monitor"
+
+[lib]
+name = "goreecloud_monitor_client"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "=2.6.3", features = [] }
+
+[dependencies]
+tauri = { version = "=2.11.5", features = [] }
