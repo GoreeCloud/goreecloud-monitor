@@ -26,9 +26,11 @@ The Monitor composition remains product-specific. Availability state, incident u
 
 ## Product identity
 
-Monitor uses its own pulse/status product mark at `static/monitoring/img/monitor-mark.svg`. The primary shell, authentication surface, and staff administration surface use the same underlying mark, and browser metadata exposes it as the scalable favicon.
+Monitor uses the canonical product icon at `assets/identity/goreecloud-monitor-icon.svg`. The same pulse/status identity is used by the primary shell, authentication surface, privileged Django administration, browser favicon family, browser installation manifest, Linux/AppImage packaging input, and Android adaptive/monochrome launcher inputs.
 
-The mark is intentionally distinct from the GoreeCloud platform logo and the former generic `G` placeholder while retaining Glaze UI geometry, gradient treatment, depth, and family resemblance.
+The web implementation provides explicit 16, 32, 48, 192, and 512 pixel SVG representations plus a dedicated mask-safe installation asset. The ordinary rounded-square icon is not falsely declared maskable. Android uses a separate adaptive background/foreground/monochrome representation while preserving the same pulse and protected healthy-state symbol.
+
+The icon is intentionally distinct from the GoreeCloud platform logo and the former generic `G` placeholder while retaining Glaze UI geometry, gradient treatment, depth, and family resemblance. The superseded `monitor-mark.svg` asset is removed so Monitor has one authoritative product identity. See `docs/product-identity.md` for cross-platform change control and the current client-delivery boundary.
 
 ## Appearance
 
@@ -66,11 +68,11 @@ The source includes:
 - Solid-surface fallbacks when backdrop filtering is unavailable or unsuitable.
 - Local/system font and icon behavior with no remote UI, font, icon, analytics, or tracking dependency.
 
-These automated/source guarantees do not replace representative manual keyboard, zoom/reflow, screen-reader, light/dark, contrast, and usability review.
+These automated/source guarantees do not replace representative manual keyboard, zoom/reflow, screen-reader, light/dark, contrast, small-icon recognition, launcher masking, and usability review.
 
 ## Monitor-specific surfaces
 
-The Glaze system now covers the complete initial Monitor information architecture:
+The Glaze system covers the complete initial Monitor information architecture:
 
 - Overview.
 - Monitors.
@@ -78,6 +80,7 @@ The Glaze system now covers the complete initial Monitor information architectur
 - Active and recovered incident history.
 - Maintenance.
 - Notifications/integration posture.
+- Wardveil Security posture for staff.
 - Settings.
 - Authentication.
 - Empty states, forms, filters, status feedback, and destructive/recovery workflows.
@@ -87,10 +90,12 @@ Normal operation is expected to use the primary Monitor workflows. The framework
 
 ## Privacy and security boundary
 
-Visual improvements do not weaken Monitor security controls. The source continues to preserve authentication, staff-only configuration changes, CSRF protection for browser mutations, SSRF-aware target policy, protected environment secrets, least-privilege ntfy publishing, read-only Manager integration, and private-by-default production topology.
+Visual improvements do not weaken Monitor security controls. The source preserves authentication, staff-only configuration changes, CSRF protection for browser mutations, SSRF-aware target policy, protected environment secrets, least-privilege notification publishing, read-only Manager integration, Wardveil response/session hardening, and private-by-default production topology.
 
-The unauthenticated heartbeat acknowledgement is intentionally generic and no longer returns the internal monitor name. The Notifications surface reports configuration posture but never renders the ntfy publisher token or claims operational transition records are delivery receipts.
+The unauthenticated heartbeat acknowledgement is intentionally generic and does not return the internal monitor name. The Notifications surface reports configuration posture but never renders the ntfy publisher token or claims operational transition records are delivery receipts. Product identity assets contain no remote dependencies, analytics, trackers, reusable credentials, private target information, or user data.
+
+Wardveil Security by GoreeCloud remains the security/protection identity. It does not replace the GoreeCloud Monitor application icon or create a competing design system.
 
 ## Stable-release gate
 
-Automated conformance is necessary but not sufficient for Stable. Before Monitor is classified Stable, representative Compact and Expanded layouts must be reviewed in both light and dark appearance, the staff administration surface must be sampled at representative desktop and compact widths, accessibility/resilience behavior must be exercised on real browser/operating-system combinations, and any discovered visual or interaction defects must be corrected or explicitly documented through the GoreeCloud exception process.
+Automated conformance is necessary but not sufficient for Stable. Before Monitor is classified Stable, representative Compact and Expanded layouts must be reviewed in both light and dark appearance, the staff administration surface must be sampled at representative desktop and compact widths, accessibility/resilience behavior must be exercised on real browser/operating-system combinations, the icon must be reviewed at favicon and launcher sizes/masks on supported clients, and any discovered visual or interaction defects must be corrected or explicitly documented through the GoreeCloud exception process.
