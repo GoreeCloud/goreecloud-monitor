@@ -47,11 +47,14 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    # Keep Wardveil outside request-rejection middleware so CSRF/authorization/error responses
+    # receive the same private browser-policy headers as successful dynamic responses. Static
+    # assets are still served directly by WhiteNoise before Wardveil is invoked.
+    "monitoring.middleware.WardveilSecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "monitoring.middleware.WardveilSecurityHeadersMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -152,7 +155,9 @@ MONITOR_CONTENT_SECURITY_POLICY = (
     "media-src 'none'; "
     "object-src 'none'; "
     "script-src 'self'; "
-    "style-src 'self'"
+    # Django administration may render limited framework-managed inline presentation state.
+    # Script execution remains self-only; inline CSS is the narrow compatibility exception.
+    "style-src 'self' 'unsafe-inline'"
 )
 MONITOR_PERMISSIONS_POLICY = (
     "accelerometer=(), browsing-topics=(), camera=(), geolocation=(), gyroscope=(), "
