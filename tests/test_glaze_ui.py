@@ -64,14 +64,15 @@ class GlazeUiConformanceTests(SimpleTestCase):
         self.assertIn("focus-visible", self.admin_css)
 
     def test_product_identity_and_local_assets_are_present(self):
-        self.assertIn("monitor-mark.svg", self.shell)
+        self.assertIn("goreecloud-monitor.svg", self.shell)
+        self.assertIn("monitoring/manifest.webmanifest", self.shell)
         self.assertNotIn("brand-mark\" aria-hidden=\"true\">G", self.shell)
         self.assertNotIn("@import url", self.css)
         self.assertNotIn("https://", self.css)
         self.assertNotIn("http://", self.css)
         self.assertNotIn("https://", self.wardveil)
         self.assertNotIn("http://", self.wardveil)
-        self.assertIn("monitor-mark.svg", self.admin_shell)
+        self.assertIn("goreecloud-monitor.svg", self.admin_shell)
         self.assertIn("glaze-admin.css", self.admin_shell)
         self.assertIn("--glaze-canvas", self.admin_css)
         self.assertNotIn("https://", self.admin_css)
