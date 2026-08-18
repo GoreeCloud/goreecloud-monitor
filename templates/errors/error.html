@@ -1,0 +1,29 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+  <title>{{ status_code }} · GoreeCloud Monitor</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'monitoring/img/monitor-mark.svg' %}">
+  <link rel="stylesheet" href="{% static 'monitoring/css/glaze.css' %}">
+  <link rel="stylesheet" href="{% static 'monitoring/css/glaze.accessibility.css' %}">
+  <link rel="stylesheet" href="{% static 'monitoring/css/wardveil.css' %}">
+</head>
+<body>
+  <main class="content" id="main-content">
+    <section class="hero panel section-panel" aria-labelledby="error-title">
+      <div class="hero-copy">
+        <div class="eyebrow">GoreeCloud Monitor · {{ status_code }}</div>
+        <h1 id="error-title">{{ error_title }}</h1>
+        <p>{{ error_message }}</p>
+        {% if request_id %}<p class="muted">Private request ID: <code>{{ request_id }}</code></p>{% endif %}
+      </div>
+      <div class="actions"><a class="button primary" href="/">Return to Monitor</a></div>
+    </section>
+    <div class="security-footer"><strong>Protected by Wardveil</strong><span class="security-footer-dot" aria-hidden="true">•</span><span>Security identity by GoreeCloud</span></div>
+  </main>
+</body>
+</html>

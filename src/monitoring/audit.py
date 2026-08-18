@@ -1,9 +1,10 @@
 """Minimized Wardveil Security event logging for security-relevant Monitor actions."""
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
+
+from .observability import log_event
 
 logger = logging.getLogger("monitoring.wardveil")
 
@@ -19,20 +20,14 @@ def record_security_event(
     """Write a structured, secret-free security event to the operational log.
 
     The log deliberately records identifiers rather than target URLs, tokens, credentials,
-    request bodies, IP addresses, or monitor diagnostic payloads. The runtime log remains an
-    operational record; it is not a replacement for the underlying Django/auth/database state.
+    request bodies, IP addresses, usernames, or monitor diagnostic payloads.
     """
-
-    payload: dict[str, Any] = {
-        "event": event,
-        "outcome": outcome,
-    }
+    fields: dict[str, Any] = {"outcome": outcome}
     if user is not None and getattr(user, "is_authenticated", False):
-        payload["user_id"] = getattr(user, "pk", None)
-        payload["staff"] = bool(getattr(user, "is_staff", False))
+        fields["user_id"] = getattr(user, "pk", None)
+        fields["staff"] = bool(getattr(user, "is_staff", False))
     if object_type:
-        payload["object_type"] = object_type
+        fields["object_type"] = object_type
     if object_id is not None:
-        payload["object_id"] = str(object_id)
-
-    logger.info("wardveil_security_event %s", json.dumps(payload, sort_keys=True, separators=(",", ":")))
+        fields["object_id"] = str(object_id)
+    log_event(logger, event, **fields)

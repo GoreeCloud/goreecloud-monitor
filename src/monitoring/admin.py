@@ -8,8 +8,10 @@ class MonitorAdmin(admin.ModelAdmin):
     list_display = ("name", "kind", "state", "enabled", "last_checked_at", "response_time_ms")
     list_filter = ("kind", "state", "enabled")
     search_fields = ("name", "target")
+    # The heartbeat verifier is intentionally omitted. It is neither reusable nor useful in the
+    # administration UI and should not become routine visual/log/screenshot material.
+    exclude = ("heartbeat_token",)
     readonly_fields = (
-        "heartbeat_token",
         "state",
         "consecutive_failures",
         "consecutive_successes",
