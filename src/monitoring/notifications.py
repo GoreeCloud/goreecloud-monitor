@@ -6,13 +6,14 @@ import re
 import httpx
 from django.conf import settings
 
-logger = logging.getLogger(__name__)
+from .observability import log_event, safe_traceback
+
+logger = logging.getLogger("monitoring.access")
 _TLS_WARNING = re.compile(r"^TLS certificate expires in (\d{1,5}) day\(s\)$")
 
 
 def _public_transition_summary(state: str, message: str) -> str:
     """Return a notification-safe summary without targets or raw exception diagnostics."""
-
     normalized = state.strip().upper()
     if normalized == "RECOVERED":
         return "Service availability recovered."
@@ -27,17 +28,12 @@ def _public_transition_summary(state: str, message: str) -> str:
 
 
 async def publish_transition(name: str, state: str, message: str) -> None:
-    """Publish a minimized state transition through the dedicated ntfy publisher identity.
-
-    Notification output intentionally excludes monitor targets, response bodies, raw exception
-    diagnostics, credentials, and reusable secrets. A partially configured integration fails
-    closed and never attempts anonymous publication.
-    """
+    """Publish a minimized transition through the dedicated ntfy publisher identity."""
     configured = (settings.NTFY_BASE_URL, settings.NTFY_TOPIC, settings.NTFY_TOKEN)
     if not any(configured):
         return
     if not all(configured):
-        logger.error("ntfy publishing is partially configured; refusing unauthenticated publication")
+        log_event(logger, "integration.notification.refused", level=logging.ERROR, integration="ntfy", reason="partial_configuration", state=state)
         return
 
     endpoint = f"{settings.NTFY_BASE_URL}/{settings.NTFY_TOPIC}"
@@ -47,5 +43,15 @@ async def publish_transition(name: str, state: str, message: str) -> None:
         async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
             response = await client.post(endpoint, content=body.encode("utf-8"), headers=headers)
             response.raise_for_status()
-    except Exception:
-        logger.exception("Failed to publish monitor transition for %s", name)
+    except Exception as exc:
+        log_event(
+            logger,
+            "integration.notification.failed",
+            level=logging.ERROR,
+            integration="ntfy",
+            state=state,
+            exception_type=type(exc).__name__,
+            traceback=safe_traceback(exc),
+        )
+        return
+    log_event(logger, "integration.notification.published", integration="ntfy", state=state)
