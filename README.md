@@ -2,33 +2,36 @@
 
 GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-health, heartbeat, TLS-certificate, incident, and recovery-monitoring application.
 
-> **Current state:** advanced pre-production acceptance candidate. The native monitoring foundation, Uptime Kuma migration/reconciliation tooling, hardened production Compose topology, verified live Uptime Kuma configuration and runtime evidence, target-host/recovery-point preflight, isolated PostgreSQL initialization, rollback compatibility, and repeated parallel-comparison acceptance tooling are implemented. The primary web experience now targets canonical Glaze UI 1.0.0. Uptime Kuma remains the production monitoring authority until Monitor completes isolated parallel activation, target-native database restore proof, controlled transition/notification tests, ICMP/Ping and resolver-specific DNS decisions, live rollback, manual Glaze/accessibility acceptance, and explicit cutover approval.
+> **Current state:** advanced pre-production acceptance candidate. The native monitoring foundation, Uptime Kuma migration/reconciliation tooling, hardened production Compose topology, verified live Uptime Kuma configuration and runtime evidence, target-host/recovery-point preflight, isolated PostgreSQL initialization, rollback compatibility, repeated parallel-comparison acceptance tooling, canonical Glaze UI 1.0.0 product experience, and Wardveil Security source-hardening layer are implemented. Uptime Kuma remains the production monitoring authority until Monitor completes isolated parallel activation, target-native database restore proof, controlled transition/notification tests, ICMP/Ping and resolver-specific DNS decisions, live rollback, manual Glaze/accessibility acceptance, target Wardveil/security validation, and explicit cutover approval.
 
 ## What v0.1 includes
 
 - Authenticated Glaze UI 1.0 operational shell with System, Light, and Dark appearance
+- Wardveil Security by GoreeCloud protection identity with a staff-only, secret-free security-posture surface
 - Unique GoreeCloud Monitor product mark and local scalable favicon
-- Responsive Overview, Monitors, Incidents, Maintenance, Notifications, Settings, authentication, and monitor-detail surfaces
+- Responsive Overview, Monitors, Incidents, Maintenance, Notifications, Security, Settings, authentication, and monitor-detail surfaces
 - Search/filter workflows for monitor coverage and incident history
 - HTTP and HTTPS checks with status, body, JSON, redirect, latency, and TLS validation
 - TCP reachability checks
 - DNS A, AAAA, and CNAME checks
-- Push/heartbeat monitors with minimized unauthenticated acknowledgements
+- Push/heartbeat monitors with minimized unauthenticated acknowledgements and staff-only credential rendering
 - Unknown, Up, Down, Degraded, Paused, and Maintenance state handling
 - Failure and recovery thresholds with incident and recovery history
-- Authenticated least-privilege ntfy transition publishing
+- Authenticated least-privilege ntfy transition publishing with raw-diagnostic minimization
 - Notification-integration posture that keeps GoreeCloud Notify migration explicitly gated until its producer contract is approved
-- Read-only Manager summary API
+- Read-only Manager summary API with bearer authentication
 - SSRF-aware target validation with explicit private-network allowlists
+- Production browser/session hardening with CSP, Permissions Policy, same-origin resource/opener/referrer boundaries, no-index/no-store behavior, Secure/HttpOnly/SameSite cookies, HTTPS redirect, and HSTS target requirements
+- Minimized Wardveil security-event logging for authentication activity and privileged Monitor configuration actions
 - PostgreSQL production support and SQLite local/test support
 - Docker/Compose development topology and a separate hardened production deployment candidate
 - Maintenance windows, configurable check-history retention, and heartbeat-token rotation
-- Health endpoints, CI, tests, backup/recovery documentation
+- Minimized health endpoints, CI, tests, backup/recovery documentation
 - Conservative Uptime Kuma/kuma-cli audit, paused-by-default import, definition comparison, and live state/latency comparison tooling
 - Sanitized documented-baseline reconciliation against live Uptime Kuma configuration evidence
 - Minimized read-only live Uptime Kuma runtime evidence collection
 - Repeated fail-closed parallel-comparison assessment with coverage-drift detection
-- Fail-closed production target preflight
+- Fail-closed production target preflight including Wardveil-aligned transport, cookie, and browser-policy gates
 - Production Compose contract validation with zero host-published application/database ports
 - Immediate-predecessor PostgreSQL application rollback-compatibility proof when the migration set is unchanged
 - Cutover and rollback evidence requirements that preserve Uptime Kuma until explicit retirement approval
@@ -39,7 +42,17 @@ Monitor targets Glaze UI **1.0.0** from the canonical `GoreeCloud/glaze-ui` desi
 
 The interface uses only local source assets and system/local font fallbacks; it has no remote UI, font, icon, analytics, or tracking dependency. Appearance preference is browser-local and fails soft if client storage is unavailable.
 
-See `docs/glaze-ui-conformance.md` for the source contract and the manual acceptance gate that remains required before Stable classification.
+Wardveil Security surfaces consume Glaze UI rather than defining a competing visual system. See `docs/glaze-ui-conformance.md` for the source contract and the manual acceptance gate that remains required before Stable classification.
+
+## Wardveil Security
+
+**Wardveil Security by GoreeCloud** is Monitor's platform security and protection identity. The approved user-facing phrase is **Protected by Wardveil**.
+
+Wardveil does not replace the technical source of truth. Django authentication/authorization, Monitor target validation, Caddy, NetBird, firewall policy, protected environment files, vulnerability scanning, PostgreSQL recovery, and rollback evidence remain the enforcing controls for their respective roles.
+
+The source candidate adds a staff-only security-posture view, production response/session hardening, minimized health and notification output, staff-only credential/diagnostic presentation, structured secret-free security events, and fail-closed preflight checks for the security controls expected on the target.
+
+See `docs/wardveil-security.md` and `SECURITY.md`.
 
 ## Quick start
 
@@ -99,7 +112,7 @@ Repeated parity observations can be aggregated with:
 python manage.py assessparallel /path/to/observation-*.json --require-ready
 ```
 
-A ready repeated series proves only the state/latency comparison contract for those observations. It does not replace controlled outage/recovery, TLS, maintenance, notification, DNS, Ping/ICMP, restore, rollback, or cutover evidence.
+A ready repeated series proves only the state/latency comparison contract for those observations. It does not replace controlled outage/recovery, TLS, maintenance, notification, DNS, Ping/ICMP, restore, rollback, Wardveil target validation, or cutover evidence.
 
 See `docs/live-acceptance-evidence.md` and `docs/uptime-kuma-runtime-evidence.md`.
 
@@ -126,11 +139,13 @@ Monitor makes outbound requests by design. Public targets are permitted when `MO
 
 Credentials and reusable secrets do not belong in this repository. Production environment files are protected infrastructure configuration and are excluded from source control. Sanitized live-evidence bundles are still Internal operational artifacts rather than public source artifacts.
 
+The current SSRF design validates all addresses returned during application preflight, but the HTTP/TCP/TLS client may perform a later DNS resolution. Do not use attacker-controlled DNS zones or broaden private allowlists to compensate for this documented boundary.
+
 ## Architecture
 
 The repository contains one Django web/API application and one asynchronous monitoring worker. PostgreSQL is the intended production database. Redis, Celery, Kafka, and other brokers are intentionally excluded from v0.1.
 
-See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
+See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/wardveil-security.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
 
 ## License
 
