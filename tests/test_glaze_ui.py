@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from xml.etree import ElementTree
 
 from django.conf import settings
 from django.test import SimpleTestCase
@@ -96,7 +97,9 @@ class GlazeUiConformanceTests(SimpleTestCase):
         self.assertEqual(self.web_manifest["name"], "GoreeCloud Monitor")
         manifest_sizes = {icon["sizes"] for icon in self.web_manifest["icons"]}
         self.assertEqual(manifest_sizes, {"192x192", "512x512"})
-        self.assertTrue(any("maskable" in icon["purpose"] for icon in self.web_manifest["icons"]))
+        maskable = [icon for icon in self.web_manifest["icons"] if icon["purpose"] == "maskable"]
+        self.assertEqual(len(maskable), 1)
+        self.assertEqual(maskable[0]["src"], "img/goreecloud-monitor-icon-maskable.svg")
         for size in (16, 32, 48, 192, 512):
             variant = self.base / f"static/monitoring/img/goreecloud-monitor-icon-{size}.svg"
             self.assertTrue(variant.exists())
@@ -104,8 +107,17 @@ class GlazeUiConformanceTests(SimpleTestCase):
             self.assertIn(f'width="{size}"', text)
             self.assertIn(f'height="{size}"', text)
             self.assertIn(identity_path, text)
-        self.assertTrue((self.base / "packaging/android/res/mipmap-anydpi-v26/ic_launcher.xml").exists())
-        self.assertTrue((self.base / "packaging/android/res/mipmap-anydpi-v26/ic_launcher_round.xml").exists())
+            ElementTree.fromstring(text)
+        ElementTree.fromstring(self.canonical_icon)
+        ElementTree.fromstring(self.appimage_icon)
+        ElementTree.fromstring(self.android_foreground)
+        ElementTree.fromstring(self.android_monochrome)
+        ElementTree.parse(self.base / "packaging/android/res/mipmap-anydpi-v26/ic_launcher.xml")
+        ElementTree.parse(self.base / "packaging/android/res/mipmap-anydpi-v26/ic_launcher_round.xml")
+        ElementTree.parse(self.base / "packaging/android/res/values/colors.xml")
+        maskable_source = (self.base / "static/monitoring/img/goreecloud-monitor-icon-maskable.svg").read_text()
+        ElementTree.fromstring(maskable_source)
+        self.assertIn('<rect width="512" height="512"', maskable_source)
 
     def test_wardveil_is_a_glaze_consumer_not_a_replacement_design_system(self):
         self.assertIn("wardveil.css", self.shell)
