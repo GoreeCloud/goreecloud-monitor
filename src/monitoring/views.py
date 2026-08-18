@@ -17,11 +17,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
+from .audit import record_security_event
 from .forms import MaintenanceWindowForm, MonitorForm
 from .models import CheckResult, Incident, MaintenanceWindow, Monitor
 
 
 GLAZE_UI_VERSION = "1.0.0"
+WARDVEIL_SECURITY_IDENTITY = "Wardveil Security by GoreeCloud"
 
 
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -128,8 +130,15 @@ class MonitorCreateView(StaffRequiredMixin, CreateView):
     success_url = reverse_lazy("monitoring:monitor-list")
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+        record_security_event(
+            "monitor.configuration.created",
+            user=self.request.user,
+            object_type="monitor",
+            object_id=self.object.pk,
+        )
         messages.success(self.request, "Monitor created.")
-        return super().form_valid(form)
+        return response
 
 
 class MonitorUpdateView(StaffRequiredMixin, UpdateView):
@@ -139,14 +148,32 @@ class MonitorUpdateView(StaffRequiredMixin, UpdateView):
     success_url = reverse_lazy("monitoring:monitor-list")
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+        record_security_event(
+            "monitor.configuration.updated",
+            user=self.request.user,
+            object_type="monitor",
+            object_id=self.object.pk,
+        )
         messages.success(self.request, "Monitor updated.")
-        return super().form_valid(form)
+        return response
 
 
 class MonitorDeleteView(StaffRequiredMixin, DeleteView):
     model = Monitor
     template_name = "monitoring/monitor_confirm_delete.html"
     success_url = reverse_lazy("monitoring:monitor-list")
+
+    def form_valid(self, form):
+        object_id = self.object.pk
+        response = super().form_valid(form)
+        record_security_event(
+            "monitor.configuration.deleted",
+            user=self.request.user,
+            object_type="monitor",
+            object_id=object_id,
+        )
+        return response
 
 
 @login_required
@@ -191,6 +218,16 @@ class MaintenanceCreateView(StaffRequiredMixin, CreateView):
     template_name = "monitoring/maintenance_form.html"
     success_url = reverse_lazy("monitoring:maintenance-list")
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        record_security_event(
+            "maintenance.window.created",
+            user=self.request.user,
+            object_type="maintenance_window",
+            object_id=self.object.pk,
+        )
+        return response
+
 
 class MaintenanceUpdateView(StaffRequiredMixin, UpdateView):
     model = MaintenanceWindow
@@ -198,11 +235,32 @@ class MaintenanceUpdateView(StaffRequiredMixin, UpdateView):
     template_name = "monitoring/maintenance_form.html"
     success_url = reverse_lazy("monitoring:maintenance-list")
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        record_security_event(
+            "maintenance.window.updated",
+            user=self.request.user,
+            object_type="maintenance_window",
+            object_id=self.object.pk,
+        )
+        return response
+
 
 class MaintenanceDeleteView(StaffRequiredMixin, DeleteView):
     model = MaintenanceWindow
     template_name = "monitoring/maintenance_confirm_delete.html"
     success_url = reverse_lazy("monitoring:maintenance-list")
+
+    def form_valid(self, form):
+        object_id = self.object.pk
+        response = super().form_valid(form)
+        record_security_event(
+            "maintenance.window.deleted",
+            user=self.request.user,
+            object_type="maintenance_window",
+            object_id=object_id,
+        )
+        return response
 
 
 @login_required
@@ -223,6 +281,8 @@ def notifications_view(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def settings_view(request: HttpRequest) -> HttpResponse:
+    if not request.user.is_staff:
+        return HttpResponse(status=403)
     return render(
         request,
         "monitoring/settings.html",
@@ -239,6 +299,41 @@ def settings_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+def security_view(request: HttpRequest) -> HttpResponse:
+    """Present secret-free Monitor protection posture under the Wardveil Security identity."""
+
+    if not request.user.is_staff:
+        return HttpResponse(status=403)
+
+    controls = [
+        ("HTTPS redirect", bool(settings.SECURE_SSL_REDIRECT)),
+        ("HSTS", settings.SECURE_HSTS_SECONDS >= 31536000),
+        ("Secure session cookie", bool(settings.SESSION_COOKIE_SECURE)),
+        ("HttpOnly session cookie", bool(settings.SESSION_COOKIE_HTTPONLY)),
+        ("Secure CSRF cookie", bool(settings.CSRF_COOKIE_SECURE)),
+        ("SameSite session boundary", settings.SESSION_COOKIE_SAMESITE in {"Lax", "Strict"}),
+        ("Content Security Policy", bool(settings.MONITOR_CONTENT_SECURITY_POLICY)),
+        ("Permissions Policy", bool(settings.MONITOR_PERMISSIONS_POLICY)),
+        ("Clickjacking protection", settings.X_FRAME_OPTIONS == "DENY"),
+        ("Same-origin opener policy", settings.SECURE_CROSS_ORIGIN_OPENER_POLICY == "same-origin"),
+    ]
+    protected = all(enabled for _, enabled in controls)
+    return render(
+        request,
+        "monitoring/security.html",
+        {
+            "wardveil_identity": WARDVEIL_SECURITY_IDENTITY,
+            "protected": protected,
+            "controls": controls,
+            "manager_api_enabled": bool(settings.MANAGER_API_TOKEN),
+            "ntfy_enabled": bool(settings.NTFY_BASE_URL and settings.NTFY_TOPIC and settings.NTFY_TOKEN),
+            "private_network_count": len(settings.MONITOR_ALLOWED_NETWORKS),
+            "public_targets": settings.MONITOR_ALLOW_PUBLIC_TARGETS,
+        },
+    )
+
+
+@login_required
 @require_http_methods(["POST"])
 def rotate_heartbeat_token(request: HttpRequest, pk: int) -> HttpResponse:
     if not request.user.is_staff:
@@ -246,12 +341,18 @@ def rotate_heartbeat_token(request: HttpRequest, pk: int) -> HttpResponse:
     monitor = get_object_or_404(Monitor, pk=pk, kind=Monitor.Kind.PUSH)
     monitor.heartbeat_token = secrets.token_urlsafe(32)
     monitor.save(update_fields=["heartbeat_token", "updated_at"])
+    record_security_event(
+        "heartbeat.credential.rotated",
+        user=request.user,
+        object_type="monitor",
+        object_id=monitor.pk,
+    )
     messages.success(request, "Heartbeat token rotated. Update every sender before relying on the monitor again.")
     return redirect("monitoring:monitor-detail", pk=monitor.pk)
 
 
 @csrf_exempt
-@require_http_methods(["GET", "POST", "HEAD"])
+@require_http_methods(["GET", "POST"])
 def push_heartbeat(request: HttpRequest, token: str) -> JsonResponse:
     monitor = get_object_or_404(Monitor, heartbeat_token=token, kind=Monitor.Kind.PUSH, enabled=True)
     monitor.last_heartbeat_at = timezone.now()
@@ -263,7 +364,7 @@ def push_heartbeat(request: HttpRequest, token: str) -> JsonResponse:
 
 @require_http_methods(["GET"])
 def health_live(request: HttpRequest) -> JsonResponse:
-    return JsonResponse({"ok": True, "service": "goreecloud-monitor"})
+    return JsonResponse({"ok": True})
 
 
 @require_http_methods(["GET"])
@@ -273,8 +374,8 @@ def health_ready(request: HttpRequest) -> JsonResponse:
             cursor.execute("SELECT 1")
             cursor.fetchone()
     except Exception:
-        return JsonResponse({"ok": False, "database": "unavailable"}, status=503)
-    return JsonResponse({"ok": True, "database": "ready"})
+        return JsonResponse({"ok": False}, status=503)
+    return JsonResponse({"ok": True})
 
 
 def _manager_authorized(request: HttpRequest) -> bool:
@@ -291,7 +392,9 @@ def _manager_authorized(request: HttpRequest) -> bool:
 @require_http_methods(["GET"])
 def manager_summary(request: HttpRequest) -> JsonResponse:
     if not _manager_authorized(request):
-        return JsonResponse({"detail": "Unauthorized"}, status=401)
+        response = JsonResponse({"detail": "Unauthorized"}, status=401)
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response
     counts = {state: 0 for state, _ in Monitor.State.choices}
     for row in Monitor.objects.values("state").annotate(total=Count("id")):
         counts[row["state"]] = row["total"]
