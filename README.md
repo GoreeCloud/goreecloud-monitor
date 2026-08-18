@@ -2,13 +2,14 @@
 
 GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-health, heartbeat, TLS-certificate, incident, and recovery-monitoring application.
 
-> **Current state:** advanced pre-production acceptance candidate. The native monitoring foundation, Uptime Kuma migration/reconciliation tooling, hardened production Compose topology, verified live Uptime Kuma configuration and runtime evidence, target-host/recovery-point preflight, isolated PostgreSQL initialization, rollback compatibility, repeated parallel-comparison acceptance tooling, canonical Glaze UI 1.0.0 product experience, and Wardveil Security source-hardening layer are implemented. Uptime Kuma remains the production monitoring authority until Monitor completes isolated parallel activation, target-native database restore proof, controlled transition/notification tests, ICMP/Ping and resolver-specific DNS decisions, live rollback, manual Glaze/accessibility acceptance, target Wardveil/security validation, and explicit cutover approval.
+> **Current state:** advanced pre-production acceptance candidate. The native monitoring foundation, Uptime Kuma migration/reconciliation tooling, hardened production Compose topology, verified live Uptime Kuma configuration and runtime evidence, target-host/recovery-point preflight, isolated PostgreSQL initialization, rollback compatibility, repeated parallel-comparison acceptance tooling, canonical Glaze UI 1.0.0 product experience, Wardveil Security source-hardening layer, canonical cross-platform application identity, and first-party Linux/Android client packaging foundation are implemented. Uptime Kuma remains the production monitoring authority until Monitor completes isolated parallel activation, target-native database restore proof, controlled transition/notification tests, ICMP/Ping and resolver-specific DNS decisions, live rollback, manual Glaze/accessibility acceptance, target Wardveil/security validation, native-client installed-device acceptance, and explicit cutover approval.
 
 ## What v0.1 includes
 
 - Authenticated Glaze UI 1.0 operational shell with System, Light, and Dark appearance
 - Wardveil Security by GoreeCloud protection identity with a staff-only, secret-free security-posture surface
-- Unique GoreeCloud Monitor product mark and local scalable favicon
+- Unique canonical GoreeCloud Monitor availability-pulse/status icon shared by web, PWA, Linux packaging, and Android packaging
+- First-party Tauri 2 thin-client foundation for Linux AppImage/Debian and Android APK acceptance without a second data/authentication authority
 - Responsive Overview, Monitors, Incidents, Maintenance, Notifications, Security, Settings, authentication, and monitor-detail surfaces
 - Search/filter workflows for monitor coverage and incident history
 - HTTP and HTTPS checks with status, body, JSON, redirect, latency, and TLS validation
@@ -53,6 +54,20 @@ Wardveil does not replace the technical source of truth. Django authentication/a
 The source candidate adds a staff-only security-posture view, production response/session hardening, minimized health and notification output, staff-only credential/diagnostic presentation, structured secret-free security events, and fail-closed preflight checks for the security controls expected on the target.
 
 See `docs/wardveil-security.md` and `SECURITY.md`.
+
+## Canonical app identity and native clients
+
+Monitor has one source-controlled application icon authority:
+
+`assets/app-icon/goreecloud-monitor.svg`
+
+The web shell, browser/PWA identity, Linux launcher packaging, and Android launcher packaging all consume that same underlying artwork. Platform launcher assets are generated from the canonical SVG during native packaging instead of being maintained as unrelated hand-edited copies.
+
+The first-party client under `clients/goreecloud-monitor/` is a deliberately thin Tauri 2 shell around the canonical future private origin `https://monitor.goreecloud.com`. The address is reserved in source/documentation but is not published by this work. The client does not contain a second Monitor database, API token, authentication implementation, or synchronization layer.
+
+Its Wardveil boundary permits only the canonical HTTPS/default-port origin and `about:blank`, denies unrelated/new-window navigation, and exposes no global Tauri API or native IPC capability to remote Monitor content. CI builds Linux AppImage/Debian acceptance artifacts and an unsigned Android ARM64 debug APK with source/icon provenance and checksums. A debug APK is not a Stable signed Android release.
+
+See `docs/app-identity-and-clients.md` and `clients/goreecloud-monitor/README.md`.
 
 ## Quick start
 
@@ -112,7 +127,7 @@ Repeated parity observations can be aggregated with:
 python manage.py assessparallel /path/to/observation-*.json --require-ready
 ```
 
-A ready repeated series proves only the state/latency comparison contract for those observations. It does not replace controlled outage/recovery, TLS, maintenance, notification, DNS, Ping/ICMP, restore, rollback, Wardveil target validation, or cutover evidence.
+A ready repeated series proves only the state/latency comparison contract for those observations. It does not replace controlled outage/recovery, TLS, maintenance, notification, DNS, Ping/ICMP, restore, rollback, Wardveil target validation, native-client installed-device acceptance, or cutover evidence.
 
 See `docs/live-acceptance-evidence.md` and `docs/uptime-kuma-runtime-evidence.md`.
 
@@ -143,9 +158,9 @@ The current SSRF design validates all addresses returned during application pref
 
 ## Architecture
 
-The repository contains one Django web/API application and one asynchronous monitoring worker. PostgreSQL is the intended production database. Redis, Celery, Kafka, and other brokers are intentionally excluded from v0.1.
+The repository contains one Django web/API application and one asynchronous monitoring worker. PostgreSQL is the intended production database. Redis, Celery, Kafka, and other brokers are intentionally excluded from v0.1. Optional first-party Tauri shells render the same responsive Monitor web product and do not become independent application authorities.
 
-See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/wardveil-security.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
+See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/wardveil-security.md`, `docs/app-identity-and-clients.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
 
 ## License
 
