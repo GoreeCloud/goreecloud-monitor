@@ -8,6 +8,7 @@
     <h1>Sign in</h1>
     <p class="muted">Use an individually assigned approved GoreeCloud identity. Administrative actions require additional staff authorization.</p>
     <form method="post" class="form-grid">{% csrf_token %}{{ form.as_p }}<button class="button primary" type="submit">Sign in to Monitor</button></form>
+    <div class="auth-wardveil"><strong>Protected by Wardveil</strong><br>Wardveil Security by GoreeCloud identifies the platform security layer. Authentication and authorization remain enforced by Monitor and the applicable GoreeCloud access controls.</div>
   </div>
 </section>
 {% endblock %}
