@@ -32,11 +32,13 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "monitoring.middleware.WardveilSecurityHeadersMiddleware",
+    # Correlation wraps session/common/CSRF/auth so early dynamic rejection paths receive the
+    # same private request ID and minimized route-name-only event contract as normal views.
+    "monitoring.middleware.OperationalRequestMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "monitoring.middleware.OperationalRequestMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
