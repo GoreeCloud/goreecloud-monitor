@@ -80,7 +80,10 @@ class GlazeUiConformanceTests(SimpleTestCase):
     def test_wardveil_is_a_glaze_consumer_not_a_replacement_design_system(self):
         self.assertIn("wardveil.css", self.shell)
         self.assertIn("Protected by Wardveil", self.shell)
-        self.assertIn("Wardveil Security by GoreeCloud", self.security)
+        # The canonical full identity is supplied by the security view and is separately
+        # asserted on the rendered response. Keep the template bound to that single source
+        # rather than duplicating the identity string in presentation markup.
+        self.assertIn("{{ wardveil_identity }}", self.security)
         self.assertIn("var(--glaze-", self.wardveil)
         self.assertNotIn("Wardveil Security Center", self.security)
         self.assertNotIn("--wardveil-color", self.wardveil)
