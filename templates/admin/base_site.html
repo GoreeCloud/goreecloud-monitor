@@ -5,14 +5,14 @@
 
 {% block extrastyle %}
   {{ block.super }}
-  <link rel="icon" type="image/svg+xml" href="{% static 'monitoring/img/monitor-mark.svg' %}">
+  <link rel="icon" type="image/svg+xml" href="{% static 'monitoring/img/goreecloud-monitor.svg' %}">
   <link rel="stylesheet" href="{% static 'monitoring/css/glaze-admin.css' %}">
 {% endblock %}
 
 {% block branding %}
   <div id="site-name">
     <a class="goreecloud-admin-brand" href="{% url 'admin:index' %}" aria-label="GoreeCloud Monitor administration home">
-      <img src="{% static 'monitoring/img/monitor-mark.svg' %}" alt="">
+      <img src="{% static 'monitoring/img/goreecloud-monitor.svg' %}" alt="">
       <span><strong>GoreeCloud</strong><small>Monitor Administration · Protected by Wardveil</small></span>
     </a>
   </div>
