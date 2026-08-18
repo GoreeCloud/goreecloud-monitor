@@ -2,13 +2,13 @@
 
 GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-health, heartbeat, TLS-certificate, incident, and recovery-monitoring application.
 
-> **Current state:** advanced pre-production acceptance candidate. The native monitoring foundation, Uptime Kuma migration/reconciliation tooling, hardened production Compose topology, verified live Uptime Kuma configuration and runtime evidence, target-host/recovery-point preflight, isolated PostgreSQL initialization, rollback compatibility, repeated parallel-comparison acceptance tooling, canonical Glaze UI 1.0.0 product experience, and Wardveil Security source-hardening layer are implemented. Uptime Kuma remains the production monitoring authority until Monitor completes isolated parallel activation, target-native database restore proof, controlled transition/notification tests, ICMP/Ping and resolver-specific DNS decisions, live rollback, manual Glaze/accessibility acceptance, target Wardveil/security validation, and explicit cutover approval.
+> **Current state:** advanced pre-production acceptance candidate. The native monitoring foundation, Uptime Kuma migration/reconciliation tooling, hardened production Compose topology, verified live Uptime Kuma configuration and runtime evidence, target-host/recovery-point preflight, isolated PostgreSQL initialization, rollback compatibility, repeated parallel-comparison acceptance tooling, canonical Glaze UI 1.0.0 product experience, Wardveil Security source-hardening layer, and canonical cross-platform product-identity assets are implemented. Uptime Kuma remains the production monitoring authority until Monitor completes isolated parallel activation, target-native database restore proof, controlled transition/notification tests, ICMP/Ping and resolver-specific DNS decisions, live rollback, manual Glaze/accessibility acceptance, target Wardveil/security validation, and explicit cutover approval.
 
 ## What v0.1 includes
 
 - Authenticated Glaze UI 1.0 operational shell with System, Light, and Dark appearance
 - Wardveil Security by GoreeCloud protection identity with a staff-only, secret-free security-posture surface
-- Unique GoreeCloud Monitor product mark and local scalable favicon
+- Unique canonical GoreeCloud Monitor application icon with a complete local web/favicon family and shared Linux/AppImage and Android launcher identity inputs
 - Responsive Overview, Monitors, Incidents, Maintenance, Notifications, Security, Settings, authentication, and monitor-detail surfaces
 - Search/filter workflows for monitor coverage and incident history
 - HTTP and HTTPS checks with status, body, JSON, redirect, latency, and TLS validation
@@ -43,6 +43,16 @@ Monitor targets Glaze UI **1.0.0** from the canonical `GoreeCloud/glaze-ui` desi
 The interface uses only local source assets and system/local font fallbacks; it has no remote UI, font, icon, analytics, or tracking dependency. Appearance preference is browser-local and fails soft if client storage is unavailable.
 
 Wardveil Security surfaces consume Glaze UI rather than defining a competing visual system. See `docs/glaze-ui-conformance.md` for the source contract and the manual acceptance gate that remains required before Stable classification.
+
+## Product identity
+
+`assets/identity/goreecloud-monitor-icon.svg` is the authoritative GoreeCloud Monitor application icon. It uses a product-specific availability pulse and protected healthy-state indicator rather than the GoreeCloud platform logo or a generic letter mark.
+
+The web product consumes the same identity through local 16, 32, 48, 192, and 512 pixel SVG representations, a dedicated mask-safe installation icon, and `static/monitoring/site.webmanifest`. The sign-in experience, primary Glaze shell, and staff Django administration all reference the canonical Monitor identity.
+
+`packaging/appimage/` and `packaging/android/` contain source-controlled launcher identity inputs for future approved Linux/AppImage and Android clients. They are **not claims that standalone AppImage or APK clients have been implemented**; the current Monitor architecture remains Django web/API plus the monitoring worker. Any future approved client must consume these assets or deterministic derivatives so web, Linux, and Android cannot silently diverge.
+
+See `docs/product-identity.md`.
 
 ## Wardveil Security
 
@@ -145,7 +155,7 @@ The current SSRF design validates all addresses returned during application pref
 
 The repository contains one Django web/API application and one asynchronous monitoring worker. PostgreSQL is the intended production database. Redis, Celery, Kafka, and other brokers are intentionally excluded from v0.1.
 
-See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/wardveil-security.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
+See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/product-identity.md`, `docs/wardveil-security.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
 
 ## License
 
