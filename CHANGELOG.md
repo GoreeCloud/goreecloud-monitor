@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased - Repeated parallel acceptance readiness
+
+- Added a fail-closed repeated parallel-comparison acceptance layer so production-readiness review no longer depends on interpreting isolated one-off runtime comparisons manually.
+- Added `evaluate_parallel_series()` to validate sanitized `compareuptimestate` reports, require a configurable minimum number of independent observations, reject unsupported schemas or malformed results, detect duplicate result names, and preserve a fixed monitor-coverage set across the observation series.
+- Added explicit acceptance blockers for state differences, latency differences, missing monitors, Monitor-only monitors, unknown source states, duplicate source records, invalid source records, insufficient observations, and coverage drift between observations.
+- Added minimized per-observation and per-monitor accounting without reintroducing monitor targets, heartbeat messages, request configuration, notification assignments, or reusable credentials into the aggregate acceptance report.
+- Added the `assessparallel` management command with `--minimum-observations`, `--json`, and `--require-ready` so the repeated-comparison gate can be used both for human review and fail-closed automation.
+- Expanded `tests/test_uptime_kuma_parallel.py` with repeated-parity readiness, insufficient-observation, non-parity, coverage-drift, unsupported-schema, and command-level acceptance tests. The complete source suite now contains 86 tests.
+- Updated `docs/uptime-kuma-runtime-evidence.md` with the repeated-comparison workflow and made clear that a ready series proves only repeated state/latency parity within the selected tolerance.
+- Kept controlled DOWN/RECOVERED, TLS-warning, maintenance, notification, Ping/ICMP, resolver-specific DNS, target restore, live rollback, monitoring-source identity, explicit cutover, and Uptime Kuma retirement as separate outstanding gates.
+- Opened stacked draft PR #9 from `agent/parallel-acceptance-series` against `agent/runtime-evidence-readiness` and validated exact head `d05e03de66a8d0b535dcb33ee6d19809965dfd2d` with CI run #38 and rollback-compatibility run #16; both completed successfully before this changelog-only follow-up commit.
+
 ## Unreleased - Uptime Kuma runtime evidence readiness
 
 - Reviewed the Uptime Kuma 2.5.0 server implementation and confirmed authenticated clients receive the monitor list plus per-monitor heartbeat lists after login, providing a narrow read-only source for runtime-state evidence separate from kuma-cli configuration output.
