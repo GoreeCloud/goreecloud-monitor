@@ -40,13 +40,13 @@ jobs:
       - name: Production static asset build
         env:
           DJANGO_DEBUG: "false"
-          DJANGO_SECRET_KEY: ci-production-key-not-used-outside-ci
+          DJANGO_SECRET_KEY: ci-production-key-not-used-outside-ci-2026-ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789
           DJANGO_ALLOWED_HOSTS: monitor.example.invalid
         run: python manage.py collectstatic --noinput
       - name: Deployment security checks
         env:
           DJANGO_DEBUG: "false"
-          DJANGO_SECRET_KEY: ci-production-key-not-used-outside-ci
+          DJANGO_SECRET_KEY: ci-production-key-not-used-outside-ci-2026-ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789
           DJANGO_ALLOWED_HOSTS: monitor.example.invalid
           DJANGO_SECURE_SSL_REDIRECT: "true"
           DJANGO_HSTS_SECONDS: "31536000"
@@ -99,7 +99,7 @@ jobs:
       - name: Production-style target preflight against PostgreSQL
         env:
           DJANGO_DEBUG: "false"
-          DJANGO_SECRET_KEY: ci-production-key-not-used-outside-ci-0123456789
+          DJANGO_SECRET_KEY: ci-production-key-not-used-outside-ci-2026-ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789
           DJANGO_ALLOWED_HOSTS: monitor.example.invalid
           DJANGO_SECURE_SSL_REDIRECT: "true"
           DJANGO_HSTS_SECONDS: "31536000"
@@ -178,7 +178,7 @@ jobs:
         run: >-
           docker run --rm
           -e DJANGO_DEBUG=false
-          -e DJANGO_SECRET_KEY=ci-production-key-not-used-outside-ci
+          -e DJANGO_SECRET_KEY=ci-production-key-not-used-outside-ci-2026-ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789
           -e DJANGO_ALLOWED_HOSTS=monitor.example.invalid
           -e DJANGO_SECURE_SSL_REDIRECT=true
           -e DJANGO_HSTS_SECONDS=31536000
