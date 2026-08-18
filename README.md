@@ -2,18 +2,22 @@
 
 GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-health, heartbeat, TLS-certificate, incident, and recovery-monitoring application.
 
-> **Current state:** source-stable live-acceptance evidence compatibility candidate. The source foundation, Uptime Kuma migration tooling, hardened production Compose topology, disposable production-stack validation, documented-baseline reconciliation, recovery proof, immediate-predecessor rollback compatibility, and sanitized read-only live target/configuration evidence tooling are implemented. The live GoreeCloud kuma-cli v2 interface is now handled explicitly rather than assuming older command shapes. Runtime heartbeat/state collection remains a separate acceptance gate. Uptime Kuma remains the production monitoring platform until GoreeCloud Monitor completes live configuration review, publication, parallel runtime acceptance, the ICMP/Ping and resolver-specific DNS decisions, target recovery/notification testing, and an explicit cutover.
+> **Current state:** advanced pre-production acceptance candidate. The native monitoring foundation, Uptime Kuma migration/reconciliation tooling, hardened production Compose topology, verified live Uptime Kuma configuration and runtime evidence, target-host/recovery-point preflight, isolated PostgreSQL initialization, rollback compatibility, and repeated parallel-comparison acceptance tooling are implemented. The primary web experience now targets canonical Glaze UI 1.0.0. Uptime Kuma remains the production monitoring authority until Monitor completes isolated parallel activation, target-native database restore proof, controlled transition/notification tests, ICMP/Ping and resolver-specific DNS decisions, live rollback, manual Glaze/accessibility acceptance, and explicit cutover approval.
 
 ## What v0.1 includes
 
-- Authenticated Glaze UI dashboard and monitor management
+- Authenticated Glaze UI 1.0 operational shell with System, Light, and Dark appearance
+- Unique GoreeCloud Monitor product mark and local scalable favicon
+- Responsive Overview, Monitors, Incidents, Maintenance, Notifications, Settings, authentication, and monitor-detail surfaces
+- Search/filter workflows for monitor coverage and incident history
 - HTTP and HTTPS checks with status, body, JSON, redirect, latency, and TLS validation
 - TCP reachability checks
 - DNS A, AAAA, and CNAME checks
-- Push/heartbeat monitors
+- Push/heartbeat monitors with minimized unauthenticated acknowledgements
 - Unknown, Up, Down, Degraded, Paused, and Maintenance state handling
-- Failure and recovery thresholds with incident history
+- Failure and recovery thresholds with incident and recovery history
 - Authenticated least-privilege ntfy transition publishing
+- Notification-integration posture that keeps GoreeCloud Notify migration explicitly gated until its producer contract is approved
 - Read-only Manager summary API
 - SSRF-aware target validation with explicit private-network allowlists
 - PostgreSQL production support and SQLite local/test support
@@ -21,12 +25,21 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Maintenance windows, configurable check-history retention, and heartbeat-token rotation
 - Health endpoints, CI, tests, backup/recovery documentation
 - Conservative Uptime Kuma/kuma-cli audit, paused-by-default import, definition comparison, and live state/latency comparison tooling
-- Sanitized documented-baseline reconciliation against a fresh live Uptime Kuma configuration snapshot
-- Read-only live target/Uptime Kuma configuration evidence collection with kuma-cli v2 ID-keyed monitor-map support and fail-closed sanitization
+- Sanitized documented-baseline reconciliation against live Uptime Kuma configuration evidence
+- Minimized read-only live Uptime Kuma runtime evidence collection
+- Repeated fail-closed parallel-comparison assessment with coverage-drift detection
 - Fail-closed production target preflight
 - Production Compose contract validation with zero host-published application/database ports
 - Immediate-predecessor PostgreSQL application rollback-compatibility proof when the migration set is unchanged
 - Cutover and rollback evidence requirements that preserve Uptime Kuma until explicit retirement approval
+
+## Glaze UI 1.0
+
+Monitor targets Glaze UI **1.0.0** from the canonical `GoreeCloud/glaze-ui` design system. The current source maps Monitor to the shared semantic token vocabulary, Canvas/Solid/Raised/Glaze/Overlay hierarchy, 44-pixel interactive target minimum, 90/160/220/320ms motion vocabulary, Compact/Medium/Expanded/Wide adaptive ranges, light/dark/system appearance architecture, and accessibility/resilience fallbacks.
+
+The interface uses only local source assets and system/local font fallbacks; it has no remote UI, font, icon, analytics, or tracking dependency. Appearance preference is browser-local and fails soft if client storage is unavailable.
+
+See `docs/glaze-ui-conformance.md` for the source contract and the manual acceptance gate that remains required before Stable classification.
 
 ## Quick start
 
@@ -62,25 +75,37 @@ The development topology deliberately publishes only the loopback web port. Post
 
 `compose.production.yml` is the source-controlled production deployment candidate. It requires traceable image identity, digest-pinned PostgreSQL, protected purpose-specific environment files, persistent database bind storage, an internal database network, the approved external Caddy network, read-only application root filesystems, dropped Linux capabilities, `no-new-privileges`, and zero host-published Monitor/database ports.
 
-It is not authorization to deploy. See `docs/production-deployment.md` for the target-environment acceptance boundary.
+It is not authorization to deploy or cut over. See `docs/production-deployment.md` for the target-environment acceptance boundary.
 
 ## Live acceptance evidence
 
-Before deploying Monitor, collect the first live target/Uptime Kuma configuration evidence through the approved administrative path from an exact reviewed checkout:
+Collect configuration evidence only through the approved administrative path from an exact reviewed checkout:
 
 ```bash
 python3 scripts/collect_live_acceptance_evidence.py
 ```
 
-The collector is read-only with respect to the live service environment. It does not invoke `sudo`, modify Uptime Kuma, modify Docker networks, copy Caddy/Compose contents, change DNS/NetBird/firewall state, or write unsanitized `kuma monitor list` output to disk. It uses an authenticated kuma-cli v2 session, validates the ID-keyed monitor map, and sanitizes the configuration immediately. The sanitized evidence bundle remains Internal and must not be committed or published.
+Collect minimized Uptime Kuma runtime state separately when a comparison observation is required:
 
-`ready_for_review` means the target-environment and configuration evidence is complete enough for review. It does **not** mean runtime heartbeat/state evidence is available. Runtime comparison remains a separate later acceptance gate because kuma-cli v2 monitor-list output is configuration-only.
+```bash
+python3 scripts/collect_uptime_kuma_runtime_evidence.py
+```
 
-See `docs/live-acceptance-evidence.md` for the exact boundary and review procedure.
+Both collectors preserve a strict evidence boundary. Sanitized evidence remains Internal and must not be committed or published. Runtime comparison becomes meaningful only against a reviewed isolated Monitor target.
+
+Repeated parity observations can be aggregated with:
+
+```bash
+python manage.py assessparallel /path/to/observation-*.json --require-ready
+```
+
+A ready repeated series proves only the state/latency comparison contract for those observations. It does not replace controlled outage/recovery, TLS, maintenance, notification, DNS, Ping/ICMP, restore, rollback, or cutover evidence.
+
+See `docs/live-acceptance-evidence.md` and `docs/uptime-kuma-runtime-evidence.md`.
 
 ## Uptime Kuma migration and cutover
 
-A fresh live Uptime Kuma configuration snapshot—not the written inventory alone—is the migration authority for an acceptance session. After live evidence is collected, reconcile the sanitized configuration copy with:
+A fresh live Uptime Kuma configuration snapshot—not the written inventory alone—is the migration authority for an acceptance session. Reconcile a sanitized configuration copy with:
 
 ```bash
 python manage.py reconcileuptimebaseline \
@@ -91,9 +116,9 @@ python manage.py reconcileuptimebaseline \
 
 The command fails closed on missing expected coverage, reappeared retired monitors, unexpected live monitors, unsupported migration semantics, unresolved review items, and documented cutover blockers. The current documented blockers/reviews include ICMP/Ping network-layer coverage and resolver-specific DNS semantics.
 
-Do not use the configuration snapshot with `compareuptimestate`. Parallel state/latency comparison requires a separately validated sanitized runtime snapshot with heartbeat status and ping values.
+Do not use the configuration snapshot with `compareuptimestate`. Parallel state/latency comparison requires separately validated sanitized runtime evidence with heartbeat status and response-time values.
 
-See `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, and `docs/cutover-and-rollback.md`.
+See `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, and `docs/cutover-and-rollback.md`.
 
 ## Security model
 
@@ -105,7 +130,7 @@ Credentials and reusable secrets do not belong in this repository. Production en
 
 The repository contains one Django web/API application and one asynchronous monitoring worker. PostgreSQL is the intended production database. Redis, Celery, Kafka, and other brokers are intentionally excluded from v0.1.
 
-See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
+See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
 
 ## License
 

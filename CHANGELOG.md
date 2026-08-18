@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased - Glaze UI 1.0 product readiness
+
+- Replaced Monitor's older product-local UI token vocabulary with the canonical Glaze UI 1.0 semantic foundation and recorded target version 1.0.0 against canonical source revision `d6e446fd8ef251259d16368d50aad90d9287a774`.
+- Added the Canvas/Solid/Raised/Glaze/Overlay surface hierarchy, canonical spacing/radius/focus/target/motion semantics, System/Light/Dark appearance behavior, local fail-soft appearance persistence, and the Compact/Medium/Expanded/Wide adaptive model.
+- Added explicit no-backdrop-filter, reduced-transparency, reduced-motion, increased-contrast, forced-colors, skip-link, focus-visible, and screen-reader-only resilience support without adding remote fonts, icons, UI runtimes, analytics, or tracking dependencies.
+- Replaced the generic `G` placeholder with a distinct source-controlled GoreeCloud Monitor pulse/status product mark and browser SVG favicon.
+- Reworked compact navigation into a persistent Glaze bottom navigation instead of removing primary navigation below the previous 980-pixel breakpoint.
+- Completed the initial information architecture with dedicated authenticated Incidents and Notifications surfaces while preserving existing Overview, Monitors, Monitor Detail, Maintenance, Settings, and authentication workflows.
+- Added monitor name/state/type filtering, searchable active/recovered incident history, recent recoveries on Overview, stronger empty states, improved settings/integration posture, and a consistent Glaze form/detail/authentication treatment.
+- Kept GoreeCloud Notify explicitly planned rather than inventing an unapproved producer contract; ntfy remains the implemented migration publisher and Manager remains the implemented read-only platform integration.
+- Minimized unauthenticated push-heartbeat acknowledgements so a valid heartbeat token no longer reveals the internal monitor name.
+- Added `docs/glaze-ui-conformance.md` and five application-level Glaze contract tests covering semantic tokens/surfaces, adaptive navigation, accessibility/resilience, local product identity/dependency boundaries, and fail-soft local appearance behavior.
+- Expanded view coverage for notification-secret non-disclosure, monitor filtering, incident filtering, minimized heartbeat responses, and Glaze shell presence. The complete source suite now contains 94 tests.
+- Preserved the existing database migration set so this product-readiness layer does not invalidate the current immediate-predecessor direct rollback proof.
+- Kept target-native restore proof, isolated parallel activation, controlled DOWN/RECOVERED/TLS/maintenance/notification acceptance, Ping/ICMP, resolver-specific DNS, live rollback, manual Glaze/accessibility acceptance, explicit cutover, and Uptime Kuma retirement as separate gates.
+
 ## Unreleased - Repeated parallel acceptance readiness
 
 - Added a fail-closed repeated parallel-comparison acceptance layer so production-readiness review no longer depends on interpreting isolated one-off runtime comparisons manually.
@@ -23,7 +39,7 @@
 - Delayed evidence-directory creation until authenticated collection, completeness validation, and sanitization have succeeded so failed collection attempts do not leave partial evidence bundles.
 - Reused the existing GoreeCloud runtime sanitizer before any runtime snapshot is written and added checksum-protected Internal evidence packaging with restrictive permissions.
 - Added `docs/uptime-kuma-runtime-evidence.md` defining the source mechanism, authentication prerequisite, collection workflow, evidence format, completeness rules, comparison boundary, and security/operational limits.
-- Added seven runtime-evidence tests covering stdin-only token transfer, token-file permissions, parent-directory permissions, missing heartbeat rejection, inactive/no-history handling, invalid heartbeat states, and invalid boolean response-time values. The complete source suite now contains 79 tests.
+- Added seven runtime-evidence tests covering stdin-only token transfer, token-file permissions, parent-directory permissions, missing-heartbeat rejection, inactive/no-history handling, invalid heartbeat states, and invalid boolean response-time values. The complete source suite now contains 79 tests.
 - Kept live execution, runtime-state acceptance, Monitor activation, Uptime Kuma changes, monitoring-source identity changes, and cutover outside this source-only layer.
 
 ## Unreleased - Verified live baseline reconciliation
