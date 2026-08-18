@@ -5,18 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>GoreeCloud Monitor</title>
-  <style>
-    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:light dark;background:#0d1119;color:#f4f7fb}
-    *{box-sizing:border-box}body{min-height:100vh;margin:0;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at top,#17223b,#0d1119 58%)}
-    main{width:min(520px,100%);padding:32px;border:1px solid rgba(255,255,255,.14);border-radius:28px;background:rgba(24,31,46,.82);box-shadow:0 24px 64px rgba(0,0,0,.28);backdrop-filter:blur(18px)}
-    .brand{display:flex;align-items:center;gap:14px}.mark{width:52px;height:52px}.eyebrow{margin:0 0 4px;color:#aebdd7;font-size:.82rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}h1{margin:0;font-size:1.45rem}p{line-height:1.6;color:#c9d3e6}.status{margin-top:22px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.07)}
-    @media(prefers-color-scheme:light){:root{background:#eef3f9;color:#172033}body{background:radial-gradient(circle at top,#f8fbff,#e7edf6 62%)}main{background:rgba(255,255,255,.84);border-color:rgba(38,64,104,.15);box-shadow:0 22px 58px rgba(41,61,94,.14)}.eyebrow,p{color:#52647f}.status{background:rgba(36,71,126,.07)}}
-    @media(prefers-reduced-transparency:reduce){main{backdrop-filter:none;background:#171f2e}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
-  </style>
+  <link rel="icon" type="image/svg+xml" href="goreecloud-monitor.svg">
+  <link rel="stylesheet" href="glaze-client.css">
 </head>
 <body>
-  <main>
-    <div class="brand"><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="8" y1="6" x2="56" y2="58"><stop stop-color="#366cf6"/><stop offset="1" stop-color="#7c5cff"/></linearGradient></defs><rect x="4" y="4" width="56" height="56" rx="18" fill="url(#g)"/><path d="M14 34h9l4-10 7 22 5-12h11" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="49" cy="18" r="5" fill="#73d9a2" stroke="#fff" stroke-width="2"/></svg><div><p class="eyebrow">Protected by Wardveil</p><h1>GoreeCloud Monitor</h1></div></div>
+  <main class="glaze-overlay">
+    <div class="brand">
+      <img class="mark" src="goreecloud-monitor.svg" alt="">
+      <div><p class="eyebrow">Protected by Wardveil</p><h1>GoreeCloud Monitor</h1></div>
+    </div>
     <p>This local Glaze UI fallback belongs to the native client package. Normal operation loads the canonical private Monitor service directly.</p>
     <div class="status" role="status">Client shell ready. The Monitor service must be separately deployed and reachable at its approved private origin.</div>
   </main>
