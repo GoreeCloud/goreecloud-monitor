@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">GoreeCloud Monitor</title>
+  <defs>
+    <linearGradient id="monitor-gradient" x1="160" y1="96" x2="864" y2="928" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#366cf6"/>
+      <stop offset="1" stop-color="#7c5cff"/>
+    </linearGradient>
+    <linearGradient id="monitor-glaze" x1="512" y1="80" x2="512" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="256" fill="url(#monitor-gradient)"/>
+  <rect x="82" y="82" width="860" height="860" rx="238" fill="none" stroke="#ffffff" stroke-opacity=".18" stroke-width="12"/>
+  <path d="M208 548h136l66-188 128 344 88-204h190" fill="none" stroke="#ffffff" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="786" cy="274" r="82" fill="#73d9a2" stroke="#ffffff" stroke-width="28"/>
+  <path d="M184 160c168-86 488-110 674 18 44 30 77 68 98 111v74c-60-68-154-116-266-140-192-41-388-11-526 69-21 12-40 25-58 38V221c24-23 50-43 78-61Z" fill="url(#monitor-glaze)"/>
+</svg>
