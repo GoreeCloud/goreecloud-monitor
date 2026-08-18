@@ -1,0 +1,15 @@
+{% extends "monitoring/base.html" %}
+{% block title %}Incidents · GoreeCloud Monitor{% endblock %}
+{% block content %}
+<section class="hero"><div class="hero-copy"><div class="eyebrow">Operational history</div><h1>Incidents</h1><p>Active outages and recovered events stay together so state transitions remain understandable without turning Monitor into a raw-log archive.</p></div></section>
+<section class="metric-grid" aria-label="Incident summary">
+  <article class="metric panel" data-state="down"><span>Active</span><strong>{{ active_count }}</strong></article>
+  <article class="metric panel" data-state="up"><span>Recovered</span><strong>{{ recovered_count }}</strong></article>
+  <article class="metric panel"><span>Total retained</span><strong>{{ total_count }}</strong></article>
+</section>
+<section class="panel section-panel">
+  <nav class="tab-list" aria-label="Incident status"><a href="{% url 'monitoring:incident-list' %}{% if query %}?q={{ query|urlencode }}{% endif %}" {% if status_filter == 'all' %}aria-current="page"{% endif %}>All</a><a href="?status=active{% if query %}&q={{ query|urlencode }}{% endif %}" {% if status_filter == 'active' %}aria-current="page"{% endif %}>Active</a><a href="?status=recovered{% if query %}&q={{ query|urlencode }}{% endif %}" {% if status_filter == 'recovered' %}aria-current="page"{% endif %}>Recovered</a></nav>
+  <form class="filter-bar" method="get" role="search"><input type="hidden" name="status" value="{{ status_filter }}"><label>Service name<input type="search" name="q" value="{{ query }}" placeholder="Search incident history" autocomplete="off"></label><div></div><div></div><div class="filter-actions"><button class="button" type="submit">Search</button>{% if query %}<a class="button quiet" href="?status={{ status_filter }}">Clear</a>{% endif %}</div></form>
+  <div class="stack">{% for incident in incidents %}<a class="row-link" href="{% url 'monitoring:monitor-detail' incident.monitor_id %}"><span class="status-dot {% if incident.is_active %}down{% else %}up{% endif %}"></span><span><strong>{{ incident.monitor.name }}</strong><small>{{ incident.started_at|date:"M j, Y H:i" }} UTC · {{ incident.failure_reason|default:"No additional failure detail" }}</small></span><span class="pill {% if incident.is_active %}down{% else %}up{% endif %}">{% if incident.is_active %}Active{% else %}Recovered{% endif %}</span></a>{% empty %}<div class="empty"><strong>No matching incidents</strong>No retained incident records match this view.</div>{% endfor %}</div>
+</section>
+{% endblock %}

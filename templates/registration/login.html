@@ -1,15 +1,13 @@
 {% extends "monitoring/base.html" %}
+{% load static %}
 {% block title %}Sign in · GoreeCloud Monitor{% endblock %}
 {% block content %}
 <section class="auth-shell">
   <div class="panel auth-card">
-    <div class="eyebrow">Private monitoring</div>
-    <h1>Sign in to Monitor</h1>
-    <p class="muted">Administrative access is restricted to approved GoreeCloud identities.</p>
-    <form method="post" class="form-grid">{% csrf_token %}
-      {{ form.as_p }}
-      <button class="button primary" type="submit">Sign in</button>
-    </form>
+    <div class="auth-brand"><img src="{% static 'monitoring/img/monitor-mark.svg' %}" alt=""><div><div class="eyebrow">Private monitoring</div><strong>GoreeCloud Monitor</strong></div></div>
+    <h1>Sign in</h1>
+    <p class="muted">Use an individually assigned approved GoreeCloud identity. Administrative actions require additional staff authorization.</p>
+    <form method="post" class="form-grid">{% csrf_token %}{{ form.as_p }}<button class="button primary" type="submit">Sign in to Monitor</button></form>
   </div>
 </section>
 {% endblock %}

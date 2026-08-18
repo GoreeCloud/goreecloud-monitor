@@ -1,26 +1,31 @@
 {% extends "monitoring/base.html" %}
 {% block content %}
 <section class="hero">
-  <div><div class="eyebrow">Availability and recovery</div><h1>System health</h1><p class="muted">Focused visibility into GoreeCloud service availability without replacing specialized resource or job monitoring.</p></div>
-  {% if user.is_staff %}<a class="button primary" href="{% url 'monitoring:monitor-create' %}">Add monitor</a>{% endif %}
+  <div class="hero-copy"><div class="eyebrow">Availability and recovery</div><h1>System health</h1><p>Focused GoreeCloud availability evidence, incidents, recovery, certificates, and heartbeats without absorbing resource monitoring or scheduled-job responsibilities.</p></div>
+  <div class="actions"><span class="pill {{ overall_tone }}">{{ overall_state }}</span>{% if user.is_staff %}<a class="button primary" href="{% url 'monitoring:monitor-create' %}">Add monitor</a>{% endif %}</div>
 </section>
 <section class="metric-grid" aria-label="Monitor state summary">
   <article class="metric panel"><span>Monitors</span><strong>{{ total }}</strong></article>
-  <article class="metric panel state-up"><span>Up</span><strong>{{ counts.UP }}</strong></article>
-  <article class="metric panel state-down"><span>Down</span><strong>{{ counts.DOWN }}</strong></article>
-  <article class="metric panel state-degraded"><span>Degraded</span><strong>{{ counts.DEGRADED }}</strong></article>
+  <article class="metric panel" data-state="up"><span>Up</span><strong>{{ counts.UP }}</strong></article>
+  <article class="metric panel" data-state="down"><span>Down</span><strong>{{ counts.DOWN }}</strong></article>
+  <article class="metric panel" data-state="degraded"><span>Degraded</span><strong>{{ counts.DEGRADED }}</strong></article>
   <article class="metric panel"><span>Maintenance</span><strong>{{ counts.MAINTENANCE }}</strong></article>
-  <article class="metric panel"><span>Paused</span><strong>{{ counts.PAUSED }}</strong></article>
+  <article class="metric panel"><span>Paused / unknown</span><strong>{{ counts.PAUSED|add:counts.UNKNOWN }}</strong></article>
 </section>
 <div class="two-column">
-  <section class="panel section-panel"><div class="section-heading"><h2>Active incidents</h2><span>{{ counts.DOWN }} down</span></div>
-    {% if active_incidents %}<div class="stack">{% for incident in active_incidents %}<a class="row-link" href="{% url 'monitoring:monitor-detail' incident.monitor_id %}"><span class="status-dot down"></span><span><strong>{{ incident.monitor.name }}</strong><small>Since {{ incident.started_at|date:"M j, H:i" }} UTC</small></span><span class="pill down">Down</span></a>{% endfor %}</div>{% else %}<div class="empty">No active incidents.</div>{% endif %}
+  <section class="panel section-panel"><div class="section-heading"><h2>Active incidents</h2><a href="{% url 'monitoring:incident-list' %}?status=active">{{ counts.DOWN }} down</a></div>
+    {% if active_incidents %}<div class="stack">{% for incident in active_incidents %}<a class="row-link" href="{% url 'monitoring:monitor-detail' incident.monitor_id %}"><span class="status-dot down"></span><span><strong>{{ incident.monitor.name }}</strong><small>Started {{ incident.started_at|date:"M j, H:i" }} UTC</small></span><span class="pill down">Active</span></a>{% endfor %}</div>{% else %}<div class="empty"><strong>No active incidents</strong>Current monitor evidence has not produced an open outage.</div>{% endif %}
   </section>
-  <section class="panel section-panel"><div class="section-heading"><h2>Recent checks</h2><span>Latest evidence</span></div>
-    {% if recent_checks %}<div class="stack">{% for check in recent_checks %}<a class="row-link" href="{% url 'monitoring:monitor-detail' check.monitor_id %}"><span class="status-dot {% if check.success %}up{% else %}down{% endif %}"></span><span><strong>{{ check.monitor.name }}</strong><small>{{ check.message }}</small></span><span class="mono">{% if check.response_time_ms %}{{ check.response_time_ms|floatformat:0 }} ms{% else %}—{% endif %}</span></a>{% endfor %}</div>{% else %}<div class="empty">No check evidence yet. Start the worker to begin monitoring.</div>{% endif %}
+  <section class="panel section-panel"><div class="section-heading"><h2>Recent recoveries</h2><a href="{% url 'monitoring:incident-list' %}?status=recovered">Incident history</a></div>
+    {% if recent_recoveries %}<div class="stack">{% for incident in recent_recoveries %}<a class="row-link" href="{% url 'monitoring:monitor-detail' incident.monitor_id %}"><span class="status-dot up"></span><span><strong>{{ incident.monitor.name }}</strong><small>Recovered {{ incident.ended_at|date:"M j, H:i" }} UTC</small></span><span class="pill up">Recovered</span></a>{% endfor %}</div>{% else %}<div class="empty"><strong>No recoveries yet</strong>Recovered incidents will appear here after controlled state transitions.</div>{% endif %}
   </section>
 </div>
-<section class="panel section-panel"><div class="section-heading"><h2>Services</h2><a href="{% url 'monitoring:monitor-list' %}">View all</a></div>
-  <div class="stack">{% for monitor in monitors %}<a class="row-link" href="{% url 'monitoring:monitor-detail' monitor.pk %}"><span class="status-dot {{ monitor.state|lower }}"></span><span><strong>{{ monitor.name }}</strong><small>{{ monitor.kind }} · {{ monitor.last_message|default:"Awaiting first check" }}</small></span><span class="pill {{ monitor.state|lower }}">{{ monitor.get_state_display }}</span></a>{% empty %}<div class="empty">Create the first monitor to begin.</div>{% endfor %}</div>
-</section>
+<div class="two-column">
+  <section class="panel section-panel"><div class="section-heading"><h2>Latest evidence</h2><span class="muted">Recent checks</span></div>
+    {% if recent_checks %}<div class="stack">{% for check in recent_checks %}<a class="row-link" href="{% url 'monitoring:monitor-detail' check.monitor_id %}"><span class="status-dot {% if check.success %}up{% else %}down{% endif %}"></span><span><strong>{{ check.monitor.name }}</strong><small>{{ check.message }}</small></span><span class="mono">{% if check.response_time_ms %}{{ check.response_time_ms|floatformat:0 }} ms{% else %}—{% endif %}</span></a>{% endfor %}</div>{% else %}<div class="empty"><strong>No check evidence yet</strong>Start the approved worker only after the target environment is ready.</div>{% endif %}
+  </section>
+  <section class="panel section-panel"><div class="section-heading"><h2>Coverage</h2><a href="{% url 'monitoring:monitor-list' %}">View all</a></div>
+    <div class="stack">{% for monitor in monitors %}<a class="row-link" href="{% url 'monitoring:monitor-detail' monitor.pk %}"><span class="status-dot {{ monitor.state|lower }}"></span><span><strong>{{ monitor.name }}</strong><small>{{ monitor.get_kind_display }} · every {{ monitor.interval_seconds }}s</small></span><span class="pill {{ monitor.state|lower }}">{{ monitor.get_state_display }}</span></a>{% empty %}<div class="empty"><strong>No monitors configured</strong>Import or create reviewed definitions when the isolated target is ready.</div>{% endfor %}</div>
+  </section>
+</div>
 {% endblock %}
