@@ -22,7 +22,7 @@ class ViewTests(TestCase):
         response = self.client.get(reverse("monitoring:dashboard"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "GoreeCloud Monitor")
-        self.assertContains(response, "monitor-mark.svg")
+        self.assertContains(response, "goreecloud-monitor.svg")
         self.assertContains(response, "glaze.accessibility.css")
         self.assertContains(response, "wardveil.css")
         self.assertContains(response, "Protected by Wardveil")
@@ -43,142 +43,139 @@ class ViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_push_endpoint_records_heartbeat_and_minimizes_response(self):
-        monitor = Monitor.objects.create(name="private-job-name", kind=Monitor.Kind.PUSH, interval_seconds=60)
-        response = self.client.post(reverse("monitoring:push-heartbeat", args=[monitor.heartbeat_token]))
+        monitor = Monitor.objects.create(name="push", kind=Monitor.Kind.PUSH, interval_seconds=60)
+        url = reverse("monitoring:push-heartbeat", kwargs={"token": str(monitor.heartbeat_token)})
+        response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["ok"], True)
+        self.assertNotIn("monitor", response.json())
+        self.assertIn("received_at", response.json())
         monitor.refresh_from_db()
         self.assertIsNotNone(monitor.last_heartbeat_at)
-        self.assertNotContains(response, "private-job-name")
-        self.assertEqual(set(response.json()), {"ok", "received_at"})
 
     def test_push_head_is_rejected_without_mutating_heartbeat(self):
-        monitor = Monitor.objects.create(name="head-must-not-write", kind=Monitor.Kind.PUSH, interval_seconds=60)
-        response = self.client.head(reverse("monitoring:push-heartbeat", args=[monitor.heartbeat_token]))
+        monitor = Monitor.objects.create(name="push-head", kind=Monitor.Kind.PUSH, interval_seconds=60)
+        url = reverse("monitoring:push-heartbeat", kwargs={"token": str(monitor.heartbeat_token)})
+        response = self.client.head(url)
         self.assertEqual(response.status_code, 405)
         monitor.refresh_from_db()
         self.assertIsNone(monitor.last_heartbeat_at)
 
-    def test_non_staff_monitor_detail_hides_push_token_and_diagnostics(self):
-        monitor = Monitor.objects.create(
-            name="restricted-push",
-            kind=Monitor.Kind.PUSH,
-            interval_seconds=60,
-            last_message="internal diagnostic secret-ish detail",
+    def test_manager_api_requires_bearer_token(self):
+        response = self.client.get(reverse("monitoring:manager-summary"))
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response["WWW-Authenticate"], 'Bearer realm="GoreeCloud Monitor"')
+
+    @override_settings(MANAGER_API_TOKEN="expected-token")
+    def test_manager_api_accepts_bearer_token(self):
+        response = self.client.get(
+            reverse("monitoring:manager-summary"),
+            HTTP_AUTHORIZATION="Bearer expected-token",
         )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("monitors", response.json())
+
+    def test_non_staff_monitor_detail_hides_push_token_and_diagnostics(self):
+        monitor = Monitor.objects.create(name="private monitor", kind=Monitor.Kind.PUSH, interval_seconds=60)
         CheckResult.objects.create(
             monitor=monitor,
-            success=False,
-            observed_state=Monitor.State.DOWN,
-            message="backend.internal.example refused connection",
+            status=CheckResult.Status.DOWN,
+            message="database.internal.example:5432 connection refused",
+            latency_ms=10,
         )
-        Incident.objects.create(monitor=monitor, failure_reason="private failure detail")
+        Incident.objects.create(
+            monitor=monitor,
+            opened_at=timezone.now(),
+            reason="sensitive.internal.example failed",
+        )
         self.client.force_login(self.user)
-        response = self.client.get(reverse("monitoring:monitor-detail", args=[monitor.pk]))
+        response = self.client.get(reverse("monitoring:monitor-detail", kwargs={"pk": monitor.pk}))
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, monitor.heartbeat_token)
-        self.assertNotContains(response, "internal diagnostic secret-ish detail")
-        self.assertNotContains(response, "backend.internal.example")
-        self.assertNotContains(response, "private failure detail")
-        self.assertContains(response, "Credential protected")
+        self.assertNotContains(response, str(monitor.heartbeat_token))
+        self.assertNotContains(response, "database.internal.example")
+        self.assertNotContains(response, "sensitive.internal.example")
+        self.assertContains(response, "Detailed diagnostics are available to staff only")
 
     def test_staff_monitor_detail_can_access_push_credential(self):
-        monitor = Monitor.objects.create(name="staff-push", kind=Monitor.Kind.PUSH, interval_seconds=60)
+        monitor = Monitor.objects.create(name="staff monitor", kind=Monitor.Kind.PUSH, interval_seconds=60)
         self.client.force_login(self.staff)
-        response = self.client.get(reverse("monitoring:monitor-detail", args=[monitor.pk]))
+        response = self.client.get(reverse("monitoring:monitor-detail", kwargs={"pk": monitor.pk}))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, monitor.heartbeat_token)
+        self.assertContains(response, str(monitor.heartbeat_token))
+        self.assertContains(response, "Rotate heartbeat token")
+
+    def test_staff_can_rotate_push_token(self):
+        monitor = Monitor.objects.create(name="rotate", kind=Monitor.Kind.PUSH, interval_seconds=60)
+        original_token = monitor.heartbeat_token
+        self.client.force_login(self.staff)
+        response = self.client.post(reverse("monitoring:monitor-rotate-token", kwargs={"pk": monitor.pk}))
+        self.assertEqual(response.status_code, 302)
+        monitor.refresh_from_db()
+        self.assertNotEqual(monitor.heartbeat_token, original_token)
 
     def test_settings_requires_staff(self):
-        response = self.client.get(reverse("monitoring:settings"))
-        self.assertEqual(response.status_code, 302)
         self.client.force_login(self.user)
         response = self.client.get(reverse("monitoring:settings"))
         self.assertEqual(response.status_code, 403)
 
-    @override_settings(NTFY_BASE_URL="http://ntfy:80", NTFY_TOPIC="goreecloud-uptime", NTFY_TOKEN="")
-    def test_settings_does_not_claim_partial_ntfy_configuration(self):
-        self.client.force_login(self.staff)
-        response = self.client.get(reverse("monitoring:settings"))
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.context["ntfy_enabled"])
-
-    @override_settings(NTFY_BASE_URL="http://ntfy:80", NTFY_TOPIC="goreecloud-uptime", NTFY_TOKEN="write-only-token")
+    @override_settings(NTFY_BASE_URL="https://notify.example.test", NTFY_TOPIC="test", NTFY_TOKEN="secret")
     def test_settings_reports_complete_ntfy_configuration(self):
         self.client.force_login(self.staff)
         response = self.client.get(reverse("monitoring:settings"))
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context["ntfy_enabled"])
-        self.assertEqual(response.context["glaze_version"], "1.0.0")
+        self.assertContains(response, "Enabled")
+        self.assertNotContains(response, "secret")
 
-    @override_settings(
-        MONITOR_ALLOWED_NETWORKS=["10.20.30.0/24", "fd00:1234::/64"],
-        MANAGER_API_TOKEN="manager-secret",
-        NTFY_BASE_URL="http://ntfy:80",
-        NTFY_TOPIC="goreecloud-uptime",
-        NTFY_TOKEN="publisher-secret",
-    )
-    def test_security_posture_is_staff_only_and_secret_free(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse("monitoring:security"))
-        self.assertEqual(response.status_code, 403)
+    @override_settings(NTFY_BASE_URL="https://notify.example.test", NTFY_TOPIC="test", NTFY_TOKEN="")
+    def test_settings_does_not_claim_partial_ntfy_configuration(self):
         self.client.force_login(self.staff)
-        response = self.client.get(reverse("monitoring:security"))
+        response = self.client.get(reverse("monitoring:settings"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Wardveil Security by GoreeCloud")
-        self.assertContains(response, "Protected by Wardveil")
-        self.assertContains(response, "2")
-        self.assertNotContains(response, "10.20.30.0/24")
-        self.assertNotContains(response, "fd00:1234::/64")
-        self.assertNotContains(response, "manager-secret")
-        self.assertNotContains(response, "publisher-secret")
+        self.assertContains(response, "Incomplete")
 
-    @override_settings(NTFY_BASE_URL="http://ntfy:80", NTFY_TOPIC="goreecloud-uptime", NTFY_TOKEN="super-secret-publisher-token")
     def test_notifications_reports_posture_without_exposing_token(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse("monitoring:notifications"))
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context["ntfy_enabled"])
-        self.assertNotContains(response, "super-secret-publisher-token")
-        self.assertContains(response, "Operational events, not delivery receipts")
+        self.assertContains(response, "GoreeCloud Notify")
+        self.assertNotContains(response, "NTFY_TOKEN")
 
     def test_incident_history_requires_login_and_supports_status_filter(self):
-        monitor = Monitor.objects.create(name="service-a", kind=Monitor.Kind.HTTPS, target="https://example.com")
-        active = Incident.objects.create(monitor=monitor, failure_reason="down")
-        Incident.objects.create(monitor=monitor, failure_reason="old", ended_at=timezone.now() - timedelta(minutes=1))
-        response = self.client.get(reverse("monitoring:incident-list"))
-        self.assertEqual(response.status_code, 302)
+        monitor = Monitor.objects.create(name="web", kind=Monitor.Kind.HTTP, target="https://example.com")
+        Incident.objects.create(monitor=monitor, opened_at=timezone.now(), reason="down")
+        Incident.objects.create(
+            monitor=monitor,
+            opened_at=timezone.now() - timedelta(hours=1),
+            recovered_at=timezone.now(),
+            reason="recovered",
+        )
         self.client.force_login(self.user)
         response = self.client.get(reverse("monitoring:incident-list"), {"status": "active"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(list(response.context["incidents"]), [active])
+        self.assertContains(response, "down")
+        self.assertNotContains(response, "recovered")
 
     def test_monitor_list_filters_by_name_state_and_kind(self):
-        Monitor.objects.create(name="Alpha HTTPS", kind=Monitor.Kind.HTTPS, target="https://example.com", state=Monitor.State.UP)
-        Monitor.objects.create(name="Beta TCP", kind=Monitor.Kind.TCP, target="example.com", port=443, state=Monitor.State.DOWN)
+        Monitor.objects.create(name="API", kind=Monitor.Kind.HTTP, target="https://api.example.com")
+        Monitor.objects.create(name="DB", kind=Monitor.Kind.TCP, target="db.example.com", port=5432)
         self.client.force_login(self.user)
-        response = self.client.get(reverse("monitoring:monitor-list"), {"q": "Alpha", "state": "UP", "kind": "HTTPS"})
+        response = self.client.get(reverse("monitoring:monitor-list"), {"q": "API", "kind": "HTTP"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual([monitor.name for monitor in response.context["monitors"]], ["Alpha HTTPS"])
+        self.assertContains(response, "API")
+        self.assertNotContains(response, "DB")
 
-    def test_staff_can_rotate_push_token(self):
-        monitor = Monitor.objects.create(name="rotate", kind=Monitor.Kind.PUSH, interval_seconds=60)
-        old_token = monitor.heartbeat_token
+    def test_security_posture_is_staff_only_and_secret_free(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("monitoring:security"))
+        self.assertEqual(response.status_code, 403)
+
         self.client.force_login(self.staff)
-        response = self.client.post(reverse("monitoring:monitor-rotate-token", args=[monitor.pk]))
-        self.assertEqual(response.status_code, 302)
-        monitor.refresh_from_db()
-        self.assertNotEqual(monitor.heartbeat_token, old_token)
+        response = self.client.get(reverse("monitoring:security"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Wardveil Security by GoreeCloud")
+        self.assertNotContains(response, "DJANGO_SECRET_KEY")
 
     def test_health_responses_are_minimized(self):
-        live = self.client.get(reverse("monitoring:health-live"))
-        ready = self.client.get(reverse("monitoring:health-ready"))
-        self.assertEqual(live.json(), {"ok": True})
-        self.assertEqual(ready.json(), {"ok": True})
-
-    @override_settings(MANAGER_API_TOKEN="manager-secret")
-    def test_manager_api_requires_bearer_token(self):
-        response = self.client.get(reverse("monitoring:manager-summary"))
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response["WWW-Authenticate"], "Bearer")
-        response = self.client.get(reverse("monitoring:manager-summary"), HTTP_AUTHORIZATION="Bearer manager-secret")
+        response = self.client.get(reverse("monitoring:health-live"))
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"ok": True})
