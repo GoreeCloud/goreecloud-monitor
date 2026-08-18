@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased - Wardveil Security hardening
+
+- Integrated **Wardveil Security by GoreeCloud** as Monitor's official security/protection identity while preserving Glaze UI 1.0 as the visual/interaction system and keeping Django, Caddy, NetBird, firewall, credential, vulnerability, backup, and recovery controls authoritative for their technical state.
+- Added a staff-only Glaze UI security-posture surface and the approved `Protected by Wardveil` presentation across the primary shell, authentication, protected Settings, and privileged Django administration.
+- Restricted Settings, exact private-network allowlists, push-heartbeat credentials, raw check diagnostics, and incident failure reasons to staff while retaining useful monitor state, incident state, interval, latency, and timing information for authenticated viewers.
+- Added dynamic response hardening with Content Security Policy, Permissions Policy, same-origin resource policy, no-index/no-archive robot controls, same-origin referrer/opener boundaries, clickjacking denial, and no-store caching for operational responses.
+- Strengthened production session defaults with Secure/HttpOnly/SameSite cookies, host-only production cookie names, HTTPS redirect, and one-year HSTS defaults while preserving non-secure development cookie names under explicit debug mode.
+- Moved Wardveil response middleware outside request-rejection middleware so rejected dynamic requests receive the same private response-policy headers; WhiteNoise static assets retain independent immutable caching behavior.
+- Added minimized structured `monitoring.wardveil` events for login, logout, failed login, monitor mutation, maintenance-window mutation, and heartbeat-credential rotation without copying failed-login usernames, client IP addresses, target URLs, request bodies, tokens, secrets, or raw diagnostics.
+- Minimized health endpoints to readiness/liveness booleans, rejected HEAD as a state-mutating heartbeat method, and added an explicit bearer challenge to unauthorized Manager API requests.
+- Hardened ntfy transition publishing so arbitrary monitor exceptions, target details, query strings, response data, and other diagnostics are not forwarded to notification bodies; controlled TLS-expiry context remains available.
+- Expanded `targetpreflight` to fail closed when one-year HSTS, Secure/HttpOnly/SameSite cookie boundaries, clickjacking denial, same-origin opener policy, Content Security Policy, or Permissions Policy are missing from a production acceptance configuration.
+- Added `docs/wardveil-security.md`, updated `SECURITY.md`, `.env.example`, and `README.md`, and explicitly documented the existing DNS re-resolution SSRF time-of-check/time-of-use boundary instead of overstating the current protection.
+- Expanded automated regression coverage for Wardveil/Glaze conformance, security headers, staff-only posture, diagnostic and credential non-disclosure, non-mutating HEAD behavior, minimized health/API behavior, notification sanitization, structured audit events, and fail-closed security preflight.
+- Preserved the existing Django migration set, hardened production Compose topology, Uptime Kuma production authority, and all existing live acceptance/recovery/rollback/cutover gates.
+
 ## Unreleased - Glaze UI 1.0 product readiness
 
 - Replaced Monitor's older product-local UI token vocabulary with the canonical Glaze UI 1.0 semantic foundation and recorded target version 1.0.0 against canonical source revision `d6e446fd8ef251259d16368d50aad90d9287a774`.
