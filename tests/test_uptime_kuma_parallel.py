@@ -6,10 +6,34 @@ from io import StringIO
 from pathlib import Path
 
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase
 
 from monitoring.models import Monitor
-from monitoring.parallel import normalize_kuma_snapshot
+from monitoring.parallel import evaluate_parallel_series, normalize_kuma_snapshot
+
+
+def _comparison_report(*results):
+    statuses = (
+        "match",
+        "state-different",
+        "latency-different",
+        "missing",
+        "monitor-only",
+        "source-unknown",
+        "source-duplicate",
+        "source-invalid",
+    )
+    monitors = [{"name": name, "status": status} for name, status in results]
+    summary = {status: sum(1 for item in monitors if item["status"] == status) for status in statuses}
+    summary["compared"] = len(monitors)
+    return {
+        "schema": "goreecloud-monitor-uptime-kuma-runtime-comparison",
+        "version": 1,
+        "latency_tolerance_ms": 250.0,
+        "summary": summary,
+        "monitors": monitors,
+    }
 
 
 class KumaRuntimeNormalizationTests(SimpleTestCase):
@@ -24,6 +48,76 @@ class KumaRuntimeNormalizationTests(SimpleTestCase):
         snapshot = normalize_kuma_snapshot({"name": "future", "active": True, "heartbeat": {"status": 99, "ping": 10}})
         self.assertEqual(snapshot.state, Monitor.State.UNKNOWN)
         self.assertFalse(snapshot.status_known)
+
+
+class ParallelSeriesEvaluationTests(SimpleTestCase):
+    def test_three_complete_parity_observations_are_ready(self):
+        reports = [
+            _comparison_report(("A", "match"), ("B", "match")),
+            _comparison_report(("A", "match"), ("B", "match")),
+            _comparison_report(("A", "match"), ("B", "match")),
+        ]
+        result = evaluate_parallel_series(reports)
+        self.assertTrue(result["ready"])
+        self.assertEqual(result["summary"]["parity_observations"], 3)
+        self.assertEqual(result["summary"]["monitor_count"], 2)
+        self.assertEqual(result["blockers"], [])
+
+    def test_insufficient_observations_fail_closed(self):
+        result = evaluate_parallel_series([_comparison_report(("A", "match"))], minimum_observations=3)
+        self.assertFalse(result["ready"])
+        self.assertIn("insufficient observations", result["blockers"][0])
+
+    def test_non_parity_status_blocks_acceptance(self):
+        reports = [
+            _comparison_report(("A", "match")),
+            _comparison_report(("A", "state-different")),
+            _comparison_report(("A", "match")),
+        ]
+        result = evaluate_parallel_series(reports)
+        self.assertFalse(result["ready"])
+        self.assertEqual(result["summary"]["status_totals"]["state-different"], 1)
+        self.assertTrue(any("non-parity" in blocker for blocker in result["blockers"]))
+
+    def test_coverage_drift_blocks_acceptance(self):
+        reports = [
+            _comparison_report(("A", "match"), ("B", "match")),
+            _comparison_report(("A", "match")),
+            _comparison_report(("A", "match"), ("B", "match")),
+        ]
+        result = evaluate_parallel_series(reports)
+        self.assertFalse(result["ready"])
+        self.assertEqual(result["summary"]["coverage_drift_observations"], 1)
+        self.assertTrue(any("coverage drift" in blocker for blocker in result["blockers"]))
+
+    def test_unsupported_schema_is_rejected(self):
+        report = _comparison_report(("A", "match"))
+        report["version"] = 99
+        with self.assertRaisesRegex(ValueError, "unsupported comparison schema"):
+            evaluate_parallel_series([report], minimum_observations=1)
+
+
+class ParallelSeriesCommandTests(SimpleTestCase):
+    def test_command_reads_multiple_reports_and_can_require_readiness(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = []
+            for index in range(3):
+                path = Path(directory) / f"comparison-{index}.json"
+                path.write_text(json.dumps(_comparison_report(("A", "match"))), encoding="utf-8")
+                paths.append(str(path))
+
+            out = StringIO()
+            call_command("assessparallel", *paths, json=True, require_ready=True, stdout=out)
+            report = json.loads(out.getvalue())
+            self.assertTrue(report["ready"])
+            self.assertEqual(report["observation_count"], 3)
+
+    def test_command_exits_nonzero_when_readiness_is_required(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "comparison.json"
+            path.write_text(json.dumps(_comparison_report(("A", "state-different"))), encoding="utf-8")
+            with self.assertRaisesRegex(CommandError, "acceptance criteria"):
+                call_command("assessparallel", str(path), require_ready=True, minimum_observations=1)
 
 
 class KumaRuntimeComparisonCommandTests(TestCase):
