@@ -12,6 +12,7 @@
   <meta name="referrer" content="same-origin">
   <title>{% block title %}GoreeCloud Monitor{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'monitoring/img/monitor-mark.svg' %}">
+  <link rel="manifest" href="{% static 'monitoring/manifest.webmanifest' %}">
   <link rel="stylesheet" href="{% static 'monitoring/css/glaze.css' %}">
   <link rel="stylesheet" href="{% static 'monitoring/css/glaze.accessibility.css' %}">
   <link rel="stylesheet" href="{% static 'monitoring/css/wardveil.css' %}">
@@ -31,46 +32,30 @@
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="app-shell" data-glaze-ui="1.0.0" data-security-identity="wardveil">
     <header class="topbar">
-      <a class="brand" href="{% url 'monitoring:dashboard' %}" aria-label="GoreeCloud Monitor home">
-        <img class="brand-mark" src="{% static 'monitoring/img/monitor-mark.svg' %}" alt="">
-        <span class="brand-copy"><strong>GoreeCloud</strong><small>Monitor</small></span>
-      </a>
-      {% if user.is_authenticated %}
-      {% with current=request.resolver_match.url_name %}
+      <a class="brand" href="{% url 'monitoring:dashboard' %}" aria-label="GoreeCloud Monitor home"><img class="brand-mark" src="{% static 'monitoring/img/monitor-mark.svg' %}" alt=""><span class="brand-copy"><strong>GoreeCloud</strong><small>Monitor</small></span></a>
+      {% if user.is_authenticated %}{% with current=request.resolver_match.url_name %}
       <nav class="nav" aria-label="Primary navigation">
         <a href="{% url 'monitoring:dashboard' %}" {% if current == 'dashboard' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-overview"/></svg><span>Overview</span></a>
         <a href="{% url 'monitoring:monitor-list' %}" {% if 'monitor' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-monitor"/></svg><span>Monitors</span></a>
         <a href="{% url 'monitoring:incident-list' %}" {% if 'incident' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-incident"/></svg><span>Incidents</span></a>
         <a href="{% url 'monitoring:maintenance-list' %}" {% if 'maintenance' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-maintenance"/></svg><span>Maintenance</span></a>
         <a href="{% url 'monitoring:notifications' %}" {% if current == 'notifications' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-bell"/></svg><span>Notifications</span></a>
-        {% if user.is_staff %}<a href="{% url 'monitoring:security' %}" {% if current == 'security' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-security"/></svg><span>Security</span></a>
-        <a href="{% url 'monitoring:settings' %}" {% if current == 'settings' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-settings"/></svg><span>Settings</span></a>{% endif %}
-      </nav>
-      {% endwith %}
-      <div class="toolbar-actions">
-        <button class="icon-button" type="button" data-appearance-toggle aria-label="Appearance: System. Activate to change."><svg class="icon"><use href="#icon-theme"/></svg><span class="glaze-sr-only" data-appearance-label>System</span></button>
-        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="button quiet" type="submit"><span class="signout-label">Sign out</span><span aria-hidden="true">↗</span></button></form>
-      </div>
+        {% if user.is_staff %}<a href="{% url 'monitoring:security' %}" {% if current == 'security' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-security"/></svg><span>Security</span></a><a href="{% url 'monitoring:settings' %}" {% if current == 'settings' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-settings"/></svg><span>Settings</span></a>{% endif %}
+      </nav>{% endwith %}
+      <div class="toolbar-actions"><button class="icon-button" type="button" data-appearance-toggle aria-label="Appearance: System. Activate to change."><svg class="icon"><use href="#icon-theme"/></svg><span class="glaze-sr-only" data-appearance-label>System</span></button><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="button quiet" type="submit"><span class="signout-label">Sign out</span><span aria-hidden="true">↗</span></button></form></div>
       {% endif %}
     </header>
-    <main class="content" id="main-content" tabindex="-1">
-      {% for message in messages %}<div class="notice" role="status">{{ message }}</div>{% endfor %}
-      {% block content %}{% endblock %}
-    </main>
+    <main class="content" id="main-content" tabindex="-1">{% for message in messages %}<div class="notice" role="status">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main>
     <footer class="security-footer"><strong>Protected by Wardveil</strong><span class="security-footer-dot" aria-hidden="true">•</span><span>Security identity by GoreeCloud</span></footer>
   </div>
-  {% if user.is_authenticated %}
-  {% with current=request.resolver_match.url_name %}
+  {% if user.is_authenticated %}{% with current=request.resolver_match.url_name %}
   <nav class="mobile-nav {% if user.is_staff %}staff-nav{% else %}viewer-nav{% endif %}" aria-label="Primary mobile navigation">
     <a href="{% url 'monitoring:dashboard' %}" {% if current == 'dashboard' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-overview"/></svg><span>Overview</span></a>
     <a href="{% url 'monitoring:monitor-list' %}" {% if 'monitor' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-monitor"/></svg><span>Monitors</span></a>
     <a href="{% url 'monitoring:incident-list' %}" {% if 'incident' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-incident"/></svg><span>Incidents</span></a>
     <a href="{% url 'monitoring:maintenance-list' %}" {% if 'maintenance' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-maintenance"/></svg><span>Maintain</span></a>
     <a href="{% url 'monitoring:notifications' %}" {% if current == 'notifications' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-bell"/></svg><span>Alerts</span></a>
-    {% if user.is_staff %}<a href="{% url 'monitoring:security' %}" {% if current == 'security' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-security"/></svg><span>Security</span></a>
-    <a href="{% url 'monitoring:settings' %}" {% if current == 'settings' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-settings"/></svg><span>Settings</span></a>{% endif %}
-  </nav>
-  {% endwith %}
-  {% endif %}
+    {% if user.is_staff %}<a href="{% url 'monitoring:security' %}" {% if current == 'security' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-security"/></svg><span>Security</span></a><a href="{% url 'monitoring:settings' %}" {% if current == 'settings' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-settings"/></svg><span>Settings</span></a>{% endif %}
+  </nav>{% endwith %}{% endif %}
 </body>
 </html>

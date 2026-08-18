@@ -1,0 +1,31 @@
+{
+  "schema": "goreecloud-app-identity",
+  "version": 1,
+  "product": "GoreeCloud Monitor",
+  "design_language": "Glaze UI 1.0",
+  "security_identity": "Wardveil Security by GoreeCloud",
+  "canonical_artwork": {
+    "path": "static/monitoring/img/monitor-mark.svg",
+    "sha256": "dcee6c8c70f86bf3fe3ddc9d2a5b33fc1606427433ecf9f24b5d7b155bdb14cf",
+    "format": "image/svg+xml",
+    "artwork_changed_by_this_contract": false,
+    "concept": "Monitor pulse/status mark"
+  },
+  "surfaces": {
+    "web": {
+      "status": "implemented",
+      "favicon": "static/monitoring/img/monitor-mark.svg",
+      "manifest": "static/monitoring/manifest.webmanifest"
+    },
+    "linux_appimage": {
+      "status": "blocked-no-client-package",
+      "canonical_source": "static/monitoring/img/monitor-mark.svg",
+      "requirement": "Any future AppImage launcher and package artwork must be derived from the canonical Monitor mark. The repository does not currently contain an AppImage client or packaging pipeline."
+    },
+    "android_apk": {
+      "status": "blocked-no-client-package",
+      "canonical_source": "static/monitoring/img/monitor-mark.svg",
+      "requirement": "Any future Android launcher/adaptive assets must be derived from the canonical Monitor mark. The repository does not currently contain an Android client or APK/AAB packaging pipeline."
+    }
+  }
+}
