@@ -48,8 +48,10 @@ jobs:
       - name: Generate launcher assets from canonical icon
         working-directory: clients/goreecloud-monitor
         run: cargo "+$RUST_TOOLCHAIN" tauri icon ../../assets/app-icon/goreecloud-monitor.svg
-      - name: Run native shell tests
-        run: cargo "+$RUST_TOOLCHAIN" test --manifest-path clients/goreecloud-monitor/src-tauri/Cargo.toml
+      - name: Run native shell tests and resolve dependency lock
+        run: |
+          cargo "+$RUST_TOOLCHAIN" test --manifest-path clients/goreecloud-monitor/src-tauri/Cargo.toml
+          test -s clients/goreecloud-monitor/src-tauri/Cargo.lock
       - name: Build Linux AppImage and Debian package
         working-directory: clients/goreecloud-monitor
         run: cargo "+$RUST_TOOLCHAIN" tauri build --bundles appimage,deb
@@ -59,6 +61,7 @@ jobs:
           mkdir -p release-evidence/linux
           find clients/goreecloud-monitor/src-tauri/target/release/bundle -type f \( -name '*.AppImage' -o -name '*.deb' \) -print0 | sort -z | xargs -0 sha256sum > release-evidence/linux/SHA256SUMS
           test -s release-evidence/linux/SHA256SUMS
+          sha256sum clients/goreecloud-monitor/src-tauri/Cargo.lock > release-evidence/linux/CARGO_LOCK_SHA256
           printf 'source_revision=%s\nworkflow_run=%s\nplatform=linux-x86_64\ncanonical_icon_sha256=1ef53ba769bdabc37e752b2206e0839845057157406fd416032da461a4132f4b\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > release-evidence/linux/SOURCE_REVISION
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -68,6 +71,7 @@ jobs:
           path: |
             clients/goreecloud-monitor/src-tauri/target/release/bundle/appimage/*.AppImage
             clients/goreecloud-monitor/src-tauri/target/release/bundle/deb/*.deb
+            clients/goreecloud-monitor/src-tauri/Cargo.lock
             release-evidence/linux/*
 
   android:
@@ -112,8 +116,10 @@ jobs:
       - name: Generate Android launcher assets from canonical icon
         working-directory: clients/goreecloud-monitor
         run: cargo "+$RUST_TOOLCHAIN" tauri icon ../../assets/app-icon/goreecloud-monitor.svg
-      - name: Run native shell tests
-        run: cargo "+$RUST_TOOLCHAIN" test --manifest-path clients/goreecloud-monitor/src-tauri/Cargo.toml
+      - name: Resolve native dependency lock
+        run: |
+          cargo "+$RUST_TOOLCHAIN" generate-lockfile --manifest-path clients/goreecloud-monitor/src-tauri/Cargo.toml
+          test -s clients/goreecloud-monitor/src-tauri/Cargo.lock
       - name: Build unsigned ARM64 development APK
         working-directory: clients/goreecloud-monitor
         run: cargo "+$RUST_TOOLCHAIN" tauri android build --debug --apk --target aarch64
@@ -123,6 +129,7 @@ jobs:
           mkdir -p release-evidence/android
           find clients/goreecloud-monitor/src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' -print0 | sort -z | xargs -0 sha256sum > release-evidence/android/SHA256SUMS
           test -s release-evidence/android/SHA256SUMS
+          sha256sum clients/goreecloud-monitor/src-tauri/Cargo.lock > release-evidence/android/CARGO_LOCK_SHA256
           printf 'source_revision=%s\nworkflow_run=%s\nplatform=android-arm64-debug\ncanonical_icon_sha256=1ef53ba769bdabc37e752b2206e0839845057157406fd416032da461a4132f4b\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > release-evidence/android/SOURCE_REVISION
       - name: Upload Android artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -131,4 +138,5 @@ jobs:
           if-no-files-found: error
           path: |
             clients/goreecloud-monitor/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+            clients/goreecloud-monitor/src-tauri/Cargo.lock
             release-evidence/android/*
