@@ -11,7 +11,11 @@
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
   <meta name="referrer" content="same-origin">
   <title>{% block title %}GoreeCloud Monitor{% endblock %}</title>
-  <link rel="icon" type="image/svg+xml" href="{% static 'monitoring/img/monitor-mark.svg' %}">
+  <link rel="icon" type="image/svg+xml" href="{% static 'monitoring/img/goreecloud-monitor-icon.svg' %}">
+  <link rel="icon" type="image/svg+xml" sizes="16x16" href="{% static 'monitoring/img/goreecloud-monitor-icon-16.svg' %}">
+  <link rel="icon" type="image/svg+xml" sizes="32x32" href="{% static 'monitoring/img/goreecloud-monitor-icon-32.svg' %}">
+  <link rel="icon" type="image/svg+xml" sizes="48x48" href="{% static 'monitoring/img/goreecloud-monitor-icon-48.svg' %}">
+  <link rel="manifest" href="{% static 'monitoring/site.webmanifest' %}">
   <link rel="stylesheet" href="{% static 'monitoring/css/glaze.css' %}">
   <link rel="stylesheet" href="{% static 'monitoring/css/glaze.accessibility.css' %}">
   <link rel="stylesheet" href="{% static 'monitoring/css/wardveil.css' %}">
@@ -32,7 +36,7 @@
   <div class="app-shell" data-glaze-ui="1.0.0" data-security-identity="wardveil">
     <header class="topbar">
       <a class="brand" href="{% url 'monitoring:dashboard' %}" aria-label="GoreeCloud Monitor home">
-        <img class="brand-mark" src="{% static 'monitoring/img/monitor-mark.svg' %}" alt="">
+        <img class="brand-mark" src="{% static 'monitoring/img/goreecloud-monitor-icon.svg' %}" alt="">
         <span class="brand-copy"><strong>GoreeCloud</strong><small>Monitor</small></span>
       </a>
       {% if user.is_authenticated %}
