@@ -45,10 +45,26 @@ def configuration_findings() -> list[PreflightFinding]:
 
     if not getattr(settings, "SECURE_SSL_REDIRECT", False):
         add("error", "https-redirect", "DJANGO_SECURE_SSL_REDIRECT must be enabled behind the approved HTTPS gateway.")
+    if int(getattr(settings, "SECURE_HSTS_SECONDS", 0)) < 31536000:
+        add("error", "hsts", "HSTS must be enabled for at least one year after the approved HTTPS route is validated.")
     if not getattr(settings, "SESSION_COOKIE_SECURE", False):
-        add("error", "session-cookie", "Session cookies must be Secure.")
+        add("error", "session-cookie-secure", "Session cookies must be Secure.")
+    if not getattr(settings, "SESSION_COOKIE_HTTPONLY", False):
+        add("error", "session-cookie-httponly", "Session cookies must be HttpOnly.")
+    if getattr(settings, "SESSION_COOKIE_SAMESITE", None) not in {"Lax", "Strict"}:
+        add("error", "session-cookie-samesite", "Session cookies must use an approved SameSite boundary.")
     if not getattr(settings, "CSRF_COOKIE_SECURE", False):
-        add("error", "csrf-cookie", "CSRF cookies must be Secure.")
+        add("error", "csrf-cookie-secure", "CSRF cookies must be Secure.")
+    if getattr(settings, "CSRF_COOKIE_SAMESITE", None) not in {"Lax", "Strict"}:
+        add("error", "csrf-cookie-samesite", "CSRF cookies must use an approved SameSite boundary.")
+    if getattr(settings, "X_FRAME_OPTIONS", "") != "DENY":
+        add("error", "frame-options", "Clickjacking protection must deny framing.")
+    if getattr(settings, "SECURE_CROSS_ORIGIN_OPENER_POLICY", "") != "same-origin":
+        add("error", "opener-policy", "Cross-origin opener policy must remain same-origin.")
+    if not getattr(settings, "MONITOR_CONTENT_SECURITY_POLICY", ""):
+        add("error", "content-security-policy", "The Monitor Content Security Policy must be configured.")
+    if not getattr(settings, "MONITOR_PERMISSIONS_POLICY", ""):
+        add("error", "permissions-policy", "The Monitor Permissions Policy must be configured.")
 
     for value in getattr(settings, "MONITOR_ALLOWED_NETWORKS", []):
         try:
@@ -71,9 +87,6 @@ def configuration_findings() -> list[PreflightFinding]:
 
     if not getattr(settings, "MANAGER_API_TOKEN", ""):
         add("warning", "manager-disabled", "The read-only GoreeCloud Manager integration token is not configured.")
-
-    if int(getattr(settings, "SECURE_HSTS_SECONDS", 0)) <= 0:
-        add("warning", "hsts-disabled", "HSTS is not enabled; enable it only after the final HTTPS route is verified.")
 
     return findings
 
