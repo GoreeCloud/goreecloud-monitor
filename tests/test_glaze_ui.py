@@ -13,7 +13,9 @@ class GlazeUiConformanceTests(SimpleTestCase):
         cls.base = Path(settings.BASE_DIR)
         cls.css = (cls.base / "static/monitoring/css/glaze.css").read_text()
         cls.accessibility = (cls.base / "static/monitoring/css/glaze.accessibility.css").read_text()
+        cls.wardveil = (cls.base / "static/monitoring/css/wardveil.css").read_text()
         cls.shell = (cls.base / "templates/monitoring/base.html").read_text()
+        cls.security = (cls.base / "templates/monitoring/security.html").read_text()
         cls.script = (cls.base / "static/monitoring/js/glaze.js").read_text()
         cls.admin_shell = (cls.base / "templates/admin/base_site.html").read_text()
         cls.admin_css = (cls.base / "static/monitoring/css/glaze-admin.css").read_text()
@@ -40,6 +42,8 @@ class GlazeUiConformanceTests(SimpleTestCase):
         self.assertIn("min-width: 1440px", self.css)
         self.assertIn("mobile-nav", self.css)
         self.assertIn("Primary mobile navigation", self.shell)
+        self.assertIn("viewer-nav", self.wardveil)
+        self.assertIn("staff-nav", self.wardveil)
 
     def test_accessibility_resilience_contract_is_present(self):
         for rule in (
@@ -53,6 +57,8 @@ class GlazeUiConformanceTests(SimpleTestCase):
             self.assertIn(rule, self.accessibility)
         self.assertIn("focus-visible", self.css)
         self.assertIn("Skip to main content", self.shell)
+        self.assertIn("prefers-reduced-transparency", self.wardveil)
+        self.assertIn("forced-colors: active", self.wardveil)
         self.assertIn("prefers-reduced-transparency", self.admin_css)
         self.assertIn("forced-colors: active", self.admin_css)
         self.assertIn("focus-visible", self.admin_css)
@@ -63,11 +69,22 @@ class GlazeUiConformanceTests(SimpleTestCase):
         self.assertNotIn("@import url", self.css)
         self.assertNotIn("https://", self.css)
         self.assertNotIn("http://", self.css)
+        self.assertNotIn("https://", self.wardveil)
+        self.assertNotIn("http://", self.wardveil)
         self.assertIn("monitor-mark.svg", self.admin_shell)
         self.assertIn("glaze-admin.css", self.admin_shell)
         self.assertIn("--glaze-canvas", self.admin_css)
         self.assertNotIn("https://", self.admin_css)
         self.assertNotIn("http://", self.admin_css)
+
+    def test_wardveil_is_a_glaze_consumer_not_a_replacement_design_system(self):
+        self.assertIn("wardveil.css", self.shell)
+        self.assertIn("Protected by Wardveil", self.shell)
+        self.assertIn("Wardveil Security by GoreeCloud", self.security)
+        self.assertIn("var(--glaze-", self.wardveil)
+        self.assertNotIn("Wardveil Security Center", self.security)
+        self.assertNotIn("--wardveil-color", self.wardveil)
+        self.assertIn("Protected by Wardveil", self.admin_shell)
 
     def test_appearance_preference_is_fail_soft_and_local_only(self):
         self.assertIn("goreecloud-monitor-appearance", self.script)
