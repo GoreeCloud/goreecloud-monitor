@@ -28,13 +28,23 @@ jobs:
     env:
       PREVIOUS_CANDIDATE: 992e64072602a02513bc07a1dd4631e47e87035a
     steps:
-      - name: Checkout cutover candidate
+      - name: Checkout exact cutover candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify exact pull-request head
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - name: Checkout frozen deployment predecessor
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.PREVIOUS_CANDIDATE }}
           path: previous
+          persist-credentials: false
+      - name: Verify frozen predecessor revision
+        run: test "$(git -C previous rev-parse HEAD)" = "$PREVIOUS_CANDIDATE"
       - name: Require unchanged Django migration set for direct rollback proof
         run: diff -ru previous/src/monitoring/migrations src/monitoring/migrations
       - name: Build predecessor and candidate images
