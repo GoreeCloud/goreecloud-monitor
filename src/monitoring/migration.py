@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 from django.core.exceptions import ValidationError
 
 from .models import Monitor
+from .validators import format_dns_target
 
 
 SENSITIVE_MONITOR_FIELDS = {
@@ -305,9 +306,17 @@ def map_kuma_monitor(raw: dict[str, Any]) -> KumaMonitorMapping:
             _issue(issues, "error", "invalid-dns-target", "DNS monitor has no hostname.")
         if record_type not in {"A", "AAAA", "CNAME"}:
             _issue(issues, "error", "unsupported-dns-type", f"DNS record type {record_type} is not supported by Monitor v0.1.")
-        if _nonempty(raw.get("dns_resolve_server")):
-            _issue(issues, "warning", "custom-resolver-not-preserved", "A custom Uptime Kuma DNS resolver is not preserved; Monitor uses its configured system resolver.")
-        values.update({"kind": Monitor.Kind.DNS, "target": hostname, "dns_record_type": record_type})
+
+        target = hostname
+        resolver_host = str(raw.get("dns_resolve_server") or "").strip()
+        if resolver_host:
+            try:
+                resolver_port = _int_value(raw, "dns_resolve_port", 53)
+                target = format_dns_target(hostname, resolver_host, resolver_port)
+            except (TypeError, ValueError, ValidationError):
+                _issue(issues, "error", "invalid-dns-resolver", "The custom Uptime Kuma DNS resolver could not be represented safely by Monitor.")
+
+        values.update({"kind": Monitor.Kind.DNS, "target": target, "dns_record_type": record_type})
 
     elif source_type == "push":
         values.update(
