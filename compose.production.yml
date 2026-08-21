@@ -102,6 +102,8 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+    sysctls:
+      net.ipv4.ping_group_range: "999 999"
     networks:
       - backend
       - proxy
