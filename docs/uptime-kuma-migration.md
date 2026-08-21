@@ -50,8 +50,10 @@ The importer currently understands:
 - `keyword` -> HTTP/HTTPS body-text assertion
 - simple equality `json-query` -> HTTP/HTTPS JSON path/value assertion
 - `port` or `tcp` -> TCP
-- `dns` -> DNS A, AAAA, or CNAME
+- `dns` -> DNS A, AAAA, or CNAME, including supported custom resolver semantics
 - `push` -> Monitor push/heartbeat with a newly generated token
+
+For a DNS monitor with `dns_resolve_server`, the importer preserves the resolver through Monitor's portable resolver-qualified target form, `dns://resolver[:port]/query-name`. The explicit resolver is validated through Monitor's destination policy before runtime use. See `dns-resolver-semantics.md`.
 
 Unsupported monitor types are reported rather than guessed.
 
@@ -65,8 +67,9 @@ The following source behavior requires manual review or blocks automatic migrati
 - inverted keyword checks
 - complex JSONPath or non-equality JSON operators
 - monitor types outside the supported set
+- custom DNS resolver values that cannot be represented by the resolver-qualified target contract
 
-Some compatible definitions can still produce warnings. Examples include Uptime Kuma status-code ranges, retry timing, custom DNS resolvers, tags, notification assignments, and redirect limits. These are not silently represented as exact equivalents.
+Some compatible definitions can still produce warnings. Examples include Uptime Kuma status-code ranges, retry timing, tags, notification assignments, and redirect limits. These are not silently represented as exact equivalents.
 
 ## Safe import
 
@@ -161,7 +164,7 @@ A separately validated runtime collector must retain only the source fields requ
 
 Uptime Kuma heartbeat states are normalized as follows: Down -> Down, Up -> Up, Pending -> Unknown, Maintenance -> Maintenance, and inactive -> Paused. A GoreeCloud Monitor Degraded state intentionally does not collapse into Uptime Kuma Up; the difference remains visible for review.
 
-A single snapshot is not acceptance evidence by itself. Parallel validation should collect repeated comparisons across healthy operation plus controlled failure, recovery, TLS-warning, maintenance, and notification scenarios.
+A single snapshot is not acceptance evidence by itself. Parallel validation should collect repeated comparisons across healthy operation plus controlled failure, recovery, TLS-warning, maintenance, notification, and resolver-specific DNS scenarios.
 
 ## Parallel acceptance
 
@@ -177,7 +180,7 @@ Before cutover:
 8. Activate approved Monitor definitions deliberately.
 9. Run Monitor and Uptime Kuma in parallel using distinct conflict-free monitoring identities.
 10. Collect repeated runtime snapshots through a separately validated runtime-state source and run `compareuptimestate`.
-11. Compare controlled state transitions, latency, TLS behavior, outage/recovery behavior, maintenance, and notifications.
+11. Compare controlled state transitions, latency, TLS behavior, outage/recovery behavior, maintenance, notifications, and resolver-specific DNS behavior.
 12. Prove backup and restore in the target environment.
 13. Validate private Caddy, DNS, NetBird, firewall, and monitoring-source behavior.
 14. Resolve every baseline monitor that the importer reports as unsupported; unsupported coverage is a cutover blocker.
