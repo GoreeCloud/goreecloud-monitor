@@ -1,9 +1,10 @@
 from datetime import timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from django.test import TestCase
 from django.utils import timezone
 
-from monitoring.engine import CheckOutcome, _apply_outcome, check_push
+from monitoring.engine import CheckOutcome, _apply_outcome, check_dns, check_push
 from monitoring.models import Incident, Monitor
 
 
@@ -47,3 +48,51 @@ class EngineStateTests(TestCase):
         self.monitor.last_heartbeat_at = timezone.now()
         outcome = await check_push(self.monitor)
         self.assertTrue(outcome.success)
+
+    async def test_dns_monitor_uses_validated_explicit_resolver(self):
+        monitor = Monitor(
+            name="resolver-specific",
+            kind=Monitor.Kind.DNS,
+            target="dns://1.1.1.1/example.test",
+            dns_record_type="A",
+            expected_dns_answer="203.0.113.10",
+            interval_seconds=60,
+            timeout_seconds=10,
+        )
+        resolver = MagicMock()
+        resolver.resolve = AsyncMock(return_value=["203.0.113.10"])
+        with (
+            patch("monitoring.engine.resolve_and_validate_network_target", new=AsyncMock(return_value=["1.1.1.1"])) as validate,
+            patch("monitoring.engine.dns.asyncresolver.Resolver", return_value=resolver) as resolver_factory,
+        ):
+            outcome = await check_dns(monitor)
+
+        self.assertTrue(outcome.success)
+        validate.assert_awaited_once_with("1.1.1.1", 53)
+        resolver_factory.assert_called_once_with(configure=False)
+        self.assertEqual(resolver.nameservers, ["1.1.1.1"])
+        self.assertEqual(resolver.port, 53)
+        self.assertEqual(resolver.lifetime, 10.0)
+        resolver.resolve.assert_awaited_once_with("example.test", "A")
+
+    async def test_dns_monitor_keeps_system_resolver_for_plain_target(self):
+        monitor = Monitor(
+            name="system-resolver",
+            kind=Monitor.Kind.DNS,
+            target="example.test",
+            dns_record_type="AAAA",
+            interval_seconds=60,
+            timeout_seconds=10,
+        )
+        resolver = MagicMock()
+        resolver.resolve = AsyncMock(return_value=["2001:db8::10"])
+        with (
+            patch("monitoring.engine.resolve_and_validate_network_target", new=AsyncMock()) as validate,
+            patch("monitoring.engine.dns.asyncresolver.Resolver", return_value=resolver) as resolver_factory,
+        ):
+            outcome = await check_dns(monitor)
+
+        self.assertTrue(outcome.success)
+        validate.assert_not_awaited()
+        resolver_factory.assert_called_once_with()
+        resolver.resolve.assert_awaited_once_with("example.test", "AAAA")
