@@ -103,6 +103,11 @@ def validate_target_syntax(kind: str, target: str, port: int | None = None) -> N
             raise ValidationError("TCP target must be a hostname or IP address")
         if not port or not 1 <= int(port) <= 65535:
             raise ValidationError("TCP monitors require a port between 1 and 65535")
+    elif kind == "PING":
+        if not target or any(char in target for char in "/?#@") or any(char.isspace() for char in target):
+            raise ValidationError("Ping target must be a hostname or IP address")
+        if port not in (None, 0):
+            raise ValidationError("Ping monitors do not use a TCP or UDP port")
     elif kind == "DNS":
         parse_dns_target(target)
     elif kind == "PUSH":
