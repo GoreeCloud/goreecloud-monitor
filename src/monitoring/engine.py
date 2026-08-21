@@ -17,6 +17,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from .icmp import IcmpUnavailable, echo as icmp_echo
 from .models import CheckResult, Incident, MaintenanceWindow, Monitor
 from .notifications import publish_transition
 from .observability import log_event, safe_traceback
@@ -125,6 +126,29 @@ async def check_tcp(monitor: Monitor) -> CheckOutcome:
         if writer is not None: writer.close(); await writer.wait_closed()
 
 
+async def check_ping(monitor: Monitor) -> CheckOutcome:
+    started = time.perf_counter()
+    try:
+        addresses = await resolve_and_validate_network_target(monitor.target, 0)
+        deadline = asyncio.get_running_loop().time() + float(monitor.timeout_seconds)
+        last_error: Exception | None = None
+        for address in addresses:
+            remaining = deadline - asyncio.get_running_loop().time()
+            if remaining <= 0:
+                break
+            try:
+                elapsed = await icmp_echo(address, remaining)
+                return CheckOutcome(True, Monitor.State.UP, elapsed, "ICMP Echo reply received")
+            except (OSError, asyncio.TimeoutError, IcmpUnavailable) as exc:
+                last_error = exc
+        if isinstance(last_error, IcmpUnavailable):
+            return CheckOutcome(False, Monitor.State.DOWN, (time.perf_counter()-started)*1000, "Unprivileged ICMP Echo is unavailable for the Monitor worker")
+        return CheckOutcome(False, Monitor.State.DOWN, (time.perf_counter()-started)*1000, "ICMP Echo did not receive a valid reply")
+    except (OSError, asyncio.TimeoutError, ValidationError, IcmpUnavailable) as exc:
+        message = "Unprivileged ICMP Echo is unavailable for the Monitor worker" if isinstance(exc, IcmpUnavailable) else f"{type(exc).__name__}: {str(exc)[:420]}"
+        return CheckOutcome(False, Monitor.State.DOWN, (time.perf_counter()-started)*1000, message)
+
+
 async def check_dns(monitor: Monitor) -> CheckOutcome:
     started=time.perf_counter()
     try:
@@ -154,6 +178,7 @@ async def check_push(monitor: Monitor) -> CheckOutcome:
 async def perform_check(monitor: Monitor) -> CheckOutcome:
     if monitor.kind in {Monitor.Kind.HTTP, Monitor.Kind.HTTPS}: return await check_http(monitor)
     if monitor.kind == Monitor.Kind.TCP: return await check_tcp(monitor)
+    if monitor.kind == Monitor.Kind.PING: return await check_ping(monitor)
     if monitor.kind == Monitor.Kind.DNS: return await check_dns(monitor)
     if monitor.kind == Monitor.Kind.PUSH: return await check_push(monitor)
     return CheckOutcome(False, Monitor.State.DOWN, None, "Unsupported monitor type")
