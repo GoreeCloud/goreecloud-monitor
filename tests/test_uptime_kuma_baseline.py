@@ -45,13 +45,13 @@ class BaselineReconciliationTests(SimpleTestCase):
         statuses = {item["status"] for item in report["monitors"]}
         self.assertTrue({"retired-present", "unexpected-live", "expected-missing"}.issubset(statuses))
 
-    def test_documented_ping_blocker_remains_blocking(self):
+    def test_documented_ping_review_remains_blocking_until_live_validation(self):
         report = reconcile(
             [{"name": "Ping", "type": "ping", "hostname": "100.64.0.1", "interval": 60, "timeout": 10}],
-            baseline({"name": "Ping", "expected": "active", "cutover_gate": "blocker", "reason": "ICMP unresolved"}),
+            baseline({"name": "Ping", "expected": "active", "cutover_gate": "review", "reason": "live ICMP validation required"}),
         )
         self.assertFalse(report["ready"])
-        self.assertEqual(report["monitors"][0]["status"], "baseline-blocker")
+        self.assertEqual(report["monitors"][0]["status"], "review")
         self.assertNotIn("100.64.0.1", json.dumps(report))
 
     def test_documented_review_must_be_resolved(self):
@@ -62,14 +62,15 @@ class BaselineReconciliationTests(SimpleTestCase):
         self.assertFalse(report["ready"])
         self.assertEqual(report["monitors"][0]["status"], "review")
 
-    def test_documented_baseline_tracks_verified_live_scope(self):
+    def test_documented_baseline_tracks_current_approved_scope(self):
         documented = load_baseline(DEFAULT_BASELINE)
         active = {item["name"] for item in documented["monitors"] if item.get("expected") == "active"}
         retired = {item["name"] for item in documented["monitors"] if item.get("expected") == "retired"}
 
-        self.assertEqual(len(active), 23)
+        self.assertEqual(documented["basis"]["live_source_monitor_count"], 23)
+        self.assertEqual(len(active), 22)
         self.assertEqual(retired, {"Flatnotes", "Linkding", "Termix"})
-        self.assertIn("GoreeCloud Research Library", active)
+        self.assertNotIn("GoreeCloud Research Library", active)
         self.assertIn("GoreeCloud Memos", active)
         self.assertIn("GoreeCloud VPS", active)
         self.assertNotIn("GoreeCloud VPS Ping", active)
