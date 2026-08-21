@@ -4,12 +4,82 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import socket
+from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
 ALLOWED_DNS_TYPES = {"A", "AAAA", "CNAME"}
+
+
+@dataclass(frozen=True, slots=True)
+class DnsTarget:
+    query_name: str
+    resolver_host: str | None = None
+    resolver_port: int = 53
+
+    @property
+    def uses_explicit_resolver(self) -> bool:
+        return self.resolver_host is not None
+
+
+def _validate_dns_name(value: str, *, label: str) -> str:
+    value = (value or "").strip()
+    if not value or len(value.rstrip(".")) > 253 or any(char.isspace() for char in value):
+        raise ValidationError(f"{label} must be a valid DNS hostname")
+    if any(char in value for char in "/?#@"):
+        raise ValidationError(f"{label} must not contain URL delimiters")
+    return value
+
+
+def parse_dns_target(target: str) -> DnsTarget:
+    """Parse a DNS target while preserving the no-schema-migration rollback boundary.
+
+    Plain hostnames continue to use the system resolver. Resolver-qualified targets use the
+    explicit portable form ``dns://<resolver>[:port]/<query-name>``. The resolver is validated
+    against the same destination policy as other active network targets before it is queried.
+    """
+    value = (target or "").strip()
+    if not value.lower().startswith("dns://"):
+        return DnsTarget(query_name=_validate_dns_name(value, label="DNS target"))
+
+    parsed = urlsplit(value)
+    if parsed.scheme.lower() != "dns" or not parsed.hostname:
+        raise ValidationError("Resolver-qualified DNS targets require dns://<resolver>/<hostname>")
+    if parsed.username or parsed.password:
+        raise ValidationError("Credentials are not permitted in DNS resolver targets")
+    if parsed.query or parsed.fragment:
+        raise ValidationError("DNS resolver targets do not permit query strings or fragments")
+
+    query_name = parsed.path.lstrip("/")
+    if not query_name or "/" in query_name:
+        raise ValidationError("Resolver-qualified DNS targets require exactly one DNS query name")
+    query_name = _validate_dns_name(query_name, label="DNS query name")
+    resolver_host = _validate_dns_name(parsed.hostname, label="DNS resolver")
+
+    try:
+        resolver_port = parsed.port or 53
+    except ValueError as exc:
+        raise ValidationError("DNS resolver port is invalid") from exc
+    if not 1 <= resolver_port <= 65535:
+        raise ValidationError("DNS resolver port must be between 1 and 65535")
+
+    return DnsTarget(query_name=query_name, resolver_host=resolver_host, resolver_port=resolver_port)
+
+
+def format_dns_target(query_name: str, resolver_host: str, resolver_port: int = 53) -> str:
+    """Return the canonical resolver-qualified DNS target representation."""
+    query_name = _validate_dns_name(query_name, label="DNS query name")
+    resolver_host = _validate_dns_name(resolver_host, label="DNS resolver")
+    if not 1 <= int(resolver_port) <= 65535:
+        raise ValidationError("DNS resolver port must be between 1 and 65535")
+    host = f"[{resolver_host}]" if ":" in resolver_host and not resolver_host.startswith("[") else resolver_host
+    port_suffix = "" if int(resolver_port) == 53 else f":{int(resolver_port)}"
+    target = f"dns://{host}{port_suffix}/{query_name}"
+    # Parse our own output so formatting cannot create a representation that the runtime rejects.
+    parse_dns_target(target)
+    return target
 
 
 def validate_target_syntax(kind: str, target: str, port: int | None = None) -> None:
@@ -31,8 +101,7 @@ def validate_target_syntax(kind: str, target: str, port: int | None = None) -> N
         if not port or not 1 <= int(port) <= 65535:
             raise ValidationError("TCP monitors require a port between 1 and 65535")
     elif kind == "DNS":
-        if not target or len(target) > 253 or any(char.isspace() for char in target):
-            raise ValidationError("DNS target must be a valid hostname")
+        parse_dns_target(target)
     elif kind == "PUSH":
         return
     else:
