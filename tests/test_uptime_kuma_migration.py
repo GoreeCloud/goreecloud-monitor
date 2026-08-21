@@ -191,7 +191,7 @@ class UptimeKumaImportCommandTests(TestCase):
             "version": "1",
             "monitors": [
                 {"name": "supported", "type": "push", "interval": 60, "timeout": 10},
-                {"name": "unsupported", "type": "ping", "hostname": "example.test", "interval": 60, "timeout": 10},
+                {"name": "unsupported", "type": "real-browser", "interval": 60, "timeout": 10},
             ],
         }
         tmp, path = self._write(document)
@@ -215,7 +215,7 @@ class UptimeKumaImportCommandTests(TestCase):
                     "maxredirects": 5,
                     "accepted_statuscodes": ["200"],
                 },
-                {"name": "unsupported", "type": "ping", "hostname": "example.test", "interval": 60, "timeout": 10},
+                {"name": "unsupported", "type": "real-browser", "interval": 60, "timeout": 10},
             ],
         }
         tmp, path = self._write(document)
