@@ -5,7 +5,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src
 
-RUN groupadd --system monitor && useradd --system --gid monitor --home-dir /app monitor
+# Keep the application identity deterministic so the production worker can grant
+# only this group access to Linux unprivileged ICMP datagram sockets.
+RUN groupadd --system --gid 999 monitor \
+    && useradd --system --uid 999 --gid monitor --home-dir /app monitor
 WORKDIR /app
 
 COPY requirements.txt ./
