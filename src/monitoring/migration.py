@@ -41,7 +41,7 @@ SENSITIVE_MONITOR_FIELDS = {
     "rabbitmqPassword",
 }
 
-SUPPORTED_KUMA_TYPES = {"http", "keyword", "json-query", "port", "tcp", "dns", "push"}
+SUPPORTED_KUMA_TYPES = {"http", "keyword", "json-query", "port", "tcp", "ping", "dns", "push"}
 
 
 @dataclass(slots=True)
@@ -298,6 +298,12 @@ def map_kuma_monitor(raw: dict[str, Any]) -> KumaMonitorMapping:
         if not hostname or not 1 <= port <= 65535:
             _issue(issues, "error", "invalid-tcp-target", "TCP monitor requires a hostname and port from 1 through 65535.")
         values.update({"kind": Monitor.Kind.TCP, "target": hostname, "port": port})
+
+    elif source_type == "ping":
+        hostname = str(raw.get("hostname") or raw.get("url") or "").strip()
+        if not hostname:
+            _issue(issues, "error", "invalid-ping-target", "Ping monitor has no hostname or IP address.")
+        values.update({"kind": Monitor.Kind.PING, "target": hostname, "port": None})
 
     elif source_type == "dns":
         hostname = str(raw.get("hostname") or raw.get("url") or "").strip()
