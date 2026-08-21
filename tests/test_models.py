@@ -40,6 +40,7 @@ class MonitorModelTests(TestCase):
             "dns://1.1.1.1/example.com/extra",
             "dns://1.1.1.1:70000/example.com",
             "dns://1.1.1.1/example.com?mode=test",
+            "dns://[2001:db8::1/example.com",
         ):
             monitor = Monitor(name="bad-dns", kind=Monitor.Kind.DNS, target=target, dns_record_type="A")
             with self.assertRaises(ValidationError):
