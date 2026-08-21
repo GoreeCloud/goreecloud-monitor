@@ -4,8 +4,8 @@
   "basis": {
     "inventory_document": "GoreeCloud — Inventory — Uptime Kuma Monitors",
     "retirement_document": "GoreeCloud — Change Log — Uptime Kuma",
-    "reconciled_date": "2026-08-17",
-    "authority": "documentation-baseline-reconciled-against-sanitized-live-evidence",
+    "reconciled_date": "2026-08-21",
+    "authority": "documentation-baseline-reconciled-against-sanitized-live-evidence-and-subsequent-retirement-records",
     "live_source_monitor_count": 23
   },
   "monitors": [
@@ -30,7 +30,6 @@
     {"name": "Cloudflare DNS", "expected": "active", "cutover_gate": "review", "reason": "Live evidence confirms an A-record check through custom resolver 1.1.1.1; Monitor v0.1 does not preserve that resolver-specific behavior automatically."},
     {"name": "Google DNS", "expected": "active", "cutover_gate": "review", "reason": "Live evidence confirms an A-record check through custom resolver 8.8.8.8; Monitor v0.1 does not preserve that resolver-specific behavior automatically."},
     {"name": "GoreeCloud VPS SSH", "expected": "active", "cutover_gate": "none"},
-    {"name": "GoreeCloud Research Library", "expected": "active", "cutover_gate": "none"},
     {"name": "GoreeCloud Memos", "expected": "active", "cutover_gate": "none"},
     {"name": "Linkding", "expected": "retired", "cutover_gate": "none"},
     {"name": "Termix", "expected": "retired", "cutover_gate": "none"},
