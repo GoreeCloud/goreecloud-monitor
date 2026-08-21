@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased - Native low-privilege Ping / ICMP parity
+
+- Added `PING` as a first-class GoreeCloud Monitor kind and implemented first-party IPv4/IPv6 ICMP Echo using Linux unprivileged datagram ping sockets rather than raw sockets.
+- Kept the worker non-root with `cap_drop: ALL`, `no-new-privileges`, a read-only root filesystem, and no host networking, privileged mode, Docker socket, device mapping, or `CAP_NET_RAW`.
+- Pinned the Monitor runtime UID/GID to 999 and restricted `net.ipv4.ping_group_range` to `999 999` inside the worker network namespace only; web and migration services do not receive that sysctl.
+- Reused the existing destination-policy boundary before ICMP traffic is sent. The transport receives only already approved numeric addresses, which avoids a second hostname resolution inside the Ping transport.
+- Added `checkicmpruntime` and extended the disposable production topology to execute a real loopback ICMP Echo through the hardened worker container.
+- Added Uptime Kuma `ping` migration mapping to paused native `PING` definitions and changed the documented Ping condition from a source blocker to a live-validation review gate.
+- Reconciled the current expected-active baseline to 22 definitions while retaining the historical verified live-source count of 23; resolver-specific DNS checks remain live-validation review items.
+- Added migration `0002_monitor_ping_kind` to record the new kind without adding a database column or kernel privilege.
+- Replaced the old unchanged-migration rollback assumption with a migration-aware proof against the exact validated DNS-parity predecessor. The proof removes candidate-only Ping definitions, reverses to migration 0001, and verifies predecessor application/database state.
+- Added `docs/icmp-ping.md`, README guidance, model/engine/migration regression coverage, and production Compose policy validation for the worker-only ping-socket boundary.
+- The first Ping candidate CI run correctly exposed two stale importer tests that still used `ping` as their sample unsupported Uptime Kuma monitor type. The fixtures were changed to a genuinely unsupported `real-browser` type; Ping support was not weakened to satisfy legacy expectations.
+- Source/disposable validation does not clear the live Ping acceptance gate. Target-host execution from the approved parallel worker identity, comparison with the existing Uptime Kuma Ping monitor, live rollback evidence, and explicit cutover approval remain required.
+
 ## Unreleased - Canonical cross-platform product identity
 
 - Established `assets/identity/goreecloud-monitor-icon.svg` as the authoritative GoreeCloud Monitor application icon, using the product-specific availability pulse and protected healthy-state indicator rather than the GoreeCloud platform logo or a generic letter mark.
