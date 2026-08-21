@@ -32,6 +32,7 @@ class Monitor(models.Model):
         HTTPS = "HTTPS", "HTTPS"
         HTTP = "HTTP", "HTTP"
         TCP = "TCP", "TCP"
+        PING = "PING", "Ping / ICMP"
         DNS = "DNS", "DNS"
         PUSH = "PUSH", "Push / heartbeat"
 
