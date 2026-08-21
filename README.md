@@ -2,7 +2,7 @@
 
 GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-health, heartbeat, TLS-certificate, incident, and recovery-monitoring application.
 
-> **Current state:** advanced pre-production acceptance candidate. The native monitoring foundation, Uptime Kuma migration/reconciliation tooling, hardened production Compose topology, verified live Uptime Kuma configuration and runtime evidence, target-host/recovery-point preflight, isolated PostgreSQL initialization, rollback compatibility, repeated parallel-comparison acceptance tooling, canonical Glaze UI 1.0.0 product experience, Wardveil Security source-hardening layer, and canonical cross-platform product-identity assets are implemented. Uptime Kuma remains the production monitoring authority until Monitor completes isolated parallel activation, target-native database restore proof, controlled transition/notification tests, ICMP/Ping and resolver-specific DNS decisions, live rollback, manual Glaze/accessibility acceptance, target Wardveil/security validation, and explicit cutover approval.
+> **Current state:** advanced pre-production acceptance candidate. The native monitoring foundation, Uptime Kuma migration/reconciliation tooling, hardened production Compose topology, verified live Uptime Kuma configuration and runtime evidence, target-host/recovery-point preflight, isolated PostgreSQL initialization, rollback compatibility, repeated parallel-comparison acceptance tooling, canonical Glaze UI 1.0.0 product experience, Wardveil Security source-hardening layer, canonical cross-platform product-identity assets, and resolver-specific DNS source parity are implemented. Uptime Kuma remains the production monitoring authority until Monitor completes isolated parallel activation, target-native database restore proof, controlled transition/notification tests, ICMP/Ping resolution, live resolver-specific DNS validation, live rollback, manual Glaze/accessibility acceptance, target Wardveil/security validation, and explicit cutover approval.
 
 ## What v0.1 includes
 
@@ -13,7 +13,7 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Search/filter workflows for monitor coverage and incident history
 - HTTP and HTTPS checks with status, body, JSON, redirect, latency, and TLS validation
 - TCP reachability checks
-- DNS A, AAAA, and CNAME checks
+- DNS A, AAAA, and CNAME checks with optional destination-policy-validated explicit resolvers
 - Push/heartbeat monitors with minimized unauthenticated acknowledgements and staff-only credential rendering
 - Unknown, Up, Down, Degraded, Paused, and Maintenance state handling
 - Failure and recovery thresholds with incident and recovery history
@@ -100,6 +100,14 @@ The development topology deliberately publishes only the loopback web port. Post
 
 It is not authorization to deploy or cut over. See `docs/production-deployment.md` for the target-environment acceptance boundary.
 
+## DNS resolver semantics
+
+Plain DNS monitor targets such as `example.com` use the Monitor worker's configured system resolver. When the resolver itself is part of the requirement, Monitor supports the portable resolver-qualified form `dns://resolver[:port]/query-name`.
+
+Before an explicit resolver is queried, all of its resolved addresses must satisfy the same `MONITOR_ALLOW_PUBLIC_TARGETS` and `MONITOR_ALLOWED_NETWORKS` destination policy used by other active network targets. The Uptime Kuma migration layer preserves supported `dns_resolve_server` configuration by converting it to this form instead of silently substituting Monitor's system resolver.
+
+This closes the source implementation gap for resolver-specific DNS semantics. The current live Uptime Kuma resolver-specific checks still require isolated-target execution and comparison before production acceptance. See `docs/dns-resolver-semantics.md`.
+
 ## Live acceptance evidence
 
 Collect configuration evidence only through the approved administrative path from an exact reviewed checkout:
@@ -137,11 +145,11 @@ python manage.py reconcileuptimebaseline \
   --no-fail
 ```
 
-The command fails closed on missing expected coverage, reappeared retired monitors, unexpected live monitors, unsupported migration semantics, unresolved review items, and documented cutover blockers. The current documented blockers/reviews include ICMP/Ping network-layer coverage and resolver-specific DNS semantics.
+The command fails closed on missing expected coverage, reappeared retired monitors, unexpected live monitors, unsupported migration semantics, unresolved review items, and documented cutover blockers. ICMP/Ping network-layer coverage remains a source/cutover blocker. Resolver-specific DNS source semantics are now implemented, but their live target behavior remains an acceptance gate until the approved resolver checks are exercised and compared in parallel.
 
 Do not use the configuration snapshot with `compareuptimestate`. Parallel state/latency comparison requires separately validated sanitized runtime evidence with heartbeat status and response-time values.
 
-See `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, and `docs/cutover-and-rollback.md`.
+See `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/dns-resolver-semantics.md`, `docs/icmp-reachability.md`, and `docs/cutover-and-rollback.md`.
 
 ## Security model
 
@@ -155,7 +163,7 @@ The current SSRF design validates all addresses returned during application pref
 
 The repository contains one Django web/API application and one asynchronous monitoring worker. PostgreSQL is the intended production database. Redis, Celery, Kafka, and other brokers are intentionally excluded from v0.1.
 
-See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/product-identity.md`, `docs/wardveil-security.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
+See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/product-identity.md`, `docs/wardveil-security.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/dns-resolver-semantics.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
 
 ## License
 
