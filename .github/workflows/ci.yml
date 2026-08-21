@@ -158,8 +158,13 @@ jobs:
         run: docker compose config --quiet
       - name: Build application image
         run: docker build --pull --tag goreecloud-monitor:ci .
-      - name: Verify application image runs as non-root monitor user
-        run: test "$(docker image inspect goreecloud-monitor:ci --format '{{.Config.User}}')" = "monitor"
+      - name: Verify deterministic non-root Monitor identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(docker image inspect goreecloud-monitor:ci --format '{{.Config.User}}')" = "monitor"
+          test "$(docker run --rm --entrypoint id goreecloud-monitor:ci -u)" = "999"
+          test "$(docker run --rm --entrypoint id goreecloud-monitor:ci -g)" = "999"
       - name: Verify runtime image excludes development and secret-bearing files
         run: >-
           docker run --rm --entrypoint sh goreecloud-monitor:ci -c
@@ -272,9 +277,12 @@ jobs:
           test "$(docker inspect "$worker_id" --format '{{.HostConfig.ReadonlyRootfs}}')" = "true"
           test "$(docker inspect "$web_id" --format '{{.Config.User}}')" = "monitor"
           test "$(docker inspect "$worker_id" --format '{{.Config.User}}')" = "monitor"
+          test "$(docker inspect "$worker_id" --format '{{index .HostConfig.Sysctls "net.ipv4.ping_group_range"}}')" = "999 999"
           test -z "$(docker port "$web_id")"
           test -z "$(docker port "$worker_id")"
           test -z "$(docker port "$db_id")"
+      - name: Verify low-privilege ICMP runtime in worker
+        run: docker compose -f compose.production.yml exec -T worker python manage.py checkicmpruntime --target 127.0.0.1 --timeout 3
       - name: Run target preflight inside disposable production web container
         run: docker compose -f compose.production.yml exec -T web python manage.py targetpreflight --json
       - name: Verify one-shot migration completed successfully
