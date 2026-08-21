@@ -62,17 +62,25 @@ class BaselineReconciliationTests(SimpleTestCase):
         self.assertFalse(report["ready"])
         self.assertEqual(report["monitors"][0]["status"], "review")
 
-    def test_documented_baseline_tracks_verified_live_scope(self):
+    def test_documented_baseline_tracks_current_expected_scope(self):
         documented = load_baseline(DEFAULT_BASELINE)
         active = {item["name"] for item in documented["monitors"] if item.get("expected") == "active"}
         retired = {item["name"] for item in documented["monitors"] if item.get("expected") == "retired"}
 
-        self.assertEqual(len(active), 23)
+        self.assertEqual(documented["basis"]["live_source_monitor_count"], 23)
+        self.assertEqual(len(active), 22)
         self.assertEqual(retired, {"Flatnotes", "Linkding", "Termix"})
-        self.assertIn("GoreeCloud Research Library", active)
         self.assertIn("GoreeCloud Memos", active)
         self.assertIn("GoreeCloud VPS", active)
         self.assertNotIn("GoreeCloud VPS Ping", active)
+
+    def test_unexpected_live_definition_remains_blocking_after_baseline_retirement(self):
+        report = reconcile(
+            [{"name": "Former Project Monitor", "type": "http", "url": "https://example.test/", "interval": 60, "timeout": 10}],
+            baseline(),
+        )
+        self.assertFalse(report["ready"])
+        self.assertEqual(report["monitors"][0]["status"], "unexpected-live")
 
     def test_command_json_is_sanitized_and_fails_closed(self):
         with tempfile.TemporaryDirectory() as tempdir:

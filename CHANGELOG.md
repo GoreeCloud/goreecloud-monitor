@@ -18,14 +18,15 @@
 
 - Verified the uploaded Internal schema-v2 live-evidence archive against its previously recorded outer SHA-256 and all three internal `SHA256SUMS` entries.
 - Confirmed the evidence was collected from exact validated collector revision `5d39cf25da1354412446d445c57d534b560481bd`, reported no collection failures, and marked target/environment configuration ready for review while keeping runtime comparison explicitly uncollected.
-- Reconciled the documented baseline from 21 to 23 expected-active monitors using the verified sanitized live configuration while preserving Flatnotes, Linkding, and Termix as expected retired.
+- Preserved the verified 23-definition live-source evidence while reconciling the current documented baseline from 21 to 22 expected-active monitors; one source definition is intentionally excluded because its project was subsequently retired.
+- Preserved Flatnotes, Linkding, and Termix as expected retired and kept any live definition absent from the current baseline fail-closed as unexpected coverage pending review.
 - Aligned stale documentation labels to the exact live Uptime Kuma labels for Adguard Home, Netbird, GoreeCloud VPS, and Caddy so name-only drift no longer creates false missing/unexpected pairs.
-- Added GoreeCloud Research Library and GoreeCloud Memos to the expected-active baseline because both are present in the verified live source.
+- Kept GoreeCloud Memos in the expected-active baseline because it remains represented in the verified live source and current project scope.
 - Preserved the live GoreeCloud VPS Ping definition as an explicit ICMP/NetBird cutover blocker rather than approximating it with TCP coverage.
 - Confirmed Cloudflare DNS and Google DNS are resolver-specific A-record checks through `1.1.1.1` and `8.8.8.8`; both remain review gates because Monitor v0.1 does not preserve per-monitor resolver choice.
-- Confirmed every live Uptime Kuma definition currently has a notification assignment; notification assignments remain intentionally non-imported and require separate Monitor configuration and controlled transition testing.
+- Confirmed every definition in the accepted 2026-08-17 live source had a notification assignment; notification assignments remain intentionally non-imported and require separate Monitor configuration and controlled transition testing.
 - Recorded a filesystem-permission review item because the live Uptime Kuma Compose file and production Caddyfile are mode `0664`; no permission change is authorized without owner/group/ACL/application review and rollback validation.
-- Added a regression test locking the verified 23-active / 3-retired documented baseline scope.
+- Updated the regression contract to lock the 23-definition historical source count, 22-active / 3-retired current documented scope, and unexpected-live blocking behavior for definitions removed from the baseline after project retirement.
 
 ## Unreleased - kuma-cli v2 live evidence compatibility
 
@@ -49,7 +50,7 @@
 - Added host evidence for identity, operating-system version, interface addresses, routes, listening sockets, Docker/Compose versions, running container identities/states, and Uptime Kuma network context.
 - Added file fingerprinting for the current Uptime Kuma Compose file and production Caddyfile without copying either file's contents into the evidence bundle.
 - Added a pure-Python Uptime Kuma configuration sanitizer that retains only migration/reconciliation-relevant fields and replaces authentication material, request content, certificate material, connection strings, and other known sensitive values with a non-secret presence sentinel.
-- The redaction sentinel remains non-empty so the existing migration importer continues to fail closed with manual-authentication/configuration review instead of treating the sanitized monitor as credential-free.
+- The redaction sentinel remains non-empty so the existing migration importer continues to fail closed with manual-authentication/configuration review instead of treating a sanitized monitor as credential-free.
 - Added URL sanitization for user information, URL query strings, and URL fragments; sanitized URL material also forces the existing sensitive-configuration blocker.
 - Added malformed URL-port handling so hostile or malformed source configuration cannot crash credential redaction.
 - Added a test invariant requiring the evidence sanitizer's sensitive-field policy to remain exactly synchronized with the migration importer's sensitive-field policy.
@@ -58,7 +59,7 @@
 - The original candidate assumed a raw `kuma config export` temporary-file path and a separate monitor-list runtime snapshot; the later kuma-cli v2 compatibility section above supersedes those live-command assumptions while preserving this frozen source layer for traceability.
 - Added restrictive evidence-directory/archive permissions, SHA-256 file checksums, collection-failure reporting, and exact collector-revision capture when the collector is run from a Git checkout.
 - Added `docs/live-acceptance-evidence.md` defining the preferred NetBird SSH execution path, default documented VPS paths, override rules, evidence contents, sanitization boundary, review steps, classification, and explicit limits on what collection proves.
-- Expanded the automated application suite from 60 to 68 tests with sanitizer secrecy, importer fail-closed compatibility, future sensitive-field policy drift, malformed URL handling, minimal runtime evidence, loader compatibility, and collector import/parser coverage.
+- Expanded the automated application suite from 60 to 68 tests with sanitizer secrecy, importer fail-closed compatibility, future sensitive-field policy drift, malformed URL handling, minimal runtime evidence, loader compatibility, and collector import/parsing coverage.
 - Opened stacked draft PR #5 against the frozen cutover-readiness candidate so this source-only evidence layer can be validated independently without modifying production.
 
 ## Unreleased - Cutover and rollback readiness
@@ -118,8 +119,3 @@
 - Docker/Compose, health checks, CI, tests, backup and recovery documentation.
 - Portable database index names validated against Django system checks.
 - GitHub Actions pinned to exact commits for checkout v7.0.1 and setup-python v7.0.0.
-- Versioned monitor-definition and maintenance-window export/import with secret and runtime-state exclusion.
-- PostgreSQL 17 integration tests and disposable logical backup/restore proof.
-- Fail-closed Python dependency audit and HIGH/CRITICAL container-image vulnerability scan.
-- Production-mode container build and smoke validation.
-- Supported Python runtime narrowed to the tested Python 3.13 release line.
