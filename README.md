@@ -2,7 +2,7 @@
 
 GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-health, heartbeat, TLS-certificate, incident, and recovery-monitoring application.
 
-> **Current state:** advanced pre-production acceptance candidate. The native monitoring foundation, Uptime Kuma migration/reconciliation tooling, hardened production Compose topology, verified live Uptime Kuma configuration and runtime evidence, target-host/recovery-point preflight, isolated PostgreSQL initialization, rollback compatibility, repeated parallel-comparison acceptance tooling, canonical Glaze UI 1.0.0 product experience, Wardveil Security source-hardening layer, canonical cross-platform product-identity assets, and resolver-specific DNS source parity are implemented. Uptime Kuma remains the production monitoring authority until Monitor completes isolated parallel activation, target-native database restore proof, controlled transition/notification tests, ICMP/Ping resolution, live resolver-specific DNS validation, live rollback, manual Glaze/accessibility acceptance, target Wardveil/security validation, and explicit cutover approval.
+> **Current state:** advanced pre-production acceptance candidate. The native monitoring foundation, Uptime Kuma migration/reconciliation tooling, hardened production Compose topology, verified live Uptime Kuma configuration and runtime evidence, target-host/recovery-point preflight, isolated PostgreSQL initialization, rollback compatibility, repeated parallel-comparison acceptance tooling, canonical Glaze UI 1.0.0 product experience, Wardveil Security source-hardening layer, canonical cross-platform product-identity assets, resolver-specific DNS source parity, and low-privilege native Ping/ICMP source parity are implemented. Uptime Kuma remains the production monitoring authority until Monitor completes isolated parallel activation, target-native database restore proof, controlled transition/notification tests, live Ping/ICMP and resolver-specific DNS validation, live rollback, manual Glaze/accessibility acceptance, target Wardveil/security validation, and explicit cutover approval.
 
 ## What v0.1 includes
 
@@ -13,6 +13,7 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Search/filter workflows for monitor coverage and incident history
 - HTTP and HTTPS checks with status, body, JSON, redirect, latency, and TLS validation
 - TCP reachability checks
+- Native IPv4/IPv6 Ping/ICMP Echo checks using policy-validated unprivileged datagram ping sockets rather than raw-socket capabilities
 - DNS A, AAAA, and CNAME checks with optional destination-policy-validated explicit resolvers
 - Push/heartbeat monitors with minimized unauthenticated acknowledgements and staff-only credential rendering
 - Unknown, Up, Down, Degraded, Paused, and Maintenance state handling
@@ -32,8 +33,8 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Minimized read-only live Uptime Kuma runtime evidence collection
 - Repeated fail-closed parallel-comparison assessment with coverage-drift detection
 - Fail-closed production target preflight including Wardveil-aligned transport, cookie, and browser-policy gates
-- Production Compose contract validation with zero host-published application/database ports
-- Immediate-predecessor PostgreSQL application rollback-compatibility proof when the migration set is unchanged
+- Production Compose contract validation with zero host-published application/database ports and a worker-only narrow ping-socket group policy
+- Migration-aware immediate-predecessor PostgreSQL application rollback proof for the Ping model-state migration
 - Cutover and rollback evidence requirements that preserve Uptime Kuma until explicit retirement approval
 
 ## Glaze UI 1.0
@@ -98,7 +99,9 @@ The development topology deliberately publishes only the loopback web port. Post
 
 `compose.production.yml` is the source-controlled production deployment candidate. It requires traceable image identity, digest-pinned PostgreSQL, protected purpose-specific environment files, persistent database bind storage, an internal database network, the approved external Caddy network, read-only application root filesystems, dropped Linux capabilities, `no-new-privileges`, and zero host-published Monitor/database ports.
 
-It is not authorization to deploy or cut over. See `docs/production-deployment.md` for the target-environment acceptance boundary.
+The worker remains non-root with all Linux capabilities dropped. Native Ping uses Linux unprivileged ICMP datagram sockets, with `net.ipv4.ping_group_range` restricted to the deterministic Monitor group inside the worker network namespace only; web and migration containers do not receive that permission.
+
+It is not authorization to deploy or cut over. See `docs/production-deployment.md` and `docs/icmp-ping.md` for the target-environment acceptance boundary.
 
 ## DNS resolver semantics
 
@@ -107,6 +110,14 @@ Plain DNS monitor targets such as `example.com` use the Monitor worker's configu
 Before an explicit resolver is queried, all of its resolved addresses must satisfy the same `MONITOR_ALLOW_PUBLIC_TARGETS` and `MONITOR_ALLOWED_NETWORKS` destination policy used by other active network targets. The Uptime Kuma migration layer preserves supported `dns_resolve_server` configuration by converting it to this form instead of silently substituting Monitor's system resolver.
 
 This closes the source implementation gap for resolver-specific DNS semantics. The current live Uptime Kuma resolver-specific checks still require isolated-target execution and comparison before production acceptance. See `docs/dns-resolver-semantics.md`.
+
+## Ping / ICMP semantics
+
+Ping is a first-class `PING` monitor. The worker resolves the configured hostname or IP through the same destination-policy boundary used by the other active network checks and passes only approved numeric addresses to the ICMP transport. The transport sends IPv4 or IPv6 Echo requests through unprivileged datagram ping sockets and validates the Echo Reply type, code, sequence, and payload.
+
+Monitor deliberately does not add `CAP_NET_RAW`, privileged mode, host networking, the Docker socket, or a permanent probe sidecar to provide Ping. `python manage.py checkicmpruntime` exercises the same Ping path and is used by the disposable production-topology validation. Uptime Kuma `ping` definitions can now map to paused native `PING` definitions.
+
+This closes the source implementation blocker, not the live acceptance gate. The existing live Uptime Kuma Ping check still requires target-host execution from the approved parallel worker identity and comparison evidence before the review can be cleared. See `docs/icmp-ping.md`.
 
 ## Live acceptance evidence
 
@@ -145,11 +156,11 @@ python manage.py reconcileuptimebaseline \
   --no-fail
 ```
 
-The command fails closed on missing expected coverage, reappeared retired monitors, unexpected live monitors, unsupported migration semantics, unresolved review items, and documented cutover blockers. ICMP/Ping network-layer coverage remains a source/cutover blocker. Resolver-specific DNS source semantics are now implemented, but their live target behavior remains an acceptance gate until the approved resolver checks are exercised and compared in parallel.
+The command fails closed on missing expected coverage, reappeared retired monitors, unexpected live monitors, unsupported migration semantics, and unresolved review items. Ping/ICMP and resolver-specific DNS source semantics are implemented, but each remains a live target review gate until the approved checks are exercised and compared in parallel.
 
 Do not use the configuration snapshot with `compareuptimestate`. Parallel state/latency comparison requires separately validated sanitized runtime evidence with heartbeat status and response-time values.
 
-See `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/dns-resolver-semantics.md`, `docs/icmp-reachability.md`, and `docs/cutover-and-rollback.md`.
+See `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/dns-resolver-semantics.md`, `docs/icmp-ping.md`, `docs/icmp-reachability.md`, and `docs/cutover-and-rollback.md`.
 
 ## Security model
 
@@ -163,7 +174,7 @@ The current SSRF design validates all addresses returned during application pref
 
 The repository contains one Django web/API application and one asynchronous monitoring worker. PostgreSQL is the intended production database. Redis, Celery, Kafka, and other brokers are intentionally excluded from v0.1.
 
-See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/product-identity.md`, `docs/wardveil-security.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/dns-resolver-semantics.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
+See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/product-identity.md`, `docs/wardveil-security.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/dns-resolver-semantics.md`, `docs/icmp-ping.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
 
 ## License
 
