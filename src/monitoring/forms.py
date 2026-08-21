@@ -27,6 +27,15 @@ class MonitorForm(forms.ModelForm):
             "expected_dns_answer",
             "heartbeat_grace_seconds",
         ]
+        help_texts = {
+            "target": (
+                "Use the service URL or host for HTTP/TCP checks. DNS checks accept a query name "
+                "or dns://resolver[:port]/query-name when a specific resolver must be validated. "
+                "Push monitors leave this blank."
+            ),
+            "dns_record_type": "DNS checks support A, AAAA, and CNAME records.",
+            "expected_dns_answer": "Optional exact DNS answer that must be present after normalization.",
+        }
         widgets = {
             "expected_body_text": forms.TextInput(attrs={"autocomplete": "off"}),
             "expected_json_value": forms.TextInput(attrs={"autocomplete": "off"}),
