@@ -72,6 +72,13 @@ def main() -> None:
         if not service.get("tmpfs"):
             fail(f"{name} has no bounded writable temporary filesystem")
 
+    for name in {"migrate", "web"}:
+        if services[name].get("sysctls"):
+            fail(f"{name} receives a network sysctl despite not performing ICMP checks")
+    worker_sysctls = services["worker"].get("sysctls") or {}
+    if worker_sysctls.get("net.ipv4.ping_group_range") != "999 999":
+        fail("worker ping_group_range must be restricted to the deterministic Monitor group 999")
+
     db = services["db"]
     db_image = str(db.get("image") or "")
     if "@sha256:" not in db_image:
