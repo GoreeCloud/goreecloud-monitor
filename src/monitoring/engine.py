@@ -20,7 +20,7 @@ from django.utils import timezone
 from .models import CheckResult, Incident, MaintenanceWindow, Monitor
 from .notifications import publish_transition
 from .observability import log_event, safe_traceback
-from .validators import resolve_and_validate_network_target
+from .validators import parse_dns_target, resolve_and_validate_network_target
 
 logger = logging.getLogger("monitoring.access")
 
@@ -126,9 +126,18 @@ async def check_tcp(monitor: Monitor) -> CheckOutcome:
 
 
 async def check_dns(monitor: Monitor) -> CheckOutcome:
-    started=time.perf_counter(); resolver=dns.asyncresolver.Resolver(); resolver.lifetime=float(monitor.timeout_seconds)
+    started=time.perf_counter()
     try:
-        answer=await resolver.resolve(monitor.target, monitor.dns_record_type.upper()); values=sorted(str(item).rstrip(".") for item in answer); elapsed=(time.perf_counter()-started)*1000
+        dns_target = parse_dns_target(monitor.target)
+        if dns_target.uses_explicit_resolver:
+            resolver_addresses = await resolve_and_validate_network_target(dns_target.resolver_host, dns_target.resolver_port)
+            resolver = dns.asyncresolver.Resolver(configure=False)
+            resolver.nameservers = resolver_addresses
+            resolver.port = dns_target.resolver_port
+        else:
+            resolver = dns.asyncresolver.Resolver()
+        resolver.lifetime=float(monitor.timeout_seconds)
+        answer=await resolver.resolve(dns_target.query_name, monitor.dns_record_type.upper()); values=sorted(str(item).rstrip(".") for item in answer); elapsed=(time.perf_counter()-started)*1000
         if monitor.expected_dns_answer and monitor.expected_dns_answer.rstrip(".") not in values: return CheckOutcome(False, Monitor.State.DOWN, elapsed, "DNS answer did not contain the expected value")
         return CheckOutcome(True, Monitor.State.UP, elapsed, f"DNS {monitor.dns_record_type.upper()} check passed")
     except Exception as exc:
