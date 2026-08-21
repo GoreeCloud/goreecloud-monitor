@@ -44,7 +44,10 @@ def parse_dns_target(target: str) -> DnsTarget:
     if not value.lower().startswith("dns://"):
         return DnsTarget(query_name=_validate_dns_name(value, label="DNS target"))
 
-    parsed = urlsplit(value)
+    try:
+        parsed = urlsplit(value)
+    except ValueError as exc:
+        raise ValidationError("DNS resolver target is malformed") from exc
     if parsed.scheme.lower() != "dns" or not parsed.hostname:
         raise ValidationError("Resolver-qualified DNS targets require dns://<resolver>/<hostname>")
     if parsed.username or parsed.password:
