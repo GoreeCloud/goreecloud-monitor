@@ -29,8 +29,8 @@ class MonitorForm(forms.ModelForm):
         ]
         help_texts = {
             "target": (
-                "Use the service URL or host for HTTP/TCP checks. DNS checks accept a query name "
-                "or dns://resolver[:port]/query-name when a specific resolver must be validated. "
+                "Use the service URL or host for HTTP/TCP checks. Ping checks use a hostname or IP address and no port. "
+                "DNS checks accept a query name or dns://resolver[:port]/query-name when a specific resolver must be validated. "
                 "Push monitors leave this blank."
             ),
             "dns_record_type": "DNS checks support A, AAAA, and CNAME records.",
