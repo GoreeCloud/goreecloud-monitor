@@ -34,14 +34,16 @@
     },
     "privacy_shield": {
       "identity": "GoreeCloud Privacy Shield",
-      "source_status": "capability-evidence-present-contract-pending",
+      "source_status": "draft-adapter-source-candidate",
       "evidence": [
+        "docs/privacy-shield.adapter.json",
+        "tests/test_privacy_shield_adapter.py",
         "src/monitoring/audit.py",
         "src/monitoring/middleware.py",
-        "src/monitoring/views.py",
-        "SECURITY.md"
+        "tests/test_portability.py",
+        "src/monitoring/management/commands/prunemonitorhistory.py"
       ],
-      "blocker": "Monitor already minimizes operational evidence and private diagnostics, but the explicit Privacy Shield application contract and acceptance evidence are not yet complete."
+      "blocker": "Monitor now declares a source-side draft Privacy Shield adapter limited to telemetry-minimization, data-minimization, retention-controls, and portable-export. Runtime acceptance and central Privacy Shield adapter acceptance remain required, and production_approved remains false."
     },
     "everkeep": {
       "identity": "Everkeep",
@@ -57,7 +59,7 @@
   },
   "production_blockers": [
     "complete Glaze UI 1.4 Stable gate and representative form-factor acceptance",
-    "explicit Privacy Shield application contract and acceptance",
+    "Privacy Shield runtime and central adapter acceptance",
     "explicit Everkeep application contract and target recovery acceptance",
     "target database-native backup and isolated restore proof",
     "isolated persistent target deployment",
