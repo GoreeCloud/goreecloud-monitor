@@ -41,8 +41,9 @@
       "identity": "Everkeep",
       "source_status": "recovery-evidence-present-contract-pending",
       "evidence": [
-        "docs/backup-recovery.md",
-        "docs/cutover-rollback.md",
+        "docs/backup.md",
+        "docs/recovery.md",
+        "docs/cutover-and-rollback.md",
         ".github/workflows/rollback-compatibility.yml"
       ],
       "blocker": "Disposable backup/restore and rollback evidence exists, but target-native backup/restore, live rollback, and explicit Everkeep application-contract acceptance remain outstanding."
