@@ -6,14 +6,20 @@
     "glaze_ui": {
       "identity": "Glaze UI",
       "required_version": "1.4",
-      "source_status": "upgrade-required",
+      "required_release": "1.4.0",
+      "canonical_repository": "GoreeCloud/glaze-ui",
+      "canonical_revision": "7574138c8f754b69657f8b386d3ecd3e16fad53a",
+      "canonical_form_factor_css_sha": "29aee907f9382238658ebe5cdf5d659e75d02121",
+      "source_status": "adoption-in-progress",
       "evidence": [
         "templates/monitoring/base.html",
         "static/monitoring/css/glaze.css",
         "static/monitoring/css/glaze.accessibility.css",
-        "tests/test_glaze_ui.py"
+        "static/monitoring/css/glaze.formfactors.css",
+        "tests/test_glaze_ui.py",
+        "tests/test_glaze_ui_1_4_adoption.py"
       ],
-      "blocker": "Current Monitor source still declares Glaze UI 1.0.0 and must be upgraded and revalidated against Glaze UI 1.4 Stable before Stable qualification."
+      "blocker": "Monitor now carries the canonical Glaze UI 1.4 form-factor foundation and explicit 1.4.0 target metadata, but current source still truthfully declares the active application implementation as 1.0.0 until the full applicable 1.4 gate set and representative visual/form-factor acceptance are completed."
     },
     "wardveil_security": {
       "identity": "Wardveil Security by GoreeCloud",
@@ -50,7 +56,7 @@
     }
   },
   "production_blockers": [
-    "Glaze UI 1.4 Stable upgrade and acceptance",
+    "complete Glaze UI 1.4 Stable gate and representative form-factor acceptance",
     "explicit Privacy Shield application contract and acceptance",
     "explicit Everkeep application contract and target recovery acceptance",
     "target database-native backup and isolated restore proof",
