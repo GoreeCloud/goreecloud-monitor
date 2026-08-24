@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "application": "goreecloud-monitor",
+  "stable_eligible": false,
+  "platform_systems": {
+    "glaze_ui": {
+      "identity": "Glaze UI",
+      "required_version": "1.4",
+      "source_status": "upgrade-required",
+      "evidence": [
+        "templates/monitoring/base.html",
+        "static/monitoring/css/glaze.css",
+        "static/monitoring/css/glaze.accessibility.css",
+        "tests/test_glaze_ui.py"
+      ],
+      "blocker": "Current Monitor source still declares Glaze UI 1.0.0 and must be upgraded and revalidated against Glaze UI 1.4 Stable before Stable qualification."
+    },
+    "wardveil_security": {
+      "identity": "Wardveil Security by GoreeCloud",
+      "source_status": "integrated-source-validated",
+      "evidence": [
+        "docs/wardveil-security.md",
+        "static/monitoring/css/wardveil.css",
+        "templates/monitoring/security.html",
+        "tests/test_security.py"
+      ],
+      "blocker": "Target-environment Wardveil/security acceptance remains required."
+    },
+    "privacy_shield": {
+      "identity": "GoreeCloud Privacy Shield",
+      "source_status": "capability-evidence-present-contract-pending",
+      "evidence": [
+        "src/monitoring/audit.py",
+        "src/monitoring/middleware.py",
+        "src/monitoring/views.py",
+        "SECURITY.md"
+      ],
+      "blocker": "Monitor already minimizes operational evidence and private diagnostics, but the explicit Privacy Shield application contract and acceptance evidence are not yet complete."
+    },
+    "everkeep": {
+      "identity": "Everkeep",
+      "source_status": "recovery-evidence-present-contract-pending",
+      "evidence": [
+        "docs/backup-recovery.md",
+        "docs/cutover-rollback.md",
+        ".github/workflows/rollback-compatibility.yml"
+      ],
+      "blocker": "Disposable backup/restore and rollback evidence exists, but target-native backup/restore, live rollback, and explicit Everkeep application-contract acceptance remain outstanding."
+    }
+  },
+  "production_blockers": [
+    "Glaze UI 1.4 Stable upgrade and acceptance",
+    "explicit Privacy Shield application contract and acceptance",
+    "explicit Everkeep application contract and target recovery acceptance",
+    "target database-native backup and isolated restore proof",
+    "isolated persistent target deployment",
+    "repeated live Monitor-versus-Uptime-Kuma parallel comparison",
+    "controlled outage/recovery/TLS/maintenance/notification scenarios",
+    "live resolver-specific DNS acceptance",
+    "live low-privilege Ping/ICMP acceptance",
+    "target Wardveil/security validation",
+    "manual accessibility and product-identity acceptance",
+    "live rollback proof and explicit cutover approval"
+  ]
+}
