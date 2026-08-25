@@ -47,20 +47,22 @@
     },
     "everkeep": {
       "identity": "Everkeep",
-      "source_status": "recovery-evidence-present-contract-pending",
+      "source_status": "draft-adoption-source-candidate",
       "evidence": [
+        "docs/everkeep.adoption.json",
+        "tests/test_everkeep_adoption.py",
         "docs/backup.md",
         "docs/recovery.md",
         "docs/cutover-and-rollback.md",
         ".github/workflows/rollback-compatibility.yml"
       ],
-      "blocker": "Disposable backup/restore and rollback evidence exists, but target-native backup/restore, live rollback, and explicit Everkeep application-contract acceptance remain outstanding."
+      "blocker": "Monitor now declares a fail-closed Everkeep adoption candidate for backup coverage, restore capability, recovery freshness, migration, dependency recovery, documentation, and provenance. Target-native database restore, recovery freshness, live rollback, and exact-revision Everkeep acceptance remain required before readiness can be asserted."
     }
   },
   "production_blockers": [
     "complete Glaze UI 1.4 Stable gate and representative form-factor acceptance",
     "Privacy Shield runtime and central adapter acceptance",
-    "explicit Everkeep application contract and target recovery acceptance",
+    "Everkeep target-native restore, recovery freshness, live rollback, and exact-revision acceptance",
     "target database-native backup and isolated restore proof",
     "isolated persistent target deployment",
     "repeated live Monitor-versus-Uptime-Kuma parallel comparison",
