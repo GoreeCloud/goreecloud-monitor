@@ -23,14 +23,18 @@
     },
     "wardveil_security": {
       "identity": "Wardveil Security by GoreeCloud",
-      "source_status": "integrated-source-validated",
+      "source_status": "integrated-source-validated-adoption-contract",
       "evidence": [
+        "docs/wardveil.adoption.json",
+        "tests/test_wardveil_adoption.py",
         "docs/wardveil-security.md",
+        "src/monitoring/audit.py",
+        "src/monitoring/management/commands/targetpreflight.py",
         "static/monitoring/css/wardveil.css",
         "templates/monitoring/security.html",
         "tests/test_security.py"
       ],
-      "blocker": "Target-environment Wardveil/security acceptance remains required."
+      "blocker": "Monitor now has an explicit fail-closed Wardveil adoption contract over its existing source-validated security implementation. Target-runtime Wardveil/security acceptance remains required and production_approved remains false."
     },
     "privacy_shield": {
       "identity": "GoreeCloud Privacy Shield",
