@@ -46,8 +46,11 @@ def test_unfinished_platform_work_cannot_be_presented_as_stable() -> None:
     contract = _contract()
     systems = contract["platform_systems"]
     assert systems["glaze_ui"]["required_version"] == "1.4"
-    assert systems["glaze_ui"]["source_status"] == "upgrade-required"
-    assert systems["privacy_shield"]["source_status"].endswith("contract-pending")
-    assert systems["everkeep"]["source_status"].endswith("contract-pending")
+    assert systems["glaze_ui"]["source_status"] == "adoption-in-progress"
+    assert systems["privacy_shield"]["source_status"] == "draft-adapter-source-candidate"
+    assert systems["everkeep"]["source_status"] == "draft-adoption-source-candidate"
+    everkeep = json.loads((ROOT / "docs" / "everkeep.adoption.json").read_text(encoding="utf-8"))
+    assert everkeep["fail_closed"] is True
+    assert everkeep["read_only"] is True
     assert contract["production_blockers"]
     assert contract["stable_eligible"] is False
