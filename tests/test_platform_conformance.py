@@ -47,6 +47,12 @@ def test_unfinished_platform_work_cannot_be_presented_as_stable() -> None:
     systems = contract["platform_systems"]
     assert systems["glaze_ui"]["required_version"] == "1.4"
     assert systems["glaze_ui"]["source_status"] == "adoption-in-progress"
+    assert systems["wardveil_security"]["source_status"] == "integrated-source-validated-adoption-contract"
+    wardveil = json.loads((ROOT / "docs" / "wardveil.adoption.json").read_text(encoding="utf-8"))
+    assert wardveil["fail_closed"] is True
+    assert wardveil["unknown_when_evidence_missing"] is True
+    assert wardveil["acceptance"]["target_runtime_acceptance_required"] is True
+    assert wardveil["acceptance"]["production_approved"] is False
     assert systems["privacy_shield"]["source_status"] == "draft-adapter-source-candidate"
     assert systems["everkeep"]["source_status"] == "draft-adoption-source-candidate"
     everkeep = json.loads((ROOT / "docs" / "everkeep.adoption.json").read_text(encoding="utf-8"))
