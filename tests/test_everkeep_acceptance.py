@@ -7,6 +7,11 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 
+CANONICAL_ACCEPTANCE_SCHEMA = (
+    "GoreeCloud/goreecloud-everkeep:contracts/continuity.acceptance.schema.json@v1"
+)
+
+
 class EverkeepAcceptanceTests(SimpleTestCase):
     @classmethod
     def setUpClass(cls):
@@ -14,6 +19,13 @@ class EverkeepAcceptanceTests(SimpleTestCase):
         cls.base = Path(settings.BASE_DIR)
         cls.policy = json.loads((cls.base / "docs/everkeep.acceptance.json").read_text(encoding="utf-8"))
         cls.adoption = json.loads((cls.base / "docs/everkeep.adoption.json").read_text(encoding="utf-8"))
+        cls.conformance = json.loads((cls.base / "docs/platform-conformance.json").read_text(encoding="utf-8"))
+
+    def test_policy_binds_canonical_acceptance_schema(self):
+        everkeep = self.conformance["platform_systems"]["everkeep"]
+        self.assertEqual(everkeep["source_status"], "draft-acceptance-policy-candidate")
+        self.assertEqual(everkeep["canonical_acceptance_schema"], CANONICAL_ACCEPTANCE_SCHEMA)
+        self.assertIn("docs/everkeep.acceptance.json", everkeep["evidence"])
 
     def test_policy_covers_every_declared_dimension(self):
         self.assertEqual(self.policy["application"], "goreecloud-monitor")
