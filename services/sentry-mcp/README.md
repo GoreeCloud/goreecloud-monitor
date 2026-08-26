@@ -1,6 +1,17 @@
 # GoreeCloud Sentry MCP
 
-GoreeCloud Sentry MCP is a small authenticated, read-only Model Context Protocol service for GoreeCloud Monitor. It lets approved MCP clients query a configured Sentry project without ever receiving the Sentry API token.
+GoreeCloud Sentry MCP is an authenticated, read-only Model Context Protocol service for GoreeCloud Monitor. It lets approved MCP clients query the configured GoreeCloud Sentry project without ever receiving the Sentry API token.
+
+## Current status
+
+- Production Worker deployed: `https://goreecloud-sentry-mcp.goreecloud.workers.dev`
+- Public health endpoint: `https://goreecloud-sentry-mcp.goreecloud.workers.dev/health`
+- `/health` validated with HTTP 200 and the expected service/version payload.
+- `npm run typecheck` passes with zero TypeScript errors.
+- Cloudflare KV namespace `OAUTH_KV` is created and bound.
+- Sentry organization: `goreecloud-01`
+- Sentry project: `goreecloud-monitor`
+- Remaining before protected MCP validation: GitHub OAuth App registration, Worker secret provisioning, and authenticated `/mcp` testing.
 
 ## Security model
 
@@ -26,10 +37,10 @@ GoreeCloud Sentry MCP is a small authenticated, read-only Model Context Protocol
 
 Non-secret Worker variables:
 
-- `SENTRY_ORG`
-- `SENTRY_PROJECT`
-- `SENTRY_BASE_URL` (defaults to `https://sentry.io`)
-- `ALLOWED_GITHUB_LOGINS` (comma-separated; keep this narrow)
+- `SENTRY_ORG=goreecloud-01`
+- `SENTRY_PROJECT=goreecloud-monitor`
+- `SENTRY_BASE_URL=https://sentry.io`
+- `ALLOWED_GITHUB_LOGINS=GoreeCloud`
 
 Worker secrets:
 
@@ -47,41 +58,59 @@ From `services/sentry-mcp`:
 
 ```bash
 npm install
-npx wrangler kv namespace create OAUTH_KV
-```
-
-Copy the returned KV namespace ID into `wrangler.jsonc`, then set the non-secret Sentry org/project values and the allowed GitHub login.
-
-Create a GitHub OAuth App with:
-
-- Homepage URL: the Worker origin, for example `https://goreecloud-sentry-mcp.<account>.workers.dev`
-- Authorization callback URL: the Worker origin plus `/callback`
-
-Set secrets interactively. Do not put secret values in Git, `.env.example`, documentation, screenshots, or chat:
-
-```bash
-npx wrangler secret put SENTRY_AUTH_TOKEN
-npx wrangler secret put GITHUB_CLIENT_ID
-npx wrangler secret put GITHUB_CLIENT_SECRET
-```
-
-Deploy:
-
-```bash
+npm run typecheck
 npm run deploy
 ```
 
-The remote MCP endpoint is:
+The deployed Worker origin is:
 
 ```text
-https://<worker-host>/mcp
+https://goreecloud-sentry-mcp.goreecloud.workers.dev
 ```
 
-## ChatGPT
+The protected remote MCP endpoint is:
 
-When custom MCP apps are available for the account/workspace, create a custom app using the deployed `/mcp` endpoint and select OAuth authentication. The authorization flow redirects through this Worker to GitHub, verifies the approved GitHub login, and returns an MCP access token. ChatGPT never sees `SENTRY_AUTH_TOKEN`.
+```text
+https://goreecloud-sentry-mcp.goreecloud.workers.dev/mcp
+```
 
-As of 2026-08-26, direct custom MCP app availability depends on the ChatGPT plan/workspace. The Worker remains a standard remote MCP server and can also be tested with MCP Inspector or another compatible MCP client.
+The public health endpoint is:
+
+```text
+https://goreecloud-sentry-mcp.goreecloud.workers.dev/health
+```
+
+## GitHub OAuth App
+
+Create a GitHub OAuth App with these values:
+
+- Application name: `GoreeCloud Sentry MCP`
+- Homepage URL: `https://goreecloud-sentry-mcp.goreecloud.workers.dev/`
+- Application description: `Secure GitHub identity provider for the GoreeCloud Sentry MCP connector.`
+- Authorization callback URL: `https://goreecloud-sentry-mcp.goreecloud.workers.dev/callback`
+- Device Flow: disabled
+- Expiring user access tokens: enabled
+- Wildcard callback matching: disabled if presented
+
+The OAuth App is used only for human identity verification. Repository permissions are not required by this connector.
+
+## Secret provisioning
+
+Set secrets interactively after the OAuth App exists. Never place secret values in Git, `.env.example`, documentation, screenshots, or chat.
+
+```bash
+npx wrangler secret put GITHUB_CLIENT_ID
+npx wrangler secret put GITHUB_CLIENT_SECRET
+npx wrangler secret put SENTRY_AUTH_TOKEN
+```
+
+After secret provisioning, redeploy if required and validate the authenticated `/mcp` flow.
+
+## ChatGPT and MCP clients
+
+When custom MCP apps are available for the account or workspace, configure the deployed `/mcp` endpoint with OAuth authentication. The authorization flow redirects through this Worker to GitHub, verifies the approved GitHub login, and returns an MCP access token. The MCP client never receives `SENTRY_AUTH_TOKEN`.
+
+The Worker is a standard remote MCP server and can also be tested with MCP Inspector or another compatible MCP client.
 
 ## Local development
 
@@ -92,4 +121,4 @@ npm install
 npm run dev
 ```
 
-Use the MCP Inspector against `http://localhost:8787/mcp` (or the port reported by Wrangler).
+For local development, use a local KV resource rather than the production `OAUTH_KV` namespace unless remote-state testing is explicitly required. Use MCP Inspector against `http://localhost:8787/mcp` or the port reported by Wrangler.
