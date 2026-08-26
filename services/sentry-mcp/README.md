@@ -14,8 +14,9 @@ GoreeCloud Sentry MCP is an authenticated, read-only Model Context Protocol serv
 - GitHub OAuth App is registered for the production Worker callback.
 - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and `SENTRY_AUTH_TOKEN` are provisioned as Cloudflare Worker secrets; their values are not stored in Git or documentation.
 - Latest validated production deployment in this setup session: Worker version `ba2151cb-3def-47bb-8e3f-8f7776ed7bd2`.
-- Authenticated MCP Inspector connection validated successfully: OAuth completed, `initialize` succeeded, the initialized notification was accepted, and `tools/list` succeeded over Streamable HTTP.
-- Remaining validation: call `sentry_health` and confirm the configured Sentry project is reachable through the complete authenticated MCP path.
+- Authenticated MCP Inspector connection validated successfully over Streamable HTTP: OAuth completed, `initialize` succeeded, the initialized notification was accepted, and `tools/list` returned all five GoreeCloud Sentry tools.
+- `sentry_health` completed successfully through the authenticated production MCP path and returned `ok: true`, `apiReachable: true`, organization `goreecloud-01`, project `goreecloud-monitor`, and project status `active`.
+- Production end-to-end validation is complete.
 
 ## Security model
 
@@ -112,21 +113,21 @@ Production secret provisioning is complete. Secret values remain server-side in 
 
 ## Authenticated production validation
 
-Use the official MCP Inspector to validate the production OAuth and Sentry path:
+Use MCP Inspector to validate the production OAuth and Sentry path:
 
 ```bash
 npx @modelcontextprotocol/inspector@latest
 ```
 
-In the Inspector:
+Validated production sequence:
 
 1. Configure a Streamable HTTP server at `https://goreecloud-sentry-mcp.goreecloud.workers.dev/mcp`.
 2. Connect and complete the OAuth flow through GitHub using an account allowed by `ALLOWED_GITHUB_LOGINS`.
 3. Confirm the MCP `initialize` exchange succeeds and the server reports Connected.
 4. Confirm `tools/list` succeeds and the five GoreeCloud Sentry tools are present.
-5. Call `sentry_health` and confirm it can reach the configured `goreecloud-monitor` Sentry project.
+5. Call `sentry_health` and confirm the configured `goreecloud-monitor` project is reachable.
 
-Steps 1 through 4 have been validated successfully against the production Worker. Step 5 remains the final end-to-end Sentry API validation.
+All five steps have been validated successfully against the production Worker. The final `sentry_health` response reported `ok: true`, `apiReachable: true`, organization `goreecloud-01`, project slug/name `goreecloud-monitor`, platform `node-cloudflare-workers`, and status `active`.
 
 The protected `/mcp` URL is a protocol endpoint and is not intended to be tested by opening it directly in a normal browser.
 
