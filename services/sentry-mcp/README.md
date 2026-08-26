@@ -6,6 +6,8 @@ GoreeCloud Sentry MCP is a small authenticated, read-only Model Context Protocol
 
 - `SENTRY_AUTH_TOKEN` exists only as a Cloudflare Worker secret.
 - The MCP endpoint is protected by OAuth 2.1 using `@cloudflare/workers-oauth-provider`.
+- Public MCP clients are restricted to S256 PKCE; legacy plain PKCE is disabled.
+- The OAuth provider supplies MCP client metadata discovery and rotating refresh-token handling.
 - Human authentication is delegated to GitHub OAuth and restricted by `ALLOWED_GITHUB_LOGINS`.
 - The GitHub access token is used only long enough to identify the user and is not stored in MCP authorization props.
 - Sentry access is read-only. No tool resolves, deletes, assigns, mutates, or configures Sentry data.
