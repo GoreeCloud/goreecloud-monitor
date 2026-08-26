@@ -95,18 +95,31 @@ async function sentryFetch(env: SentryEnv, path: string, query?: Record<string, 
   return response.json();
 }
 
+function isSensitiveTagKey(key: string): boolean {
+  return /(user|email|ip(?:_|\.|$)|auth|token|secret|session|cookie|password|device(?:\.|_)?(?:id|uuid))/i.test(key);
+}
+
 function compactTags(tags: unknown): Array<{ key: string; value: string }> {
   if (!Array.isArray(tags)) return [];
   return tags
     .filter((tag) => tag && typeof tag === "object")
+    .map((tag) => tag as JsonObject)
+    .filter((tag) => !isSensitiveTagKey(String(tag.key ?? "")))
     .slice(0, 20)
-    .map((tag) => {
-      const obj = tag as JsonObject;
-      return {
-        key: redactString(String(obj.key ?? "")),
-        value: redactString(String(obj.value ?? ""))
-      };
-    });
+    .map((tag) => ({
+      key: redactString(String(tag.key ?? "")),
+      value: redactString(String(tag.value ?? ""))
+    }));
+}
+
+function selectContext(value: unknown, allowed: string[]): JsonObject | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const source = value as JsonObject;
+  const selected: JsonObject = {};
+  for (const key of allowed) {
+    if (source[key] !== undefined) selected[key] = source[key];
+  }
+  return Object.keys(selected).length ? selected : undefined;
 }
 
 export async function listIssues(
@@ -226,10 +239,10 @@ export async function eventDetail(env: SentryEnv, eventId: string): Promise<unkn
     requestUrl: safeUrl(request.url),
     tags: compactTags(data.tags),
     contexts: {
-      runtime: contexts.runtime,
-      os: contexts.os,
-      browser: contexts.browser,
-      device: contexts.device
+      runtime: selectContext(contexts.runtime, ["name", "version"]),
+      os: selectContext(contexts.os, ["name", "version", "build", "kernel_version"]),
+      browser: selectContext(contexts.browser, ["name", "version"]),
+      device: selectContext(contexts.device, ["family", "model", "brand", "arch"])
     }
   });
 }
