@@ -10,7 +10,7 @@
   "vars": {
     "SENTRY_BASE_URL": "https://sentry.io",
     "SENTRY_ORG": "goreecloud-01",
-    "SENTRY_PROJECT": "REPLACE_WITH_SENTRY_PROJECT_SLUG",
+    "SENTRY_PROJECT": "goreecloud-monitor",
     "ALLOWED_GITHUB_LOGINS": "GoreeCloud"
   },
   "kv_namespaces": [
