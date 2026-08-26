@@ -307,5 +307,7 @@ export default new OAuthProvider({
   clientRegistrationEndpoint: "/oauth/register",
   apiRoute: "/mcp",
   apiHandler: mcpHandler,
-  defaultHandler
+  defaultHandler,
+  allowPlainPKCE: false,
+  clientIdMetadataDocumentEnabled: true
 });
