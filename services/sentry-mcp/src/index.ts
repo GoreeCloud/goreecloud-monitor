@@ -146,8 +146,8 @@ function createServer() {
 }
 
 const mcpRequestHandler = createMcpHandler(createServer);
-const mcpApiHandler: ExportedHandler<Env> = {
-  fetch(request, env, ctx) {
+const mcpApiHandler = {
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
     return mcpRequestHandler(request, env, ctx);
   }
 };
