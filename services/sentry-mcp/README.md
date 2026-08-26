@@ -6,12 +6,15 @@ GoreeCloud Sentry MCP is an authenticated, read-only Model Context Protocol serv
 
 - Production Worker deployed: `https://goreecloud-sentry-mcp.goreecloud.workers.dev`
 - Public health endpoint: `https://goreecloud-sentry-mcp.goreecloud.workers.dev/health`
-- `/health` validated with HTTP 200 and the expected service/version payload.
+- `/health` validated with HTTP 200 and the expected service/version payload after production secret provisioning.
 - `npm run typecheck` passes with zero TypeScript errors.
 - Cloudflare KV namespace `OAUTH_KV` is created and bound.
 - Sentry organization: `goreecloud-01`
 - Sentry project: `goreecloud-monitor`
-- Remaining before protected MCP validation: GitHub OAuth App registration, Worker secret provisioning, and authenticated `/mcp` testing.
+- GitHub OAuth App is registered for the production Worker callback.
+- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and `SENTRY_AUTH_TOKEN` are provisioned as Cloudflare Worker secrets; their values are not stored in Git or documentation.
+- Latest validated production deployment in this setup session: Worker version `ba2151cb-3def-47bb-8e3f-8f7776ed7bd2`.
+- Remaining validation: complete the authenticated OAuth flow, list MCP tools, and call `sentry_health` against Sentry.
 
 ## Security model
 
@@ -104,7 +107,27 @@ npx wrangler secret put GITHUB_CLIENT_SECRET
 npx wrangler secret put SENTRY_AUTH_TOKEN
 ```
 
-After secret provisioning, redeploy if required and validate the authenticated `/mcp` flow.
+Production secret provisioning is complete. Secret values remain server-side in Cloudflare and are intentionally omitted from this documentation.
+
+## Authenticated production validation
+
+Use the official MCP Inspector to validate the production OAuth and Sentry path:
+
+```bash
+npx @modelcontextprotocol/inspector@latest
+```
+
+In the Inspector:
+
+1. Set the MCP server URL to `https://goreecloud-sentry-mcp.goreecloud.workers.dev/mcp`.
+2. Select **Connect**. An authentication-required response is expected before OAuth is completed.
+3. Open **Auth settings** and select **Quick OAuth Flow**.
+4. Complete GitHub authorization using an account allowed by `ALLOWED_GITHUB_LOGINS`.
+5. Return to the Inspector and select **Connect** again.
+6. Select **List Tools** and confirm the five GoreeCloud Sentry tools are present.
+7. Call `sentry_health` and confirm it can reach the configured `goreecloud-monitor` Sentry project.
+
+The protected `/mcp` URL is a protocol endpoint and is not intended to be tested by opening it directly in a normal browser.
 
 ## ChatGPT and MCP clients
 
