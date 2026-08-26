@@ -145,7 +145,12 @@ function createServer() {
   return server;
 }
 
-const mcpHandler = createMcpHandler(createServer);
+const mcpRequestHandler = createMcpHandler(createServer);
+const mcpApiHandler: ExportedHandler<Env> = {
+  fetch(request, env, ctx) {
+    return mcpRequestHandler(request, env, ctx);
+  }
+};
 
 function parseCookies(request: Request): Record<string, string> {
   const header = request.headers.get("cookie") || "";
@@ -306,7 +311,7 @@ export default new OAuthProvider({
   tokenEndpoint: "/oauth/token",
   clientRegistrationEndpoint: "/oauth/register",
   apiRoute: "/mcp",
-  apiHandler: mcpHandler,
+  apiHandler: mcpApiHandler,
   defaultHandler,
   allowPlainPKCE: false,
   clientIdMetadataDocumentEnabled: true
