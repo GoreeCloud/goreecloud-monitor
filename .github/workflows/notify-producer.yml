@@ -1,0 +1,28 @@
+name: Notify producer adapter
+
+on:
+  pull_request:
+    paths:
+      - "services/notify-producer/**"
+      - ".github/workflows/notify-producer.yml"
+  push:
+    branches: [main]
+    paths:
+      - "services/notify-producer/**"
+      - ".github/workflows/notify-producer.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: false
+      - name: Test adapter
+        working-directory: services/notify-producer
+        run: npm test
