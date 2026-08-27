@@ -9,6 +9,7 @@ const EVENT_POLICY = Object.freeze({
 const MAX_LABEL_LENGTH = 160;
 const MAX_SUMMARY_LENGTH = 500;
 const MAX_PAYLOAD_BYTES = 8 * 1024;
+const encoder = new TextEncoder();
 
 function requiredText(value, name, maxLength) {
   if (typeof value !== "string") throw new TypeError(`${name} must be a string`);
@@ -34,27 +35,33 @@ export function createNotificationPayload(event) {
     severity: policy.severity
   };
 
-  const bytes = Buffer.byteLength(JSON.stringify(payload), "utf8");
+  const bytes = encoder.encode(JSON.stringify(payload)).byteLength;
   if (bytes > MAX_PAYLOAD_BYTES) throw new RangeError("notification payload exceeds Notify compatibility envelope");
   return payload;
 }
 
 export class NotifyProducer {
+  #endpoint;
+  #token;
+  #fetchImpl;
+
   constructor({ endpoint, token, fetchImpl = globalThis.fetch }) {
-    this.endpoint = new URL(endpoint);
-    if (this.endpoint.protocol !== "https:") throw new TypeError("Notify endpoint must use HTTPS");
-    this.token = requiredText(token, "token", 4096);
+    const parsedEndpoint = new URL(endpoint);
+    if (parsedEndpoint.protocol !== "https:") throw new TypeError("Notify endpoint must use HTTPS");
     if (typeof fetchImpl !== "function") throw new TypeError("fetch implementation is required");
-    this.fetchImpl = fetchImpl;
+
+    this.#endpoint = parsedEndpoint;
+    this.#token = requiredText(token, "token", 4096);
+    this.#fetchImpl = fetchImpl;
   }
 
   async publish(event) {
     const payload = createNotificationPayload(event);
-    const url = new URL("/api/v1/notifications", this.endpoint);
-    const response = await this.fetchImpl(url, {
+    const url = new URL("/api/v1/notifications", this.#endpoint);
+    const response = await this.#fetchImpl(url, {
       method: "POST",
       headers: {
-        authorization: `Bearer ${this.token}`,
+        authorization: `Bearer ${this.#token}`,
         "content-type": "application/json",
         accept: "application/json"
       },
