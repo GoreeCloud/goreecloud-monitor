@@ -1,0 +1,42 @@
+{
+  "schema": "goreecloud-monitor-migration-readiness/v1",
+  "application": "goreecloud-monitor",
+  "repository": "GoreeCloud/goreecloud-monitor",
+  "readiness": {
+    "source_ready": true,
+    "migration_ready": true,
+    "production_cutover_authorized": false,
+    "stable_eligible": false
+  },
+  "authority": {
+    "current_production_monitoring": "Uptime Kuma",
+    "migration_mode": "parallel-validation",
+    "retirement_requires_explicit_approval": true
+  },
+  "required_source_evidence": [
+    "src/monitoring/migration.py",
+    "src/monitoring/parallel.py",
+    "src/monitoring/icmp.py",
+    "docs/dns-resolver-semantics.md",
+    "docs/icmp-ping.md",
+    "docs/cutover-and-rollback.md",
+    "docs/platform-conformance.json",
+    "docs/everkeep.acceptance.json",
+    "services/notify-producer/index.mjs",
+    "services/sentry-mcp/src/index.ts"
+  ],
+  "pre_cutover_live_gates": [
+    "fresh-sanitized-uptime-kuma-configuration-reconciliation",
+    "target-postgresql-recovery-point-and-isolated-restore",
+    "reviewed-paused-import-and-conflict-free-parallel-source-identity",
+    "notify-producer-runtime-credential-and-delivery-acceptance",
+    "repeated-parallel-runtime-comparison",
+    "controlled-down-recovered-tls-maintenance-notification-scenarios",
+    "live-ping-icmp-and-resolver-specific-dns-validation",
+    "target-wardveil-privacy-shield-everkeep-acceptance",
+    "manual-glaze-ui-accessibility-acceptance",
+    "live-rollback-exercise",
+    "explicit-production-cutover-approval"
+  ],
+  "revision_binding": "Migration evidence must bind to the exact reviewed Git commit used for the migration session."
+}

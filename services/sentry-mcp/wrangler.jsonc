@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "goreecloud-sentry-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-26",
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "SENTRY_BASE_URL": "https://sentry.io",
+    "SENTRY_ORG": "goreecloud-01",
+    "SENTRY_PROJECT": "goreecloud-monitor",
+    "ALLOWED_GITHUB_LOGINS": "GoreeCloud"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "OAUTH_KV",
+      "id": "55f64bddb0f745ccb5f06317c949d925"
+    }
+  ]
+}
