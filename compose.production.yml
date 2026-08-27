@@ -1,0 +1,116 @@
+services:
+  db:
+    image: ${POSTGRES_IMAGE:?POSTGRES_IMAGE must be an exact tag-and-digest reference}
+    restart: unless-stopped
+    env_file:
+      - ${MONITOR_DB_ENV_FILE:?MONITOR_DB_ENV_FILE is required}
+    volumes:
+      - type: bind
+        source: ${MONITOR_DATABASE_PATH:?MONITOR_DATABASE_PATH is required}
+        target: /var/lib/postgresql/data
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  migrate:
+    image: ${GOREECLOUD_MONITOR_IMAGE:?GOREECLOUD_MONITOR_IMAGE is required}
+    restart: "no"
+    env_file:
+      - ${MONITOR_DB_ENV_FILE:?MONITOR_DB_ENV_FILE is required}
+      - ${MONITOR_APP_ENV_FILE:?MONITOR_APP_ENV_FILE is required}
+    environment:
+      DATABASE_ENGINE: postgres
+      POSTGRES_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+
+  web:
+    image: ${GOREECLOUD_MONITOR_IMAGE:?GOREECLOUD_MONITOR_IMAGE is required}
+    restart: unless-stopped
+    env_file:
+      - ${MONITOR_DB_ENV_FILE:?MONITOR_DB_ENV_FILE is required}
+      - ${MONITOR_APP_ENV_FILE:?MONITOR_APP_ENV_FILE is required}
+    environment:
+      DATABASE_ENGINE: postgres
+      POSTGRES_HOST: db
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: ["gunicorn", "goreecloud_monitor.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--timeout", "30", "--access-logfile", "-", "--error-logfile", "-"]
+    expose:
+      - "8000"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+      - proxy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import os,urllib.request;
+          host=os.environ['DJANGO_ALLOWED_HOSTS'].split(',')[0].strip();
+          req=urllib.request.Request('http://127.0.0.1:8000/health/ready/',headers={'Host':host,'X-Forwarded-Proto':'https'});
+          urllib.request.urlopen(req,timeout=3)
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    image: ${GOREECLOUD_MONITOR_IMAGE:?GOREECLOUD_MONITOR_IMAGE is required}
+    restart: unless-stopped
+    env_file:
+      - ${MONITOR_DB_ENV_FILE:?MONITOR_DB_ENV_FILE is required}
+      - ${MONITOR_APP_ENV_FILE:?MONITOR_APP_ENV_FILE is required}
+    environment:
+      DATABASE_ENGINE: postgres
+      POSTGRES_HOST: db
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: ["python", "manage.py", "runmonitor"]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    sysctls:
+      net.ipv4.ping_group_range: "999 999"
+    networks:
+      - backend
+      - proxy
+
+networks:
+  backend:
+    internal: true
+  proxy:
+    external: true
+    name: ${CADDY_NETWORK:?CADDY_NETWORK is required}

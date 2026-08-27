@@ -1,0 +1,81 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#eef3f9">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1119">
+  <meta name="application-name" content="GoreeCloud Monitor">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+  <meta name="referrer" content="same-origin">
+  <title>{% block title %}GoreeCloud Monitor{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'monitoring/img/goreecloud-monitor-icon.svg' %}">
+  <link rel="icon" type="image/svg+xml" sizes="16x16" href="{% static 'monitoring/img/goreecloud-monitor-icon-16.svg' %}">
+  <link rel="icon" type="image/svg+xml" sizes="32x32" href="{% static 'monitoring/img/goreecloud-monitor-icon-32.svg' %}">
+  <link rel="icon" type="image/svg+xml" sizes="48x48" href="{% static 'monitoring/img/goreecloud-monitor-icon-48.svg' %}">
+  <link rel="manifest" href="{% static 'monitoring/site.webmanifest' %}">
+  <link rel="stylesheet" href="{% static 'monitoring/css/glaze.css' %}">
+  <link rel="stylesheet" href="{% static 'monitoring/css/glaze.accessibility.css' %}">
+  <link rel="stylesheet" href="{% static 'monitoring/css/glaze.formfactors.css' %}">
+  <link rel="stylesheet" href="{% static 'monitoring/css/wardveil.css' %}">
+  <script defer src="{% static 'monitoring/js/glaze.js' %}"></script>
+</head>
+<body>
+  <svg class="glaze-sr-only" aria-hidden="true" width="0" height="0">
+    <symbol id="icon-overview" viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z" fill="currentColor"/></symbol>
+    <symbol id="icon-monitor" viewBox="0 0 24 24"><path d="M3 12h4l2-5 4 10 2-5h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-incident" viewBox="0 0 24 24"><path d="M12 3 2.7 19h18.6L12 3Zm0 5.2v5.3m0 3.2v.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-maintenance" viewBox="0 0 24 24"><path d="m14.7 6.3 3-3a4.7 4.7 0 0 1-5.9 5.9L5.5 15.5a2.1 2.1 0 1 0 3 3l6.3-6.3a4.7 4.7 0 0 1 5.9-5.9l-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-security" viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.7-2.8 8-7 10-4.2-2-7-5.3-7-10V6l7-3Zm-3 9 2 2 4-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Zm7-3.2 2-1.2-2-3.5-2.2.5a7 7 0 0 0-1.8-1L14.3 4h-4.6L9 6.8a7 7 0 0 0-1.8 1L5 7.3l-2 3.5L5 12l-2 1.2 2 3.5 2.2-.5a7 7 0 0 0 1.8 1l.7 2.8h4.6l.7-2.8a7 7 0 0 0 1.8-1l2.2.5 2-3.5L19 12Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-theme" viewBox="0 0 24 24"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </svg>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="app-shell glaze-form-factor-shell" data-glaze-ui="1.0.0" data-glaze-ui-target="1.4.0" data-security-identity="wardveil">
+    <header class="topbar">
+      <a class="brand" href="{% url 'monitoring:dashboard' %}" aria-label="GoreeCloud Monitor home">
+        <img class="brand-mark" src="{% static 'monitoring/img/goreecloud-monitor-icon.svg' %}" alt="">
+        <span class="brand-copy"><strong>GoreeCloud</strong><small>Monitor</small></span>
+      </a>
+      {% if user.is_authenticated %}
+      {% with current=request.resolver_match.url_name %}
+      <nav class="nav" aria-label="Primary navigation">
+        <a href="{% url 'monitoring:dashboard' %}" {% if current == 'dashboard' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-overview"/></svg><span>Overview</span></a>
+        <a href="{% url 'monitoring:monitor-list' %}" {% if 'monitor' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-monitor"/></svg><span>Monitors</span></a>
+        <a href="{% url 'monitoring:incident-list' %}" {% if 'incident' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-incident"/></svg><span>Incidents</span></a>
+        <a href="{% url 'monitoring:maintenance-list' %}" {% if 'maintenance' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-maintenance"/></svg><span>Maintenance</span></a>
+        <a href="{% url 'monitoring:notifications' %}" {% if current == 'notifications' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-bell"/></svg><span>Notifications</span></a>
+        {% if user.is_staff %}<a href="{% url 'monitoring:security' %}" {% if current == 'security' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-security"/></svg><span>Security</span></a>
+        <a href="{% url 'monitoring:settings' %}" {% if current == 'settings' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-settings"/></svg><span>Settings</span></a>{% endif %}
+      </nav>
+      {% endwith %}
+      <div class="toolbar-actions">
+        <button class="icon-button" type="button" data-appearance-toggle aria-label="Appearance: System. Activate to change."><svg class="icon"><use href="#icon-theme"/></svg><span class="glaze-sr-only" data-appearance-label>System</span></button>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="button quiet" type="submit"><span class="signout-label">Sign out</span><span aria-hidden="true">↗</span></button></form>
+      </div>
+      {% endif %}
+    </header>
+    <main class="content" id="main-content" tabindex="-1">
+      {% for message in messages %}<div class="notice" role="status">{{ message }}</div>{% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="security-footer"><strong>Protected by Wardveil</strong><span class="security-footer-dot" aria-hidden="true">•</span><span>Security identity by GoreeCloud</span></footer>
+  </div>
+  {% if user.is_authenticated %}
+  {% with current=request.resolver_match.url_name %}
+  <nav class="mobile-nav {% if user.is_staff %}staff-nav{% else %}viewer-nav{% endif %}" aria-label="Primary mobile navigation">
+    <a href="{% url 'monitoring:dashboard' %}" {% if current == 'dashboard' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-overview"/></svg><span>Overview</span></a>
+    <a href="{% url 'monitoring:monitor-list' %}" {% if 'monitor' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-monitor"/></svg><span>Monitors</span></a>
+    <a href="{% url 'monitoring:incident-list' %}" {% if 'incident' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-incident"/></svg><span>Incidents</span></a>
+    <a href="{% url 'monitoring:maintenance-list' %}" {% if 'maintenance' in current %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-maintenance"/></svg><span>Maintain</span></a>
+    <a href="{% url 'monitoring:notifications' %}" {% if current == 'notifications' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-bell"/></svg><span>Alerts</span></a>
+    {% if user.is_staff %}<a href="{% url 'monitoring:security' %}" {% if current == 'security' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-security"/></svg><span>Security</span></a>
+    <a href="{% url 'monitoring:settings' %}" {% if current == 'settings' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-settings"/></svg><span>Settings</span></a>{% endif %}
+  </nav>
+  {% endwith %}
+  {% endif %}
+</body>
+</html>

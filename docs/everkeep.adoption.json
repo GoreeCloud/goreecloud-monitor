@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "project": "GoreeCloud Monitor",
+  "repository": "GoreeCloud/goreecloud-monitor",
+  "role": "producer",
+  "dimensions": [
+    "backup_coverage",
+    "restore_capability",
+    "recovery_freshness",
+    "migration",
+    "dependency_recovery",
+    "documentation",
+    "provenance"
+  ],
+  "read_only": true,
+  "fail_closed": true,
+  "status_schema": "contracts/continuity.status.schema.json",
+  "authoritative_sources": [
+    "docs/backup.md",
+    "docs/recovery.md",
+    "docs/cutover-and-rollback.md",
+    ".github/workflows/rollback-compatibility.yml"
+  ],
+  "notes": "Disposable backup/restore and rollback evidence exists. Everkeep readiness remains blocked until target-native database restore, recovery freshness, live rollback, and exact-revision acceptance evidence are complete."
+}

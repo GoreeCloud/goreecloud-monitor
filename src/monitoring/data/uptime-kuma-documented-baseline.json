@@ -1,0 +1,38 @@
+{
+  "schema": "goreecloud-monitor-documented-uptime-kuma-baseline",
+  "version": 1,
+  "basis": {
+    "inventory_document": "GoreeCloud — Inventory — Uptime Kuma Monitors",
+    "retirement_document": "GoreeCloud — Change Log — Uptime Kuma",
+    "reconciled_date": "2026-08-21",
+    "authority": "documentation-baseline-reconciled-against-sanitized-live-evidence",
+    "live_source_monitor_count": 23
+  },
+  "monitors": [
+    {"name": "Vaultwarden", "expected": "active", "cutover_gate": "none"},
+    {"name": "Adguard Home", "expected": "active", "cutover_gate": "none"},
+    {"name": "Beszel", "expected": "active", "cutover_gate": "none"},
+    {"name": "SearXNG", "expected": "active", "cutover_gate": "none"},
+    {"name": "Dockhand", "expected": "active", "cutover_gate": "none"},
+    {"name": "Netbird", "expected": "active", "cutover_gate": "none"},
+    {"name": "ntfy", "expected": "active", "cutover_gate": "none"},
+    {"name": "FreshRSS", "expected": "active", "cutover_gate": "none"},
+    {"name": "Radicale", "expected": "active", "cutover_gate": "none"},
+    {"name": "Dawarich", "expected": "active", "cutover_gate": "none"},
+    {"name": "Healthchecks", "expected": "active", "cutover_gate": "none"},
+    {"name": "GoreeCloud Website — WWW", "expected": "active", "cutover_gate": "none"},
+    {"name": "GoreeCloud Website — Root Redirect", "expected": "active", "cutover_gate": "none"},
+    {"name": "GoreeCloud VPS", "expected": "active", "cutover_gate": "review", "reason": "Monitor now has a native low-privilege Ping/ICMP implementation; live target execution through the approved worker ping-socket policy must still be validated before this review is cleared."},
+    {"name": "GoreeCloud VPS HTTPS", "expected": "active", "cutover_gate": "none"},
+    {"name": "Caddy", "expected": "active", "cutover_gate": "none"},
+    {"name": "Cloudflare Internet Check", "expected": "active", "cutover_gate": "none"},
+    {"name": "Google Internet Check", "expected": "active", "cutover_gate": "none"},
+    {"name": "Cloudflare DNS", "expected": "active", "cutover_gate": "review", "reason": "Monitor now preserves the dedicated 1.1.1.1 resolver in source; live resolver-specific execution and comparison evidence must still be accepted before this review is cleared."},
+    {"name": "Google DNS", "expected": "active", "cutover_gate": "review", "reason": "Monitor now preserves the dedicated 8.8.8.8 resolver in source; live resolver-specific execution and comparison evidence must still be accepted before this review is cleared."},
+    {"name": "GoreeCloud VPS SSH", "expected": "active", "cutover_gate": "none"},
+    {"name": "GoreeCloud Memos", "expected": "active", "cutover_gate": "none"},
+    {"name": "Linkding", "expected": "retired", "cutover_gate": "none"},
+    {"name": "Termix", "expected": "retired", "cutover_gate": "none"},
+    {"name": "Flatnotes", "expected": "retired", "cutover_gate": "none"}
+  ]
+}

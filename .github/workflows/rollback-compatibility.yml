@@ -1,0 +1,144 @@
+name: Rollback compatibility
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  immediate-predecessor:
+    name: Immediate predecessor database compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17.10-bookworm
+        env:
+          POSTGRES_DB: goreecloud_monitor
+          POSTGRES_USER: goreecloud_monitor
+          POSTGRES_PASSWORD: ci-rollback-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U goreecloud_monitor -d goreecloud_monitor"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PREVIOUS_CANDIDATE: e35ddda1fee65dda65b730c62cbb2414f7bf62d8
+    steps:
+      - name: Checkout Ping candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout frozen DNS predecessor
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.PREVIOUS_CANDIDATE }}
+          path: previous
+      - name: Require only the intended Ping migration delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f src/monitoring/migrations/0002_monitor_ping_kind.py
+          diff -ru --exclude=0002_monitor_ping_kind.py previous/src/monitoring/migrations src/monitoring/migrations
+      - name: Build predecessor and candidate images
+        run: |
+          docker build --tag goreecloud-monitor:rollback-previous previous
+          docker build --tag goreecloud-monitor:rollback-candidate .
+      - name: Apply predecessor schema and seed state
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network host \
+            -e DJANGO_DEBUG=true \
+            -e DJANGO_SECRET_KEY=ci-rollback-only \
+            -e DATABASE_ENGINE=postgres \
+            -e POSTGRES_DB=goreecloud_monitor \
+            -e POSTGRES_USER=goreecloud_monitor \
+            -e POSTGRES_PASSWORD=ci-rollback-password \
+            -e POSTGRES_HOST=127.0.0.1 \
+            -e POSTGRES_PORT=5432 \
+            goreecloud-monitor:rollback-previous \
+            python manage.py migrate --noinput
+          docker run --rm --network host \
+            -e DJANGO_DEBUG=true \
+            -e DJANGO_SECRET_KEY=ci-rollback-only \
+            -e DATABASE_ENGINE=postgres \
+            -e POSTGRES_DB=goreecloud_monitor \
+            -e POSTGRES_USER=goreecloud_monitor \
+            -e POSTGRES_PASSWORD=ci-rollback-password \
+            -e POSTGRES_HOST=127.0.0.1 \
+            -e POSTGRES_PORT=5432 \
+            goreecloud-monitor:rollback-previous \
+            python manage.py shell -c \
+            "from monitoring.models import Monitor; Monitor.objects.create(name='rollback-proof', kind='PUSH', interval_seconds=60, failure_threshold=1); print('predecessor state seeded')"
+      - name: Upgrade candidate and exercise Ping state
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network host \
+            -e DJANGO_DEBUG=true \
+            -e DJANGO_SECRET_KEY=ci-rollback-only \
+            -e DATABASE_ENGINE=postgres \
+            -e POSTGRES_DB=goreecloud_monitor \
+            -e POSTGRES_USER=goreecloud_monitor \
+            -e POSTGRES_PASSWORD=ci-rollback-password \
+            -e POSTGRES_HOST=127.0.0.1 \
+            -e POSTGRES_PORT=5432 \
+            goreecloud-monitor:rollback-candidate \
+            python manage.py migrate --noinput
+          docker run --rm --network host \
+            -e DJANGO_DEBUG=true \
+            -e DJANGO_SECRET_KEY=ci-rollback-only \
+            -e DATABASE_ENGINE=postgres \
+            -e POSTGRES_DB=goreecloud_monitor \
+            -e POSTGRES_USER=goreecloud_monitor \
+            -e POSTGRES_PASSWORD=ci-rollback-password \
+            -e POSTGRES_HOST=127.0.0.1 \
+            -e POSTGRES_PORT=5432 \
+            goreecloud-monitor:rollback-candidate \
+            python manage.py shell -c \
+            "from monitoring.models import Monitor; m=Monitor.objects.get(name='rollback-proof'); assert m.failure_threshold == 1; m.failure_threshold=2; m.save(update_fields=['failure_threshold','updated_at']); p=Monitor.objects.create(name='ping-rollback-proof',kind='PING',target='127.0.0.1',enabled=False,timeout_seconds=3); assert p.state == 'PAUSED'; print('candidate state and Ping definition verified')"
+      - name: Prepare database for predecessor rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network host \
+            -e DJANGO_DEBUG=true \
+            -e DJANGO_SECRET_KEY=ci-rollback-only \
+            -e DATABASE_ENGINE=postgres \
+            -e POSTGRES_DB=goreecloud_monitor \
+            -e POSTGRES_USER=goreecloud_monitor \
+            -e POSTGRES_PASSWORD=ci-rollback-password \
+            -e POSTGRES_HOST=127.0.0.1 \
+            -e POSTGRES_PORT=5432 \
+            goreecloud-monitor:rollback-candidate \
+            python manage.py shell -c \
+            "from monitoring.models import Monitor; deleted,_=Monitor.objects.filter(kind='PING').delete(); assert deleted >= 1; print('candidate-only Ping definitions removed before rollback')"
+          docker run --rm --network host \
+            -e DJANGO_DEBUG=true \
+            -e DJANGO_SECRET_KEY=ci-rollback-only \
+            -e DATABASE_ENGINE=postgres \
+            -e POSTGRES_DB=goreecloud_monitor \
+            -e POSTGRES_USER=goreecloud_monitor \
+            -e POSTGRES_PASSWORD=ci-rollback-password \
+            -e POSTGRES_HOST=127.0.0.1 \
+            -e POSTGRES_PORT=5432 \
+            goreecloud-monitor:rollback-candidate \
+            python manage.py migrate monitoring 0001 --noinput
+      - name: Roll application back and verify predecessor state
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network host \
+            -e DJANGO_DEBUG=true \
+            -e DJANGO_SECRET_KEY=ci-rollback-only \
+            -e DATABASE_ENGINE=postgres \
+            -e POSTGRES_DB=goreecloud_monitor \
+            -e POSTGRES_USER=goreecloud_monitor \
+            -e POSTGRES_PASSWORD=ci-rollback-password \
+            -e POSTGRES_HOST=127.0.0.1 \
+            -e POSTGRES_PORT=5432 \
+            goreecloud-monitor:rollback-previous \
+            python manage.py shell -c \
+            "from monitoring.models import Monitor; m=Monitor.objects.get(name='rollback-proof'); assert m.failure_threshold == 2; assert not Monitor.objects.filter(kind='PING').exists(); print('migration-aware predecessor rollback compatibility verified')"

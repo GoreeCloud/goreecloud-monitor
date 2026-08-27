@@ -1,0 +1,15 @@
+{% extends "monitoring/base.html" %}
+{% block title %}Monitors · GoreeCloud Monitor{% endblock %}
+{% block content %}
+<section class="hero"><div class="hero-copy"><div class="eyebrow">Configuration</div><h1>Monitors</h1><p>Search by service name and narrow the operational view without exposing target values in broad discovery results.</p></div>{% if user.is_staff %}<a class="button primary" href="{% url 'monitoring:monitor-create' %}">Add monitor</a>{% endif %}</section>
+<section class="panel section-panel">
+  <form class="filter-bar" method="get" role="search">
+    <label>Service name<input type="search" name="q" value="{{ query }}" placeholder="Search monitors" autocomplete="off"></label>
+    <label>State<select name="state"><option value="">All states</option>{% for value,label in state_choices %}<option value="{{ value }}" {% if state_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label>Type<select name="kind"><option value="">All types</option>{% for value,label in kind_choices %}<option value="{{ value }}" {% if kind_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <div class="filter-actions"><button class="button" type="submit">Filter</button>{% if query or state_filter or kind_filter %}<a class="button quiet" href="{% url 'monitoring:monitor-list' %}">Clear</a>{% endif %}</div>
+  </form>
+  <div class="section-heading"><h2>Coverage</h2><span class="muted">{{ result_count }} result{{ result_count|pluralize }}</span></div>
+  <div class="stack">{% for monitor in monitors %}<a class="row-link" href="{% url 'monitoring:monitor-detail' monitor.pk %}"><span class="status-dot {{ monitor.state|lower }}"></span><span><strong>{{ monitor.name }}</strong><small>{{ monitor.get_kind_display }} · every {{ monitor.interval_seconds }}s</small></span><span class="pill {{ monitor.state|lower }}">{{ monitor.get_state_display }}</span></a>{% empty %}<div class="empty"><strong>No matching monitors</strong>Adjust the filters or create an approved monitor definition.</div>{% endfor %}</div>
+</section>
+{% endblock %}

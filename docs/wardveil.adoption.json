@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "project": "GoreeCloud Monitor",
+  "repository": "GoreeCloud/goreecloud-monitor",
+  "identity": "Wardveil Security by GoreeCloud",
+  "presentation_claim": "Protected by Wardveil",
+  "source_status": "integrated-source-validated-adoption-contract",
+  "fail_closed": true,
+  "unknown_when_evidence_missing": true,
+  "authoritative_controls": [
+    {
+      "scope": "authentication-and-authorization",
+      "producer": "GoreeCloud Monitor Django application",
+      "evidence": "docs/wardveil-security.md"
+    },
+    {
+      "scope": "security-event-observability",
+      "producer": "GoreeCloud Monitor Wardveil event logger",
+      "evidence": "src/monitoring/audit.py"
+    },
+    {
+      "scope": "target-runtime-preflight",
+      "producer": "GoreeCloud Monitor target preflight",
+      "evidence": "src/monitoring/management/commands/targetpreflight.py"
+    },
+    {
+      "scope": "security-presentation",
+      "producer": "GoreeCloud Monitor application",
+      "evidence": "templates/monitoring/security.html"
+    }
+  ],
+  "excluded_authority": [
+    "firewall",
+    "vpn",
+    "backup",
+    "external-vulnerability-management",
+    "external-identity-provider"
+  ],
+  "acceptance": {
+    "exact_revision_ci_required": true,
+    "target_runtime_acceptance_required": true,
+    "production_approved": false
+  }
+}

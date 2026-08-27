@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "application": "goreecloud-monitor",
+  "stable_eligible": false,
+  "platform_systems": {
+    "glaze_ui": {
+      "identity": "Glaze UI",
+      "required_version": "1.4",
+      "required_release": "1.4.0",
+      "canonical_repository": "GoreeCloud/glaze-ui",
+      "canonical_revision": "7574138c8f754b69657f8b386d3ecd3e16fad53a",
+      "canonical_form_factor_css_sha": "29aee907f9382238658ebe5cdf5d659e75d02121",
+      "source_status": "adoption-in-progress",
+      "evidence": [
+        "templates/monitoring/base.html",
+        "static/monitoring/css/glaze.css",
+        "static/monitoring/css/glaze.accessibility.css",
+        "static/monitoring/css/glaze.formfactors.css",
+        "tests/test_glaze_ui.py",
+        "tests/test_glaze_ui_1_4_adoption.py"
+      ],
+      "blocker": "Monitor now carries the canonical Glaze UI 1.4 form-factor foundation and explicit 1.4.0 target metadata, but current source still truthfully declares the active application implementation as 1.0.0 until the full applicable 1.4 gate set and representative visual/form-factor acceptance are completed."
+    },
+    "wardveil_security": {
+      "identity": "Wardveil Security by GoreeCloud",
+      "source_status": "integrated-source-validated-adoption-contract",
+      "evidence": [
+        "docs/wardveil.adoption.json",
+        "tests/test_wardveil_adoption.py",
+        "docs/wardveil-security.md",
+        "src/monitoring/audit.py",
+        "src/monitoring/management/commands/targetpreflight.py",
+        "static/monitoring/css/wardveil.css",
+        "templates/monitoring/security.html",
+        "tests/test_security.py"
+      ],
+      "blocker": "Monitor now has an explicit fail-closed Wardveil adoption contract over its existing source-validated security implementation. Target-runtime Wardveil/security acceptance remains required and production_approved remains false."
+    },
+    "privacy_shield": {
+      "identity": "GoreeCloud Privacy Shield",
+      "source_status": "draft-adapter-source-candidate",
+      "evidence": [
+        "docs/privacy-shield.adapter.json",
+        "tests/test_privacy_shield_adapter.py",
+        "src/monitoring/audit.py",
+        "src/monitoring/middleware.py",
+        "tests/test_portability.py",
+        "src/monitoring/management/commands/prunemonitorhistory.py"
+      ],
+      "blocker": "Monitor now declares a source-side draft Privacy Shield adapter limited to telemetry-minimization, data-minimization, retention-controls, and portable-export. Runtime acceptance and central Privacy Shield adapter acceptance remain required, and production_approved remains false."
+    },
+    "everkeep": {
+      "identity": "Everkeep",
+      "source_status": "draft-acceptance-policy-candidate",
+      "canonical_acceptance_schema": "GoreeCloud/goreecloud-everkeep:contracts/continuity.acceptance.schema.json@v1",
+      "evidence": [
+        "docs/everkeep.adoption.json",
+        "docs/everkeep.acceptance.json",
+        "tests/test_everkeep_adoption.py",
+        "tests/test_everkeep_acceptance.py",
+        "docs/backup.md",
+        "docs/recovery.md",
+        "docs/cutover-and-rollback.md",
+        ".github/workflows/rollback-compatibility.yml"
+      ],
+      "blocker": "Monitor now declares an Everkeep adoption and fail-closed acceptance-policy candidate bound to the canonical Everkeep acceptance schema. Target-native database restore, recovery freshness, live rollback, and exact-revision Everkeep acceptance remain required before integration or readiness can be asserted."
+    }
+  },
+  "production_blockers": [
+    "complete Glaze UI 1.4 Stable gate and representative form-factor acceptance",
+    "Privacy Shield runtime and central adapter acceptance",
+    "Everkeep target-native restore, recovery freshness, live rollback, and exact-revision acceptance",
+    "target database-native backup and isolated restore proof",
+    "isolated persistent target deployment",
+    "repeated live Monitor-versus-Uptime-Kuma parallel comparison",
+    "controlled outage/recovery/TLS/maintenance/notification scenarios",
+    "live resolver-specific DNS acceptance",
+    "live low-privilege Ping/ICMP acceptance",
+    "target Wardveil/security validation",
+    "manual accessibility and product-identity acceptance",
+    "live rollback proof and explicit cutover approval"
+  ]
+}

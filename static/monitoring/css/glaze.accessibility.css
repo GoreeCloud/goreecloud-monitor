@@ -1,0 +1,104 @@
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glaze-surface,
+  .glaze-overlay,
+  .panel,
+  .topbar,
+  .mobile-nav {
+    background: var(--glaze-surface-strong);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glaze-surface,
+  .glaze-overlay,
+  .panel,
+  .topbar,
+  .mobile-nav {
+    background: var(--glaze-surface-strong);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+
+  .button:active:not(:disabled),
+  .icon-button:active:not(:disabled),
+  .nav a:active,
+  .mobile-nav a:active,
+  a.row-link:active {
+    transform: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --glaze-line: color-mix(in srgb, currentColor 34%, transparent);
+    --glaze-surface: var(--glaze-surface-strong);
+  }
+
+  .panel,
+  .topbar,
+  .mobile-nav,
+  .button,
+  .icon-button,
+  .pill,
+  .filter-bar input,
+  .filter-bar select,
+  .form-grid input,
+  .form-grid select,
+  .form-grid textarea {
+    border-width: 2px;
+  }
+}
+
+@media (forced-colors: active) {
+  body,
+  .panel,
+  .topbar,
+  .mobile-nav,
+  .button,
+  .icon-button,
+  .pill,
+  .callout,
+  .filter-bar input,
+  .filter-bar select,
+  .form-grid input,
+  .form-grid select,
+  .form-grid textarea,
+  code {
+    background: Canvas;
+    color: CanvasText;
+    border-color: ButtonText;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .button.primary,
+  .tab-list a[aria-current="page"] {
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .button.danger { border-style: double; }
+  .status-dot { outline: 2px solid CanvasText; box-shadow: none; }
+}
+
+.glaze-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0,0,0,0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

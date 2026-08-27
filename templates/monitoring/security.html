@@ -1,0 +1,32 @@
+{% extends "monitoring/base.html" %}
+{% block title %}Security · GoreeCloud Monitor{% endblock %}
+{% block content %}
+<section class="hero wardveil-hero">
+  <div class="hero-copy">
+    <div class="eyebrow">Wardveil Security</div>
+    <h1>Protection posture</h1>
+    <p>{{ wardveil_identity }} identifies Monitor's security and protection layer. The underlying Django, Caddy, network, credential, backup, and GoreeCloud policy controls remain authoritative for their technical state.</p>
+  </div>
+  <span class="wardveil-status {% if protected %}protected{% else %}attention{% endif %}">{% if protected %}Protected by Wardveil{% else %}Attention required{% endif %}</span>
+</section>
+<div class="three-column">
+  <section class="panel section-panel wardveil-panel">
+    <div class="section-heading"><h2>Application protections</h2><span class="pill {% if protected %}up{% else %}degraded{% endif %}">{% if protected %}Ready{% else %}Review{% endif %}</span></div>
+    <div class="settings-list">{% for label,enabled in controls %}<div><span>{{ label }}</span><strong class="security-control-state {% if enabled %}enabled{% else %}disabled{% endif %}">{% if enabled %}Enabled{% else %}Disabled{% endif %}</strong></div>{% endfor %}</div>
+  </section>
+  <section class="panel section-panel wardveil-panel">
+    <div class="section-heading"><h2>Credential boundaries</h2><span class="pill maintenance">Secret-free view</span></div>
+    <div class="settings-list"><div><span>Manager read-only API</span><strong>{% if manager_api_enabled %}Credential configured{% else %}Disabled{% endif %}</strong></div><div><span>ntfy publisher</span><strong>{% if ntfy_enabled %}Credential configured{% else %}Disabled{% endif %}</strong></div><div><span>Rendered reusable secrets</span><strong>None</strong></div></div>
+    <div class="callout"><strong>Least-privilege presentation</strong><p>This surface reports whether approved integration credentials are present. It never renders their values.</p></div>
+  </section>
+  <section class="panel section-panel wardveil-panel">
+    <div class="section-heading"><h2>Target exposure</h2><span class="pill maintenance">Policy boundary</span></div>
+    <div class="settings-list"><div><span>Public targets</span><strong>{% if public_targets %}Allowed by configuration{% else %}Blocked{% endif %}</strong></div><div><span>Private allowlist entries</span><strong>{{ private_network_count }}</strong></div><div><span>Allowlist values</span><strong>Restricted to staff settings</strong></div></div>
+    <div class="callout"><strong>Underlying authority preserved</strong><p>Wardveil summarizes posture. Monitor target validation, GoreeCloud network policy, Caddy, NetBird, and firewall controls remain the technical authorities.</p></div>
+  </section>
+</div>
+<section class="panel section-panel wardveil-panel">
+  <div class="section-heading"><h2>Security operating model</h2><a href="{% url 'monitoring:settings' %}">Open protected settings</a></div>
+  <div class="security-principles"><div><strong>Minimize disclosure</strong><p>Health responses, browser policy, notifications, and audit events expose only the information required for their role.</p></div><div><strong>Separate identity from authority</strong><p>Wardveil provides the security identity and presentation layer; existing GoreeCloud security controls continue to govern enforcement.</p></div><div><strong>Preserve recovery</strong><p>Security hardening remains subject to the same database, container, rollback, backup, and production-acceptance requirements as other Monitor changes.</p></div></div>
+</section>
+{% endblock %}
