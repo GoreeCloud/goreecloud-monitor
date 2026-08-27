@@ -1,0 +1,33 @@
+{
+  "schema": "goreecloud-monitor-migration-rehearsal-request/v1",
+  "application": "goreecloud-monitor",
+  "reviewed_base_revision": "7d21cc24a97f2ad92c728b6854570cfb0e521d64",
+  "requested_mode": "isolated-parallel-acceptance",
+  "authority": {
+    "current_production_monitoring": "Uptime Kuma",
+    "monitor_candidate_may_be_staged_in_isolation": true,
+    "uptime_kuma_must_remain_active": true
+  },
+  "authorizations": {
+    "rehearsal_preparation": true,
+    "sanitized_evidence_collection": true,
+    "isolated_candidate_validation": true,
+    "production_cutover": false,
+    "uptime_kuma_retirement": false,
+    "monitoring_source_identity_reuse": false
+  },
+  "required_session_evidence": [
+    "exact-candidate-git-revision",
+    "fresh-sanitized-uptime-kuma-configuration-reconciliation",
+    "target-postgresql-recovery-point-and-isolated-restore",
+    "conflict-free-parallel-monitoring-source-identity",
+    "notify-producer-runtime-delivery",
+    "repeated-parallel-runtime-comparison",
+    "controlled-down-recovered-tls-maintenance-notification-scenarios",
+    "live-ping-icmp-and-resolver-specific-dns-validation",
+    "target-wardveil-privacy-shield-everkeep-acceptance",
+    "manual-glaze-ui-accessibility-acceptance",
+    "live-rollback-exercise"
+  ],
+  "completion_boundary": "Successful rehearsal evidence may support a later explicit cutover decision but must never authorize production cutover or Uptime Kuma retirement by itself."
+}
