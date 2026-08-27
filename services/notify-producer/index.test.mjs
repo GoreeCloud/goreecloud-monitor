@@ -28,7 +28,7 @@ test("fails closed for unsupported events and invalid labels", () => {
   assert.throws(() => createNotificationPayload({ type: "DOWN", monitor: "Vault", summary: "" }));
 });
 
-test("requires HTTPS and keeps the producer token out of the JSON body", async () => {
+test("requires HTTPS and keeps the producer token private and out of the JSON body", async () => {
   assert.throws(() => new NotifyProducer({ endpoint: "http://notify.goreecloud.com", token: "secret" }));
 
   let captured;
@@ -40,6 +40,9 @@ test("requires HTTPS and keeps the producer token out of the JSON body", async (
       return { ok: true, status: 201, json: async () => ({ id: 1 }) };
     }
   });
+
+  assert.equal(JSON.stringify(producer).includes("secret-token"), false);
+  assert.deepEqual(Object.keys(producer), []);
 
   const result = await producer.publish({ type: "DOWN", monitor: "Vault", summary: "availability check failed" });
   assert.deepEqual(result, { id: 1 });
