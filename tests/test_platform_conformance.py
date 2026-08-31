@@ -45,8 +45,12 @@ def test_conformance_evidence_paths_are_real_repository_files() -> None:
 def test_unfinished_platform_work_cannot_be_presented_as_stable() -> None:
     contract = _contract()
     systems = contract["platform_systems"]
-    assert systems["glaze_ui"]["required_version"] == "1.4"
-    assert systems["glaze_ui"]["source_status"] == "adoption-in-progress"
+    glaze = systems["glaze_ui"]
+    assert glaze["required_version"] == "2.1"
+    assert glaze["required_release"] == "2.1.0"
+    assert glaze["canonical_repository"] == "GoreeCloud/goreecloud-glaze-ui"
+    assert glaze["canonical_revision"] == "c49113eb8b93c267613fdf1bbca1f814495acad7"
+    assert glaze["source_status"] == "adoption-candidate-source-validated"
     assert systems["wardveil_security"]["source_status"] == "integrated-source-validated-adoption-contract"
     wardveil = json.loads((ROOT / "docs" / "wardveil.adoption.json").read_text(encoding="utf-8"))
     assert wardveil["fail_closed"] is True
@@ -54,7 +58,7 @@ def test_unfinished_platform_work_cannot_be_presented_as_stable() -> None:
     assert wardveil["acceptance"]["target_runtime_acceptance_required"] is True
     assert wardveil["acceptance"]["production_approved"] is False
     assert systems["privacy_shield"]["source_status"] == "draft-adapter-source-candidate"
-    assert systems["everkeep"]["source_status"] == "draft-adoption-source-candidate"
+    assert systems["everkeep"]["source_status"] == "draft-acceptance-policy-candidate"
     everkeep = json.loads((ROOT / "docs" / "everkeep.adoption.json").read_text(encoding="utf-8"))
     assert everkeep["fail_closed"] is True
     assert everkeep["read_only"] is True
