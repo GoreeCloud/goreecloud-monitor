@@ -33,7 +33,7 @@ test("fails closed for unsupported events and invalid labels", () => {
   assert.throws(() => createNotificationPayload({ type: "DOWN", monitor: "Vault", summary: "" }));
 });
 
-test("derives a deterministic opaque idempotency key from the Monitor transition", () => {
+test("derives a deterministic opaque idempotency key from stable transition identity", () => {
   const event = {
     type: "DOWN",
     monitor: "Vault",
@@ -42,10 +42,14 @@ test("derives a deterministic opaque idempotency key from the Monitor transition
   };
   const first = createIdempotencyKey(event);
   const retry = createIdempotencyKey({ ...event });
+  const renamedMonitorRetry = createIdempotencyKey({ ...event, monitor: "Vault Service" });
   const nextTransition = createIdempotencyKey({ ...event, transitionId: "incident-42-transition-8" });
+  const recoveryTransition = createIdempotencyKey({ ...event, type: "RECOVERED" });
 
   assert.equal(first, retry);
+  assert.equal(first, renamedMonitorRetry);
   assert.notEqual(first, nextTransition);
+  assert.notEqual(first, recoveryTransition);
   assert.match(first, /^gcm-v1-[0-9a-f]{64}$/);
   assert.equal(first.includes(event.transitionId), false);
   assert.throws(() => createIdempotencyKey({ ...event, transitionId: "" }), /transitionId is required/);
