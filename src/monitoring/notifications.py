@@ -192,85 +192,101 @@ async def publish_notify_transition(
     backoff_seconds = max(0.0, float(getattr(settings, "MONITOR_NOTIFY_RETRY_BACKOFF_SECONDS", 0.25)))
     timeout_seconds = max(1.0, min(30.0, float(getattr(settings, "MONITOR_NOTIFY_TIMEOUT_SECONDS", 10.0))))
 
-    for attempt in range(1, max_attempts + 1):
-        try:
-            async with httpx.AsyncClient(timeout=timeout_seconds, trust_env=False, follow_redirects=False) as client:
-                response = await client.post(endpoint, json=payload, headers=headers)
-        except httpx.HTTPError as exc:
-            if attempt < max_attempts:
-                if backoff_seconds:
-                    await asyncio.sleep(backoff_seconds * (2 ** (attempt - 1)))
-                continue
-            log_event(
-                logger,
-                "integration.notification.failed",
-                level=logging.ERROR,
-                integration="goreecloud-notify",
-                reason="transport_error",
-                state=state,
-                attempts=attempt,
-                exception_type=type(exc).__name__,
-                traceback=safe_traceback(exc),
-            )
-            return False
+    try:
+        async with httpx.AsyncClient(timeout=timeout_seconds, trust_env=False, follow_redirects=False) as client:
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    response = await client.post(endpoint, json=payload, headers=headers)
+                except httpx.HTTPError as exc:
+                    if attempt < max_attempts:
+                        if backoff_seconds:
+                            await asyncio.sleep(backoff_seconds * (2 ** (attempt - 1)))
+                        continue
+                    log_event(
+                        logger,
+                        "integration.notification.failed",
+                        level=logging.ERROR,
+                        integration="goreecloud-notify",
+                        reason="transport_error",
+                        state=state,
+                        attempts=attempt,
+                        exception_type=type(exc).__name__,
+                        traceback=safe_traceback(exc),
+                    )
+                    return False
 
-        if response.status_code == 201:
-            log_event(
-                logger,
-                "integration.notification.published",
-                integration="goreecloud-notify",
-                state=state,
-                replayed=False,
-                attempts=attempt,
-            )
-            return True
-        if response.status_code == 200:
-            replayed = response.headers.get("Idempotency-Replayed", "").strip().lower() == "true"
-            if not replayed:
+                if response.status_code == 201:
+                    log_event(
+                        logger,
+                        "integration.notification.published",
+                        integration="goreecloud-notify",
+                        state=state,
+                        replayed=False,
+                        attempts=attempt,
+                    )
+                    return True
+                if response.status_code == 200:
+                    replayed = response.headers.get("Idempotency-Replayed", "").strip().lower() == "true"
+                    if not replayed:
+                        log_event(
+                            logger,
+                            "integration.notification.failed",
+                            level=logging.ERROR,
+                            integration="goreecloud-notify",
+                            reason="invalid_replay_response",
+                            state=state,
+                            attempts=attempt,
+                        )
+                        return False
+                    log_event(
+                        logger,
+                        "integration.notification.published",
+                        integration="goreecloud-notify",
+                        state=state,
+                        replayed=True,
+                        attempts=attempt,
+                    )
+                    return True
+                if response.status_code == 409:
+                    log_event(
+                        logger,
+                        "integration.notification.failed",
+                        level=logging.ERROR,
+                        integration="goreecloud-notify",
+                        reason="idempotency_conflict",
+                        state=state,
+                        attempts=attempt,
+                    )
+                    return False
+                if response.status_code == 429 or response.status_code >= 500:
+                    if attempt < max_attempts:
+                        if backoff_seconds:
+                            await asyncio.sleep(backoff_seconds * (2 ** (attempt - 1)))
+                        continue
                 log_event(
                     logger,
                     "integration.notification.failed",
                     level=logging.ERROR,
                     integration="goreecloud-notify",
-                    reason="invalid_replay_response",
+                    reason="http_rejected",
                     state=state,
+                    http_status=response.status_code,
                     attempts=attempt,
                 )
                 return False
-            log_event(
-                logger,
-                "integration.notification.published",
-                integration="goreecloud-notify",
-                state=state,
-                replayed=True,
-                attempts=attempt,
-            )
-            return True
-        if response.status_code == 409:
-            log_event(
-                logger,
-                "integration.notification.failed",
-                level=logging.ERROR,
-                integration="goreecloud-notify",
-                reason="idempotency_conflict",
-                state=state,
-                attempts=attempt,
-            )
-            return False
-        if response.status_code == 429 or response.status_code >= 500:
-            if attempt < max_attempts:
-                if backoff_seconds:
-                    await asyncio.sleep(backoff_seconds * (2 ** (attempt - 1)))
-                continue
+    except Exception as exc:
+        # GoreeCloud Notify is a secondary, feature-gated migration path. An unexpected
+        # integration failure must be observable but must not crash the monitoring loop
+        # after Monitor state and its CheckResult have already been committed.
         log_event(
             logger,
             "integration.notification.failed",
             level=logging.ERROR,
             integration="goreecloud-notify",
-            reason="http_rejected",
+            reason="unexpected_integration_error",
             state=state,
-            http_status=response.status_code,
-            attempts=attempt,
+            exception_type=type(exc).__name__,
+            traceback=safe_traceback(exc),
         )
         return False
 
