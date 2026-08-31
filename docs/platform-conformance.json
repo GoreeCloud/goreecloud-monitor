@@ -5,21 +5,23 @@
   "platform_systems": {
     "glaze_ui": {
       "identity": "Glaze UI",
-      "required_version": "1.4",
-      "required_release": "1.4.0",
-      "canonical_repository": "GoreeCloud/glaze-ui",
-      "canonical_revision": "7574138c8f754b69657f8b386d3ecd3e16fad53a",
-      "canonical_form_factor_css_sha": "29aee907f9382238658ebe5cdf5d659e75d02121",
-      "source_status": "adoption-in-progress",
+      "required_version": "2.1",
+      "required_release": "2.1.0",
+      "canonical_repository": "GoreeCloud/goreecloud-glaze-ui",
+      "canonical_release_tag": "v2.1.0",
+      "canonical_revision": "c49113eb8b93c267613fdf1bbca1f814495acad7",
+      "source_status": "adoption-candidate-source-validated",
       "evidence": [
         "templates/monitoring/base.html",
         "static/monitoring/css/glaze.css",
         "static/monitoring/css/glaze.accessibility.css",
         "static/monitoring/css/glaze.formfactors.css",
+        "static/monitoring/css/glaze.2.1.css",
+        "docs/glaze-ui-2.1-adoption.json",
         "tests/test_glaze_ui.py",
-        "tests/test_glaze_ui_1_4_adoption.py"
+        "tests/test_glaze_ui_2_1_adoption.py"
       ],
-      "blocker": "Monitor now carries the canonical Glaze UI 1.4 form-factor foundation and explicit 1.4.0 target metadata, but current source still truthfully declares the active application implementation as 1.0.0 until the full applicable 1.4 gate set and representative visual/form-factor acceptance are completed."
+      "blocker": "Monitor now carries an exact Glaze UI 2.1.0 Stable release anchor and a repository-local source adoption layer, but this is an Adoption Candidate rather than current-Stable conformance. Representative rendered task flows, browser/OS accessibility, Large Text and Touch Assistance resolution, Material Budget/performance evidence, applicable native/device acceptance, and central consumer-registry evidence remain required."
     },
     "wardveil_security": {
       "identity": "Wardveil Security by GoreeCloud",
@@ -34,7 +36,7 @@
         "templates/monitoring/security.html",
         "tests/test_security.py"
       ],
-      "blocker": "Monitor now has an explicit fail-closed Wardveil adoption contract over its existing source-validated security implementation. Target-runtime Wardveil/security acceptance remains required and production_approved remains false."
+      "blocker": "Monitor has an explicit fail-closed Wardveil adoption contract over its existing source-validated security implementation. Target-runtime Wardveil/security acceptance remains required and production_approved remains false."
     },
     "privacy_shield": {
       "identity": "GoreeCloud Privacy Shield",
@@ -47,7 +49,7 @@
         "tests/test_portability.py",
         "src/monitoring/management/commands/prunemonitorhistory.py"
       ],
-      "blocker": "Monitor now declares a source-side draft Privacy Shield adapter limited to telemetry-minimization, data-minimization, retention-controls, and portable-export. Runtime acceptance and central Privacy Shield adapter acceptance remain required, and production_approved remains false."
+      "blocker": "Monitor declares a source-side draft Privacy Shield adapter limited to telemetry-minimization, data-minimization, retention-controls, and portable-export. Runtime acceptance and central Privacy Shield adapter acceptance remain required, and production_approved remains false."
     },
     "everkeep": {
       "identity": "Everkeep",
@@ -63,11 +65,11 @@
         "docs/cutover-and-rollback.md",
         ".github/workflows/rollback-compatibility.yml"
       ],
-      "blocker": "Monitor now declares an Everkeep adoption and fail-closed acceptance-policy candidate bound to the canonical Everkeep acceptance schema. Target-native database restore, recovery freshness, live rollback, and exact-revision Everkeep acceptance remain required before integration or readiness can be asserted."
+      "blocker": "Monitor declares an Everkeep adoption and fail-closed acceptance-policy candidate bound to the canonical Everkeep acceptance schema. Target-native database restore, recovery freshness, live rollback, and exact-revision Everkeep acceptance remain required before integration or readiness can be asserted."
     }
   },
   "production_blockers": [
-    "complete Glaze UI 1.4 Stable gate and representative form-factor acceptance",
+    "complete Glaze UI 2.1 Adoption Candidate rendered, accessibility, performance, native/device, and consumer-registry acceptance",
     "Privacy Shield runtime and central adapter acceptance",
     "Everkeep target-native restore, recovery freshness, live rollback, and exact-revision acceptance",
     "target database-native backup and isolated restore proof",
