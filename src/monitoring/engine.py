@@ -19,7 +19,7 @@ from django.utils import timezone
 
 from .icmp import IcmpUnavailable, echo as icmp_echo
 from .models import CheckResult, Incident, MaintenanceWindow, Monitor
-from .notifications import publish_transition
+from .notifications import publish_notify_transition, publish_transition
 from .observability import log_event, safe_traceback
 from .validators import parse_dns_target, resolve_and_validate_network_target
 
@@ -189,7 +189,7 @@ def _mark_maintenance(monitor_id: int, now) -> None: Monitor.objects.filter(id=m
 
 
 @transaction.atomic
-def _apply_outcome(monitor_id: int, outcome: CheckOutcome, checked_at) -> tuple[str | None, str, str]:
+def _apply_outcome(monitor_id: int, outcome: CheckOutcome, checked_at) -> tuple[str | None, str, str, int]:
     monitor=Monitor.objects.select_for_update().get(id=monitor_id); previous_state=monitor.state
     if outcome.success:
         monitor.consecutive_failures=0; monitor.consecutive_successes+=1; monitor.last_success_at=checked_at; next_state=outcome.observed_state
@@ -202,7 +202,7 @@ def _apply_outcome(monitor_id: int, outcome: CheckOutcome, checked_at) -> tuple[
     if outcome.tls_expires_at: monitor.tls_expires_at=outcome.tls_expires_at
     monitor.state=next_state
     monitor.save(update_fields=["consecutive_failures","consecutive_successes","last_success_at","last_failure_at","last_checked_at","response_time_ms","last_message","tls_expires_at","state","updated_at"])
-    CheckResult.objects.create(monitor=monitor,checked_at=checked_at,success=outcome.success,observed_state=next_state,response_time_ms=outcome.response_time_ms,message=outcome.message[:500])
+    check_result = CheckResult.objects.create(monitor=monitor,checked_at=checked_at,success=outcome.success,observed_state=next_state,response_time_ms=outcome.response_time_ms,message=outcome.message[:500])
     transition=None
     if next_state == Monitor.State.DOWN and previous_state != Monitor.State.DOWN:
         Incident.objects.create(monitor=monitor,started_at=checked_at,failure_reason=outcome.message[:500]); transition="DOWN"
@@ -210,7 +210,7 @@ def _apply_outcome(monitor_id: int, outcome: CheckOutcome, checked_at) -> tuple[
         Incident.objects.filter(monitor=monitor,ended_at__isnull=True).update(ended_at=checked_at,recovery_message=outcome.message[:500]); transition="RECOVERED" if next_state == Monitor.State.UP else "DEGRADED"
     elif next_state == Monitor.State.DEGRADED and previous_state != Monitor.State.DEGRADED: transition="DEGRADED"
     elif previous_state == Monitor.State.DEGRADED and next_state == Monitor.State.UP: transition="RECOVERED"
-    return transition, monitor.name, outcome.message
+    return transition, monitor.name, outcome.message, check_result.id
 
 
 async def run_monitor(monitor_id: int) -> None:
@@ -223,10 +223,14 @@ async def run_monitor(monitor_id: int) -> None:
     except Exception as exc:
         log_event(logger,"monitor.check.exception",level=logging.ERROR,monitor_id=monitor_id,exception_type=type(exc).__name__,traceback=safe_traceback(exc))
         outcome=CheckOutcome(False,Monitor.State.DOWN,None,"Internal monitor worker error")
-    transition,name,message=await sync_to_async(_apply_outcome,thread_sensitive=True)(monitor_id,outcome,checked_at)
+    transition,name,message,check_result_id=await sync_to_async(_apply_outcome,thread_sensitive=True)(monitor_id,outcome,checked_at)
     if transition:
         log_event(logger,"monitor.state.transition",monitor_id=monitor_id,transition=transition,observed_state=outcome.observed_state,response_time_ms=round(outcome.response_time_ms,2) if outcome.response_time_ms is not None else None)
-        await publish_transition(name,transition,message)
+        transition_id = f"check-result:{monitor_id}:{check_result_id}:{checked_at.isoformat()}"
+        await asyncio.gather(
+            publish_transition(name,transition,message),
+            publish_notify_transition(name,transition,message,transition_id=transition_id),
+        )
 
 
 async def run_batch(monitor_ids: list[int]) -> None:
