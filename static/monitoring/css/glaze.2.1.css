@@ -1,0 +1,153 @@
+/* GoreeCloud Monitor — Glaze UI 2.1.0 Adoption Candidate layer.
+ *
+ * This file deliberately layers the current Stable 2.1 contract over the
+ * retained 1.x implementation while application-specific rendered and native
+ * acceptance remains pending. It does not constitute a conformance claim.
+ */
+
+:root {
+  --glaze-ui-version: "2.1.0";
+
+  /* Glaze UI 2.1 general and assisted target floors. */
+  --glaze-target-min: 48px;
+  --glaze-target-comfortable: 48px;
+  --glaze-target-touch-assistance: 56px;
+  --glaze-target-far-view: 56px;
+
+  /* Stable material hierarchy: content is solid; interaction is glazed. */
+  --glaze-material-canvas: var(--glaze-canvas);
+  --glaze-material-surface: var(--glaze-surface-strong);
+  --glaze-material-soft-glaze: color-mix(in srgb, var(--glaze-surface-strong) 92%, transparent);
+  --glaze-material-glaze: color-mix(in srgb, var(--glaze-surface-strong) 82%, transparent);
+  --glaze-material-deep-glaze: color-mix(in srgb, var(--glaze-surface-strong) 94%, transparent);
+  --glaze-material-live-glaze: color-mix(in srgb, var(--glaze-accent) 12%, var(--glaze-surface-strong));
+
+  /* 2.1 material-clarity and density vocabulary. */
+  --glaze-material-clarity: balanced;
+  --glaze-density-effective: standard;
+  --glaze-density-comfortable-gap: 20px;
+  --glaze-density-standard-gap: 16px;
+  --glaze-density-compact-gap: 12px;
+  --glaze-density-far-view-gap: 28px;
+}
+
+/* Durable reading/content planes remain solid by default. */
+.glaze-canvas-21 {
+  background: var(--glaze-material-canvas);
+}
+
+.glaze-surface-21,
+.glaze-content-surface-21 {
+  background: var(--glaze-material-surface);
+  border: 1px solid var(--glaze-line);
+}
+
+/* Interaction chrome consumes bounded Glaze roles. */
+.glaze-soft-21 {
+  background: var(--glaze-material-soft-glaze);
+  border: 1px solid var(--glaze-line);
+  -webkit-backdrop-filter: blur(calc(var(--glaze-blur) * .7)) saturate(120%);
+  backdrop-filter: blur(calc(var(--glaze-blur) * .7)) saturate(120%);
+}
+
+.glaze-interaction-21 {
+  background: var(--glaze-material-glaze);
+  border: 1px solid var(--glaze-line);
+  -webkit-backdrop-filter: blur(var(--glaze-blur)) saturate(135%);
+  backdrop-filter: blur(var(--glaze-blur)) saturate(135%);
+}
+
+.glaze-deep-21 {
+  background: var(--glaze-material-deep-glaze);
+  border: 1px solid var(--glaze-line);
+  box-shadow: var(--glaze-shadow-overlay);
+  -webkit-backdrop-filter: blur(var(--glaze-blur-overlay)) saturate(140%);
+  backdrop-filter: blur(var(--glaze-blur-overlay)) saturate(140%);
+}
+
+.glaze-live-21 {
+  background: var(--glaze-material-live-glaze);
+  border: 1px solid color-mix(in srgb, var(--glaze-accent) 28%, var(--glaze-line));
+}
+
+button,
+input,
+select,
+textarea,
+summary,
+.button,
+.icon-button,
+.nav a,
+.mobile-nav a {
+  min-height: var(--glaze-target-min);
+}
+
+/* 200% Large Text is an explicit rendering state. The browser/client adapter
+ * sets this state when the effective platform text scale reaches the accepted
+ * large-text threshold; Compact density yields to readable density. */
+:root[data-glaze-large-text="true"] {
+  --glaze-density-effective: comfortable;
+}
+
+:root[data-glaze-large-text="true"] .hero,
+:root[data-glaze-large-text="true"] .section-heading,
+:root[data-glaze-large-text="true"] .toolbar-actions,
+:root[data-glaze-large-text="true"] .two-column,
+:root[data-glaze-large-text="true"] .three-column {
+  flex-wrap: wrap;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Touch Assistance overrides the ordinary 48 px floor. */
+:root[data-glaze-touch-assistance="true"] {
+  --glaze-target-min: var(--glaze-target-touch-assistance);
+}
+
+/* Far-view composition keeps the 56 px minimum even without touch assistance. */
+.glaze-tv-shell {
+  --glaze-target-min: var(--glaze-target-far-view);
+  --glaze-density-effective: far-view;
+}
+
+/* Accessibility-resolution fallbacks make Solid the effective clarity mode. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glaze-material-clarity: solid;
+    --glaze-material-soft-glaze: var(--glaze-surface-strong);
+    --glaze-material-glaze: var(--glaze-surface-strong);
+    --glaze-material-deep-glaze: var(--glaze-surface-strong);
+    --glaze-material-live-glaze: var(--glaze-surface-strong);
+  }
+
+  .glaze-soft-21,
+  .glaze-interaction-21,
+  .glaze-deep-21,
+  .glaze-live-21 {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --glaze-material-clarity: solid;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --glaze-material-clarity: solid;
+  }
+
+  .glaze-soft-21,
+  .glaze-interaction-21,
+  .glaze-deep-21,
+  .glaze-live-21 {
+    background: Canvas;
+    color: CanvasText;
+    border-color: ButtonText;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
