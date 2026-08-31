@@ -47,16 +47,16 @@ export function createIdempotencyKey(event) {
   if (!event || typeof event !== "object") throw new TypeError("event is required");
   const policy = EVENT_POLICY[event.type];
   if (!policy) throw new TypeError("unsupported monitoring event type");
-  const monitor = requiredText(event.monitor, "monitor", MAX_LABEL_LENGTH);
   const transitionId = requiredText(event.transitionId, "transitionId", MAX_TRANSITION_ID_LENGTH);
 
-  // The wire key is intentionally opaque: retries remain deterministic while
-  // Monitor's internal transition identifier is not copied into Notify headers,
-  // notification history, or downstream Delivery data.
+  // The replay identity is intentionally independent of presentation fields
+  // such as the monitor display label. A label edit between attempts must not
+  // turn one state transition into a second notification. Notify will reject
+  // changed payload content under the same key rather than silently duplicating
+  // it. The wire key itself is opaque, so the internal transition identifier is
+  // not copied into Notify headers, history, or downstream Delivery data.
   const digest = createHash("sha256")
     .update("goreecloud-monitor\0v1\0")
-    .update(monitor)
-    .update("\0")
     .update(event.type)
     .update("\0")
     .update(transitionId)
