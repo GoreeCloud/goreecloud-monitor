@@ -1,101 +1,62 @@
-# GoreeCloud Monitor — Glaze UI 1.0 Conformance
+# GoreeCloud Monitor — Glaze UI 2.1 Adoption Candidate
 
 ## Status
 
-- Target design system: **Glaze UI 1.0.0**
-- Canonical source: `GoreeCloud/glaze-ui`
-- Canonical revision reviewed for this implementation: `d6e446fd8ef251259d16368d50aad90d9287a774`
-- Automated application contract: `tests/test_glaze_ui.py`
-- Production exception: **none approved or required by this source layer**
-- Manual visual/accessibility acceptance: **required before Stable classification**
+- Required current Stable design-system release: **Glaze UI 2.1.0**
+- Canonical source: `GoreeCloud/goreecloud-glaze-ui`
+- Stable release tag: `v2.1.0`
+- Stable promotion revision: `c49113eb8b93c267613fdf1bbca1f814495acad7`
+- Repository status: **Adoption Candidate**
+- Current-Stable conformance claim: **false**
+- Production Stable eligibility from this gate: **false**
 
-This record describes the Monitor-specific adoption of Glaze UI. It does not fork the design system or make Monitor an authority for shared Glaze tokens.
+Monitor now carries a repository-local Glaze UI 2.1 source adoption layer. That source work is migration evidence; it is not a substitute for application-specific rendered, browser/OS accessibility, performance, native/device, or human Visual Excellence acceptance.
 
-## Semantic foundation
+The previous 1.0/1.4 source and gate records remain in the repository as historical migration and audit evidence only. They no longer define the active consumer target.
 
-Monitor uses the canonical Glaze UI semantic roles rather than its former product-local `--bg`, `--surface`, and similar token vocabulary. The implementation includes:
+## 2.1 material and interaction mapping
 
-- Canvas atmospheric background.
-- Solid and Raised readability/elevation roles.
-- Selective Glaze translucency for primary operational surfaces.
-- Overlay treatment for compact navigation and attention-priority surfaces.
-- Shared semantic text, muted text, line, accent, success, warning, and danger colors.
-- Shared spacing, radius, shadow, blur, target-size, focus, and motion semantics.
+Monitor preserves its successful operational information architecture while adopting the current Stable material hierarchy:
 
-The Monitor composition remains product-specific. Availability state, incident urgency, recovery state, check latency, and monitoring coverage determine information hierarchy rather than copying another GoreeCloud application's screen layout.
+**Canvas → Surface → Soft Glaze → Glaze → Deep Glaze → Live Glaze**
 
-## Product identity
+Durable reading and operational content remain solid by default. Glazed material is bounded to navigation, controls, transient interaction, overlays, and live/attention-priority interaction chrome. The migration does not turn monitoring state into decoration and does not replace producer-authoritative service, security, privacy, continuity, identity, or mesh state.
 
-Monitor uses the canonical product icon at `assets/identity/goreecloud-monitor-icon.svg`. The same pulse/status identity is used by the primary shell, authentication surface, privileged Django administration, browser favicon family, browser installation manifest, Linux/AppImage packaging input, and Android adaptive/monochrome launcher inputs.
+The repository-local 2.1 bridge is `static/monitoring/css/glaze.2.1.css`. Existing `glaze.css`, accessibility, form-factor, staff-administration, and Wardveil presentation layers remain implementation inputs beneath that versioned bridge rather than being falsely relabeled as independently accepted 2.1 implementations.
 
-The web implementation provides explicit 16, 32, 48, 192, and 512 pixel SVG representations plus a dedicated mask-safe installation asset. The ordinary rounded-square icon is not falsely declared maskable. Android uses a separate adaptive background/foreground/monochrome representation while preserving the same pulse and protected healthy-state symbol.
+## Accessibility and density
 
-The icon is intentionally distinct from the GoreeCloud platform logo and the former generic `G` placeholder while retaining Glaze UI geometry, gradient treatment, depth, and family resemblance. The superseded `monitor-mark.svg` asset is removed so Monitor has one authoritative product identity. See `docs/product-identity.md` for cross-platform change control and the current client-delivery boundary.
+The 2.1 source layer raises the general effective target floor to **48 CSS pixels** and preserves the **56 CSS pixel** far-view floor. It includes an explicit **56 CSS pixel Touch Assistance** override, an explicit Large Text rendering hook that prevents Compact density from remaining authoritative when readable reflow is required, and Solid material fallbacks for reduced-transparency, increased-contrast, and forced-colors states.
 
-## Appearance
+The existing Monitor accessibility layers continue to provide visible focus, reduced-motion behavior, reduced-transparency fallbacks, increased-contrast behavior, forced-colors handling, skip navigation, safe-area-aware composition, and no-backdrop-filter fallbacks.
 
-The primary application supports:
+Source hooks do not prove platform preference detection or complete 200% text reflow. Those behaviors remain acceptance gates and must be verified in representative browser/OS and applicable native contexts before conformance can be claimed.
 
-- System appearance by default.
-- Explicit Light appearance.
-- Explicit Dark appearance.
+## Form factors
 
-The preference is browser-local only under `goreecloud-monitor-appearance`. It is not transmitted to Monitor, synchronized to an account, included in analytics, or used for tracking. If browser storage is unavailable, the interface remains functional and falls back to the current session/system appearance. The advanced Django administration surface uses Django's own local theme state while mapping its visual variables to the same Glaze semantic palette; no remote theme service is introduced.
+Monitor retains the existing Mobile, Tablet, Desktop, Wide, and TV/far-view composition foundations while migrating their shared target and density semantics to the 2.1 contract. Width remains only one adaptation signal; supported production contexts must still be validated for actual input method, viewing distance, text scale, focus behavior, safe areas, and task continuity.
 
-## Adaptive layout
+## Platform authority boundaries
 
-Monitor implements the shared Glaze ranges:
+Glaze UI standardizes presentation only. Monitor continues to treat the following systems as authoritative for their own state:
 
-- Compact: up to 599 CSS pixels.
-- Medium: 600–1023 CSS pixels.
-- Expanded: 1024–1439 CSS pixels.
-- Wide: 1440 CSS pixels and above.
+- **Wardveil Security** for security/protection state and security evidence.
+- **Privacy Shield** for privacy-control state and privacy evidence.
+- **Everkeep** for continuity/recovery state and evidence.
+- **GoreeCloud Identity** for identity/authentication state where integrated.
+- **GoreeCloud Mesh** for coordination/connectivity state where integrated.
+- **GoreeCloud Notify** for notification-delivery authority where the Monitor producer adapter is used.
 
-Compact primary layouts transform the desktop navigation into a persistent bottom navigation rather than removing navigation. Forms, metrics, filter controls, and history rows reflow for available space instead of merely shrinking desktop geometry. The advanced administration surface also reflows its header, breadcrumbs, forms, and content on narrow displays.
+A local style, cached value, migration fixture, or simulated state must never be presented as proof that one of these platform systems executed successfully.
 
-## Accessibility and resilience
+## Fail-closed evidence
 
-The source includes:
+`docs/glaze-ui-2.1-adoption.json` is the active machine-readable adoption ledger. It pins the exact current Stable release, records source-backed gates, and keeps unresolved gates explicit. `tests/test_glaze_ui_2_1_adoption.py` verifies the source target, exact release provenance, target floors, material hierarchy, accessibility hooks, platform-authority boundary, and fail-closed production posture.
 
-- A skip-to-content path in the primary application shell.
-- Semantic navigation labels and `aria-current` state.
-- Visible `:focus-visible` treatment in both primary and staff-administration surfaces.
-- 44-pixel minimum interactive targets.
-- Reduced-motion handling.
-- Reduced-transparency handling where supported.
-- Increased-contrast behavior in the primary application.
-- Forced-colors behavior.
-- Solid-surface fallbacks when backdrop filtering is unavailable or unsuitable.
-- Local/system font and icon behavior with no remote UI, font, icon, analytics, or tracking dependency.
+`docs/glaze-ui-1.4-gates.json` remains historical evidence only.
 
-These automated/source guarantees do not replace representative manual keyboard, zoom/reflow, screen-reader, light/dark, contrast, small-icon recognition, launcher masking, and usability review.
+## Remaining acceptance before a current-Stable claim
 
-## Monitor-specific surfaces
+Monitor must still complete representative rendered task-flow review; browser/OS keyboard, pointer, touch, reduced-motion, reduced-transparency, increased-contrast, forced-colors, 200% Large Text, and Touch Assistance acceptance; application-specific Material Budget/performance evidence; applicable native/package/device acceptance; human Visual Excellence review; and central consumer-registry evidence.
 
-The Glaze system covers the complete initial Monitor information architecture:
-
-- Overview.
-- Monitors.
-- Monitor detail.
-- Active and recovered incident history.
-- Maintenance.
-- Notifications/integration posture.
-- Wardveil Security posture for staff.
-- Settings.
-- Authentication.
-- Empty states, forms, filters, status feedback, and destructive/recovery workflows.
-- Authenticated staff-only Django administration used for advanced/recovery management.
-
-Normal operation is expected to use the primary Monitor workflows. The framework administration interface remains deliberately staff-only, but its local branding, semantic colors, controls, focus treatment, surfaces, dark/light behavior, translucency fallbacks, and responsive layout are Glaze-aligned so the product no longer contains a default-admin visual island.
-
-## Privacy and security boundary
-
-Visual improvements do not weaken Monitor security controls. The source preserves authentication, staff-only configuration changes, CSRF protection for browser mutations, SSRF-aware target policy, protected environment secrets, least-privilege notification publishing, read-only Manager integration, Wardveil response/session hardening, and private-by-default production topology.
-
-The unauthenticated heartbeat acknowledgement is intentionally generic and does not return the internal monitor name. The Notifications surface reports configuration posture but never renders the ntfy publisher token or claims operational transition records are delivery receipts. Product identity assets contain no remote dependencies, analytics, trackers, reusable credentials, private target information, or user data.
-
-Wardveil Security by GoreeCloud remains the security/protection identity. It does not replace the GoreeCloud Monitor application icon or create a competing design system.
-
-## Stable-release gate
-
-Automated conformance is necessary but not sufficient for Stable. Before Monitor is classified Stable, representative Compact and Expanded layouts must be reviewed in both light and dark appearance, the staff administration surface must be sampled at representative desktop and compact widths, accessibility/resilience behavior must be exercised on real browser/operating-system combinations, the icon must be reviewed at favicon and launcher sizes/masks on supported clients, and any discovered visual or interaction defects must be corrected or explicitly documented through the GoreeCloud exception process.
+Until those gates are complete, the truthful status is **Glaze UI 2.1 Adoption Candidate**, not `aligned-current-stable` and not production-accepted conformance.
