@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { NotifyProducer, createNotificationPayload, monitoringEventTypes } from "./index.mjs";
+import {
+  NotifyProducer,
+  createIdempotencyKey,
+  createNotificationPayload,
+  monitoringEventTypes
+} from "./index.mjs";
 
 test("maps the bounded monitoring event vocabulary to Notify severity", () => {
   const expected = new Map([
@@ -28,7 +33,29 @@ test("fails closed for unsupported events and invalid labels", () => {
   assert.throws(() => createNotificationPayload({ type: "DOWN", monitor: "Vault", summary: "" }));
 });
 
-test("requires HTTPS and keeps the producer token private and out of the JSON body", async () => {
+test("derives a deterministic opaque idempotency key from stable transition identity", () => {
+  const event = {
+    type: "DOWN",
+    monitor: "Vault",
+    summary: "availability check failed",
+    transitionId: "incident-42-transition-7"
+  };
+  const first = createIdempotencyKey(event);
+  const retry = createIdempotencyKey({ ...event });
+  const renamedMonitorRetry = createIdempotencyKey({ ...event, monitor: "Vault Service" });
+  const nextTransition = createIdempotencyKey({ ...event, transitionId: "incident-42-transition-8" });
+  const recoveryTransition = createIdempotencyKey({ ...event, type: "RECOVERED" });
+
+  assert.equal(first, retry);
+  assert.equal(first, renamedMonitorRetry);
+  assert.notEqual(first, nextTransition);
+  assert.notEqual(first, recoveryTransition);
+  assert.match(first, /^gcm-v1-[0-9a-f]{64}$/);
+  assert.equal(first.includes(event.transitionId), false);
+  assert.throws(() => createIdempotencyKey({ ...event, transitionId: "" }), /transitionId is required/);
+});
+
+test("requires HTTPS and keeps the producer token and transition id out of the JSON body", async () => {
   assert.throws(() => new NotifyProducer({ endpoint: "http://notify.goreecloud.com", token: "secret" }));
 
   let captured;
@@ -44,12 +71,34 @@ test("requires HTTPS and keeps the producer token private and out of the JSON bo
   assert.equal(JSON.stringify(producer).includes("secret-token"), false);
   assert.deepEqual(Object.keys(producer), []);
 
-  const result = await producer.publish({ type: "DOWN", monitor: "Vault", summary: "availability check failed" });
+  const result = await producer.publish({
+    type: "DOWN",
+    monitor: "Vault",
+    summary: "availability check failed",
+    transitionId: "incident-42-transition-7"
+  });
   assert.deepEqual(result, { id: 1 });
   assert.equal(captured.url, "https://notify.goreecloud.com/api/v1/notifications");
   assert.equal(captured.options.headers.authorization, "Bearer secret-token");
+  assert.match(captured.options.headers["idempotency-key"], /^gcm-v1-[0-9a-f]{64}$/);
+  assert.equal(captured.options.headers["idempotency-key"].includes("incident-42-transition-7"), false);
   assert.equal(captured.options.body.includes("secret-token"), false);
+  assert.equal(captured.options.body.includes("incident-42-transition-7"), false);
   assert.equal(captured.options.redirect, "error");
+});
+
+test("fails closed when publication lacks a stable transition id", async () => {
+  const producer = new NotifyProducer({
+    endpoint: "https://notify.goreecloud.com",
+    token: "secret-token",
+    fetchImpl: async () => {
+      throw new Error("network should not be reached");
+    }
+  });
+  await assert.rejects(
+    producer.publish({ type: "DOWN", monitor: "Vault", summary: "availability check failed" }),
+    /transitionId must be a string/
+  );
 });
 
 test("propagates a fail-closed error when Notify rejects publication", async () => {
@@ -59,7 +108,12 @@ test("propagates a fail-closed error when Notify rejects publication", async () 
     fetchImpl: async () => ({ ok: false, status: 403 })
   });
   await assert.rejects(
-    producer.publish({ type: "DOWN", monitor: "Vault", summary: "availability check failed" }),
+    producer.publish({
+      type: "DOWN",
+      monitor: "Vault",
+      summary: "availability check failed",
+      transitionId: "incident-42-transition-7"
+    }),
     /HTTP 403/
   );
 });
