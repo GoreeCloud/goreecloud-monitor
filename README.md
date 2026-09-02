@@ -178,4 +178,4 @@ See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md
 
 ## License
 
-MIT. See `LICENSE`.
+Current GoreeCloud Monitor source is licensed under the GNU Affero General Public License, version 3 only (`AGPL-3.0-only`). See `LICENSE` and `LICENSE-NOTICE.md`. Copies and releases previously distributed under the MIT License retain the permissions already granted to those copies.
