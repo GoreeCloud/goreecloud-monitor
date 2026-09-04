@@ -1,0 +1,69 @@
+{
+  "schema_version": 2,
+  "application": "goreecloud-monitor",
+  "target_release": "1.1.0",
+  "canonical_repository": "GoreeCloud/goreecloud-glaze-ui",
+  "canonical_release_tag": "v1.1.0",
+  "canonical_revision": "15cc76d2bcd4065552dc31c77145b63f34d9e7b2",
+  "adoption_status": "adoption-candidate",
+  "conformance_claim": false,
+  "stable_eligible": false,
+  "appearance": {
+    "modes": ["system", "light", "dark", "deep-dark"],
+    "persistence": "browser-local-only",
+    "server_account_sync": false
+  },
+  "atmosphere": {
+    "source": "static-v1.1-deep-teal-soft-amber",
+    "semantic_authority": false,
+    "environmental_color_memory": false,
+    "remote_derivation": false,
+    "sample_persistence": false,
+    "content_sampling": false,
+    "operational_state_sampling": false,
+    "security_privacy_identity_sampling": false
+  },
+  "platform_authority": {
+    "security": "Wardveil Security",
+    "privacy": "Privacy Shield",
+    "continuity": "Everkeep",
+    "identity": "GoreeCloud Identity",
+    "coordination": "GoreeCloud Mesh"
+  },
+  "gates": {
+    "01_exact_stable_anchor": {"status": "source-evidence-present", "evidence": ["docs/glaze-ui-v1.1-adoption.json"]},
+    "02_v1_1_optical_geometry": {"status": "source-evidence-present", "evidence": ["static/monitoring/css/glaze.1.1.css"]},
+    "03_deep_dark_source_mapping": {"status": "source-evidence-present-runtime-browser-local", "evidence": ["static/monitoring/css/glaze.1.1.css", "static/monitoring/js/glaze.js"]},
+    "04_nonsemantic_atmosphere": {"status": "source-evidence-present", "evidence": ["static/monitoring/css/glaze.1.1.css", "tests/test_glaze_ui_v1_1_adoption.py"]},
+    "05_target_floors": {"status": "source-evidence-present", "evidence": ["static/monitoring/css/glaze.1.1.css", "static/monitoring/css/glaze.formfactors.css"]},
+    "06_reduced_transparency": {"status": "source-evidence-present-manual-acceptance-required", "evidence": ["static/monitoring/css/glaze.accessibility.css", "static/monitoring/css/glaze.1.1.css"]},
+    "07_reduced_motion": {"status": "source-evidence-present-manual-acceptance-required", "evidence": ["static/monitoring/css/glaze.accessibility.css", "static/monitoring/css/glaze.formfactors.css"]},
+    "08_increased_contrast": {"status": "source-evidence-present-manual-acceptance-required", "evidence": ["static/monitoring/css/glaze.accessibility.css", "static/monitoring/css/glaze.1.1.css"]},
+    "09_forced_colors": {"status": "source-evidence-present-manual-acceptance-required", "evidence": ["static/monitoring/css/glaze.accessibility.css", "static/monitoring/css/glaze.1.1.css"]},
+    "10_large_text": {"status": "source-hook-present-platform-resolution-and-200-percent-reflow-acceptance-required", "evidence": ["static/monitoring/css/glaze.1.1.css"]},
+    "11_touch_assistance": {"status": "source-hook-present-platform-resolution-and-target-acceptance-required", "evidence": ["static/monitoring/css/glaze.1.1.css"]},
+    "12_adaptive_form_factors": {"status": "source-foundation-present-representative-task-flow-acceptance-required", "evidence": ["static/monitoring/css/glaze.formfactors.css", "templates/monitoring/base.html"]},
+    "13_authoritative_platform_state": {"status": "source-contracts-present-runtime-acceptance-required", "evidence": ["goreecloud.platform.yaml", "docs/platform-conformance.json", "docs/privacy-shield.adapter.json", "docs/everkeep.adoption.json", "docs/wardveil.adoption.json"]},
+    "14_material_budget_and_performance": {"status": "pending-application-specific-evidence", "evidence": []},
+    "15_rendered_visual_excellence": {"status": "pending", "evidence": []},
+    "16_browser_os_accessibility": {"status": "pending", "evidence": []},
+    "17_native_packaging_and_device": {"status": "pending-where-applicable", "evidence": ["packaging/android", "packaging/appimage"]},
+    "18_central_consumer_registry": {"status": "pending-registry-update-after-repository-evidence-review", "evidence": []}
+  },
+  "blocking_gates": [
+    "06_reduced_transparency",
+    "07_reduced_motion",
+    "08_increased_contrast",
+    "09_forced_colors",
+    "10_large_text",
+    "11_touch_assistance",
+    "12_adaptive_form_factors",
+    "13_authoritative_platform_state",
+    "14_material_budget_and_performance",
+    "15_rendered_visual_excellence",
+    "16_browser_os_accessibility",
+    "17_native_packaging_and_device",
+    "18_central_consumer_registry"
+  ],
+  "acceptance_boundary": "Monitor carries a source-level GLAZE UI V1.1 / 1.1.0 Adoption Candidate mapping pinned to the exact Stable release. Deep Dark is an explicit browser-local appearance choice. Static Deep Teal and Soft Amber atmosphere is decorative only and cannot encode or derive from operational, security, privacy, identity, recovery, or availability state. Application-specific rendered, accessibility, performance, platform, applicable native/device, platform-authority, central consumer-registry, release, and production evidence remains required."
+}
