@@ -1,0 +1,178 @@
+schema_version: "0.2"
+
+component:
+  type: application
+  id: goreecloud-monitor
+  product_name: GoreeCloud Monitor
+  repository: GoreeCloud/goreecloud-monitor
+
+lifecycle: development
+version: "0.1.0"
+
+supported_platforms:
+  - server
+
+api:
+  versions:
+    - v1
+  endpoints:
+    - name: push-heartbeat
+      url: /api/v1/heartbeat/
+      purpose: POST a bearer-authorized push-monitor heartbeat without placing the credential in the URL.
+    - name: manager-summary
+      url: /api/v1/summary/
+      purpose: GET a bearer-authorized read-only Monitor summary intended for bounded GoreeCloud Manager visibility.
+    - name: health-live
+      url: /health/live/
+      purpose: GET process liveness.
+    - name: health-ready
+      url: /health/ready/
+      purpose: GET readiness including database connectivity.
+
+platform_systems:
+  manager:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - src/monitoring/urls.py
+      - src/monitoring/views.py
+      - docs/platform-conformance.json
+    notes: A bearer-token-protected read-only summary endpoint exists, but accepted Manager registration, scoped platform identity, lifecycle/deployment visibility, and target-runtime operational acceptance are not established.
+  privacy_shield:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - docs/privacy-shield.adapter.json
+      - tests/test_privacy_shield_adapter.py
+      - src/monitoring/audit.py
+      - src/monitoring/middleware.py
+      - tests/test_portability.py
+      - src/monitoring/management/commands/prunemonitorhistory.py
+    notes: Monitor has a draft source-side privacy adapter and retention/export controls, but accepted Privacy Shield integration, target-runtime privacy validation, and central adapter acceptance are not established.
+  wardveil_security:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - docs/wardveil.adoption.json
+      - docs/wardveil-security.md
+      - src/monitoring/audit.py
+      - src/monitoring/management/commands/targetpreflight.py
+      - tests/test_wardveil_adoption.py
+      - tests/test_security.py
+    notes: Monitor has fail-closed security controls and a Wardveil adoption contract, but target-runtime Wardveil Security acceptance and production approval are not established.
+  everkeep:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - docs/everkeep.adoption.json
+      - docs/everkeep.acceptance.json
+      - tests/test_everkeep_adoption.py
+      - tests/test_everkeep_acceptance.py
+      - docs/backup.md
+      - docs/recovery.md
+      - docs/cutover-and-rollback.md
+      - .github/workflows/rollback-compatibility.yml
+    notes: PostgreSQL backup/restore proof and draft Everkeep adoption/acceptance policy evidence exist, but accepted target-native continuity, recovery freshness, live rollback, and exact-revision Everkeep integration are not established.
+  glaze_ui:
+    result: applicable-migration-required
+    version: "1.1.0"
+    evidence:
+      - templates/monitoring/base.html
+      - static/monitoring/css/glaze.css
+      - static/monitoring/css/glaze.accessibility.css
+      - static/monitoring/css/glaze.formfactors.css
+      - static/monitoring/css/glaze.1.1.css
+      - static/monitoring/js/glaze.js
+      - docs/glaze-ui-v1.1-adoption.json
+      - tests/test_glaze_ui_v1_1_adoption.py
+    notes: Monitor targets exact Stable GLAZE UI V1.1 / 1.1.0 and includes a browser-local Deep Dark mode plus bounded non-semantic atmosphere, but rendered/browser-OS accessibility, performance, representative form-factor/device, Human Visual Excellence, central registry, release, and production acceptance remain incomplete.
+  mesh:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - docs/PLATFORM_CONFORMANCE.md
+    notes: Canonical GoreeCloud Mesh registration, service identity, capability publication, event contracts, authenticated coordination, and target-runtime acceptance are not established.
+    capabilities: []
+    dependencies: []
+    published_events: []
+    consumed_events: []
+  identity:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - src/goreecloud_monitor/settings.py
+      - templates/monitoring/base.html
+    notes: Current Development UI authorization uses Django-local authentication. Accepted GoreeCloud Identity credentials, sessions, roles, service identity, and target-runtime integration are not established.
+
+health:
+  health_endpoint: /health/live/
+  readiness_endpoint: /health/ready/
+
+continuity:
+  backup:
+    required: true
+    requirements:
+      - Preserve PostgreSQL-native backup behavior and bind accepted backup evidence to the exact production revision and target environment.
+      - Establish accepted Everkeep scheduling, integrity, retention, privacy, credential recovery, and independent-copy evidence before cutover.
+  restore:
+    required: true
+    requirements:
+      - Preserve clean-database PostgreSQL restore validation and prove target-runtime recovery without bypassing authorization or losing monitoring history required by policy.
+      - Establish recovery freshness, rollback, failure handling, and exact-revision Everkeep acceptance before production cutover.
+  export:
+    required: true
+    requirements:
+      - Preserve supported portable configuration/data export without including reusable heartbeat, Manager, notification, database, or session credentials.
+      - Keep telemetry/history export and retention subject to accepted Privacy Shield policy.
+  portability:
+    required: true
+    requirements:
+      - Validate exported configuration/data against the target Monitor revision before import or migration is represented as accepted.
+      - Keep Uptime Kuma migration and Monitor cutover evidence separate from ordinary application export/import behavior.
+
+external_dependencies:
+  - name: PostgreSQL
+    purpose: Intended production relational database and recovery target for Monitor state.
+    required: true
+    version_constraint: ">=17"
+
+compatibility:
+  platform_contract: "0.2"
+  glaze_ui_required: "1.1.0"
+  requires:
+    - goreecloud-platform-contract==0.2
+    - glaze-ui==1.1.0
+    - postgresql>=17
+  provides:
+    - goreecloud-monitor-http-api-v1
+    - goreecloud-monitor-manager-summary-v1
+
+evidence:
+  acceptance_tests: []
+  release: []
+
+conformance:
+  status: nonconformant
+  validated_at: null
+  evidence:
+    - README.md
+    - docs/PLATFORM_CONFORMANCE.md
+    - docs/platform-conformance.json
+    - docs/glaze-ui-conformance.md
+    - docs/glaze-ui-v1.1-adoption.json
+    - docs/security.md
+    - docs/backup.md
+    - docs/recovery.md
+    - docs/cutover-and-rollback.md
+  blockers:
+    - GLAZE UI V1.1 / 1.1.0 rendered visual, browser/OS accessibility, performance, supported form-factor/device, Human Visual Excellence, central consumer-registry, release, and production acceptance remain incomplete.
+    - GoreeCloud Identity integration and target-runtime acceptance are not established.
+    - GoreeCloud Mesh registration, service identity, capabilities, event contracts, and target-runtime acceptance are not established.
+    - GoreeCloud Manager registration, scoped platform identity, and target-runtime operational acceptance are not established despite the bounded read-only summary endpoint.
+    - Wardveil Security target-runtime acceptance and production approval are not established.
+    - Privacy Shield target-runtime and central adapter acceptance are not established.
+    - Everkeep target-native recovery freshness, live rollback, and exact-revision acceptance are not established.
+    - Target database-native backup and isolated restore proof remain production acceptance gates despite existing CI recovery proof.
+    - Repeated live Monitor-versus-Uptime-Kuma comparison and explicit cutover approval remain incomplete; Uptime Kuma remains the current production authority.
+    - A root USER-MANUAL.md is not yet present, so repository documentation conformance is incomplete.
+    - Isolated persistent target deployment, live DNS/ICMP acceptance, manual accessibility/product-identity acceptance, release approval, production cutover, and Stable qualification remain outstanding.
