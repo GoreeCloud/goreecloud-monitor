@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from ipaddress import ip_network
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.db import connection
@@ -52,6 +53,20 @@ def configuration_findings() -> list[PreflightFinding]:
     ntfy_values = (getattr(settings, "NTFY_BASE_URL", ""), getattr(settings, "NTFY_TOPIC", ""), getattr(settings, "NTFY_TOKEN", ""))
     if any(ntfy_values) and not all(ntfy_values): add("error", "ntfy-partial", "ntfy must be fully configured with base URL, topic, and write-only publisher token or fully disabled.")
     elif not any(ntfy_values): add("warning", "ntfy-disabled", "ntfy transition publishing is not configured in this environment.")
+
+    notify_enabled = bool(getattr(settings, "MONITOR_NOTIFY_ENABLED", False))
+    notify_base_url = str(getattr(settings, "GOREECLOUD_NOTIFY_BASE_URL", ""))
+    notify_token = str(getattr(settings, "GOREECLOUD_NOTIFY_TOKEN", ""))
+    if notify_enabled:
+        if not notify_base_url or not notify_token:
+            add("error", "notify-partial", "GoreeCloud Notify parallel publishing requires both the HTTPS base URL and a dedicated producer token.")
+        else:
+            parsed_notify = urlsplit(notify_base_url)
+            if parsed_notify.scheme != "https" or not parsed_notify.netloc or parsed_notify.username or parsed_notify.password or parsed_notify.query or parsed_notify.fragment:
+                add("error", "notify-endpoint", "GoreeCloud Notify publishing requires a credential-free HTTPS base URL without query or fragment components.")
+    else:
+        add("warning", "notify-disabled", "GoreeCloud Notify parallel transition publishing is disabled; ntfy remains the active Monitor notification path.")
+
     if not getattr(settings, "MANAGER_API_TOKEN", ""): add("warning", "manager-disabled", "The read-only GoreeCloud Manager integration token is not configured.")
     return findings
 
