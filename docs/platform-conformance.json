@@ -1,31 +1,39 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "application": "goreecloud-monitor",
   "stable_eligible": false,
+  "platform_contract": "0.2",
   "platform_systems": {
+    "manager": {
+      "identity": "GoreeCloud Manager",
+      "source_status": "read-only-summary-api-source-present-acceptance-blocked",
+      "evidence": ["src/monitoring/urls.py", "src/monitoring/views.py"],
+      "blocker": "Monitor exposes a bearer-token-protected read-only /api/v1/summary/ endpoint, but accepted Manager registration, scoped platform identity, target-runtime integration, and operational acceptance are not established."
+    },
     "glaze_ui": {
-      "identity": "Glaze UI",
-      "required_version": "2.1",
-      "required_release": "2.1.0",
+      "identity": "GLAZE UI",
+      "required_version": "1.1",
+      "required_release": "1.1.0",
       "canonical_repository": "GoreeCloud/goreecloud-glaze-ui",
-      "canonical_release_tag": "v2.1.0",
-      "canonical_revision": "c49113eb8b93c267613fdf1bbca1f814495acad7",
-      "source_status": "adoption-candidate-source-validated",
+      "canonical_release_tag": "v1.1.0",
+      "canonical_revision": "15cc76d2bcd4065552dc31c77145b63f34d9e7b2",
+      "source_status": "adoption-candidate-source-validation-pending-ci",
       "evidence": [
         "templates/monitoring/base.html",
         "static/monitoring/css/glaze.css",
         "static/monitoring/css/glaze.accessibility.css",
         "static/monitoring/css/glaze.formfactors.css",
-        "static/monitoring/css/glaze.2.1.css",
-        "docs/glaze-ui-2.1-adoption.json",
+        "static/monitoring/css/glaze.1.1.css",
+        "static/monitoring/js/glaze.js",
+        "docs/glaze-ui-v1.1-adoption.json",
         "tests/test_glaze_ui.py",
-        "tests/test_glaze_ui_2_1_adoption.py"
+        "tests/test_glaze_ui_v1_1_adoption.py"
       ],
-      "blocker": "Monitor now carries an exact Glaze UI 2.1.0 Stable release anchor and a repository-local source adoption layer, but this is an Adoption Candidate rather than current-Stable conformance. Representative rendered task flows, browser/OS accessibility, Large Text and Touch Assistance resolution, Material Budget/performance evidence, applicable native/device acceptance, and central consumer-registry evidence remain required."
+      "blocker": "Monitor carries an exact GLAZE UI V1.1 / 1.1.0 Stable release anchor, browser-local Deep Dark source mapping, and a static non-semantic atmosphere layer. Representative rendered task flows, browser/OS accessibility, Large Text and Touch Assistance resolution, material/performance evidence, applicable native/device acceptance, Human Visual Excellence, and central consumer-registry evidence remain required."
     },
     "wardveil_security": {
       "identity": "Wardveil Security by GoreeCloud",
-      "source_status": "integrated-source-validated-adoption-contract",
+      "source_status": "integrated-source-validated-adoption-contract-runtime-acceptance-blocked",
       "evidence": [
         "docs/wardveil.adoption.json",
         "tests/test_wardveil_adoption.py",
@@ -36,11 +44,11 @@
         "templates/monitoring/security.html",
         "tests/test_security.py"
       ],
-      "blocker": "Monitor has an explicit fail-closed Wardveil adoption contract over its existing source-validated security implementation. Target-runtime Wardveil/security acceptance remains required and production_approved remains false."
+      "blocker": "Monitor has an explicit fail-closed Wardveil adoption contract over existing source-validated security controls. Target-runtime Wardveil/security acceptance remains required and production approval remains false."
     },
     "privacy_shield": {
       "identity": "GoreeCloud Privacy Shield",
-      "source_status": "draft-adapter-source-candidate",
+      "source_status": "draft-adapter-source-candidate-runtime-acceptance-blocked",
       "evidence": [
         "docs/privacy-shield.adapter.json",
         "tests/test_privacy_shield_adapter.py",
@@ -49,11 +57,11 @@
         "tests/test_portability.py",
         "src/monitoring/management/commands/prunemonitorhistory.py"
       ],
-      "blocker": "Monitor declares a source-side draft Privacy Shield adapter limited to telemetry-minimization, data-minimization, retention-controls, and portable-export. Runtime acceptance and central Privacy Shield adapter acceptance remain required, and production_approved remains false."
+      "blocker": "Monitor declares a source-side draft Privacy Shield adapter limited to telemetry minimization, data minimization, retention controls, and portable export. Runtime and central adapter acceptance remain required."
     },
     "everkeep": {
       "identity": "Everkeep",
-      "source_status": "draft-acceptance-policy-candidate",
+      "source_status": "draft-acceptance-policy-candidate-runtime-acceptance-blocked",
       "canonical_acceptance_schema": "GoreeCloud/goreecloud-everkeep:contracts/continuity.acceptance.schema.json@v1",
       "evidence": [
         "docs/everkeep.adoption.json",
@@ -65,11 +73,26 @@
         "docs/cutover-and-rollback.md",
         ".github/workflows/rollback-compatibility.yml"
       ],
-      "blocker": "Monitor declares an Everkeep adoption and fail-closed acceptance-policy candidate bound to the canonical Everkeep acceptance schema. Target-native database restore, recovery freshness, live rollback, and exact-revision Everkeep acceptance remain required before integration or readiness can be asserted."
+      "blocker": "Monitor declares Everkeep adoption and a fail-closed acceptance-policy candidate. Target-native database restore, recovery freshness, live rollback, and exact-revision Everkeep acceptance remain required."
+    },
+    "mesh": {
+      "identity": "GoreeCloud Mesh",
+      "source_status": "integration-not-accepted",
+      "evidence": ["docs/PLATFORM_CONFORMANCE.md"],
+      "blocker": "Canonical GoreeCloud Mesh registration, service identity, capability publication, event contracts, authenticated coordination, and target-runtime acceptance are not established."
+    },
+    "identity": {
+      "identity": "GoreeCloud Identity",
+      "source_status": "integration-not-accepted",
+      "evidence": ["src/goreecloud_monitor/settings.py", "templates/monitoring/base.html"],
+      "blocker": "Monitor uses Django-local authentication for its current Development surface; accepted GoreeCloud Identity session, credential, role, and service-identity integration are not established."
     }
   },
   "production_blockers": [
-    "complete Glaze UI 2.1 Adoption Candidate rendered, accessibility, performance, native/device, and consumer-registry acceptance",
+    "complete GLAZE UI V1.1 Adoption Candidate rendered, accessibility, performance, applicable native/device, Human Visual Excellence, and consumer-registry acceptance",
+    "GoreeCloud Identity integration and target acceptance",
+    "GoreeCloud Mesh registration, service identity, capability/event contracts, and target acceptance",
+    "Manager registration, scoped identity, and target-runtime operational acceptance",
     "Privacy Shield runtime and central adapter acceptance",
     "Everkeep target-native restore, recovery freshness, live rollback, and exact-revision acceptance",
     "target database-native backup and isolated restore proof",
