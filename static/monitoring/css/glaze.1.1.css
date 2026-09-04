@@ -1,0 +1,169 @@
+/* GoreeCloud Monitor — GLAZE UI V1.1 / 1.1.0 Development adoption layer.
+ * Canonical Stable source: GoreeCloud/goreecloud-glaze-ui@15cc76d2bcd4065552dc31c77145b63f34d9e7b2.
+ *
+ * This layer preserves Monitor's producer-authoritative operational state colors.
+ * Deep Teal / Soft Amber are decorative atmosphere only and must never encode
+ * health, incident, security, privacy, identity, recovery, or availability state.
+ */
+
+:root[data-glaze-version="1.1"] {
+  --glaze-ui-version: "1.1.0";
+
+  /* V1.1 optical geometry is separate from retained structural layout tokens. */
+  --glaze-optical-radius-micro: 8px;
+  --glaze-optical-radius-control: 16px;
+  --glaze-optical-radius-container: 24px;
+  --glaze-optical-radius-hero: 32px;
+  --glaze-optical-radius-capsule: 999px;
+
+  --glaze-target-min: 48px;
+  --glaze-target-comfortable: 48px;
+  --glaze-target-touch-assistance: 56px;
+  --glaze-target-far-view: 56px;
+
+  /* Static, non-semantic V1.1 atmosphere. */
+  --glaze-atmosphere-deep-teal: #0f6b6f;
+  --glaze-atmosphere-soft-amber: #d9a35f;
+  --glaze-atmosphere-teal-aura: rgba(15, 107, 111, 0.08);
+  --glaze-atmosphere-amber-aura: rgba(217, 163, 95, 0.04);
+
+  --glaze-material-canvas: var(--glaze-canvas);
+  --glaze-material-surface: var(--glaze-surface-strong);
+  --glaze-material-soft-glaze: color-mix(in srgb, var(--glaze-surface-strong) 92%, transparent);
+  --glaze-material-glaze: color-mix(in srgb, var(--glaze-surface-strong) 82%, transparent);
+  --glaze-material-deep-glaze: color-mix(in srgb, var(--glaze-surface-strong) 94%, transparent);
+  --glaze-material-live-glaze: color-mix(in srgb, var(--glaze-accent) 12%, var(--glaze-surface-strong));
+  --glaze-material-clarity: balanced;
+  --glaze-density-effective: standard;
+  --glaze-density-comfortable-gap: 20px;
+  --glaze-density-standard-gap: 16px;
+  --glaze-density-productive-gap: 12px;
+  --glaze-density-immersive-gap: 24px;
+}
+
+/* Explicit user-selected Deep Dark. data-theme remains "dark" so Monitor's
+ * existing producer-authoritative dark semantic status colors continue unchanged. */
+:root[data-glaze-version="1.1"][data-glz-appearance="deep-dark"] {
+  color-scheme: dark;
+  --glaze-canvas: #05070a;
+  --glaze-canvas-accent: #0d1015;
+  --glaze-surface: rgba(18, 22, 29, 0.80);
+  --glaze-surface-strong: rgba(13, 16, 21, 0.98);
+  --glaze-surface-muted: rgba(23, 28, 35, 0.90);
+  --glaze-text: #f5f7fa;
+  --glaze-muted: #abb4c2;
+  --glaze-line: rgba(225, 232, 244, 0.15);
+  --glaze-atmosphere-teal-aura: rgba(15, 107, 111, 0.16);
+  --glaze-atmosphere-amber-aura: rgba(217, 163, 95, 0.08);
+  --glaze-shadow-raised: 0 30px 92px rgba(0, 0, 0, 0.46);
+}
+
+:root[data-glaze-version="1.1"][data-glz-appearance="dark"] {
+  --glaze-atmosphere-teal-aura: rgba(15, 107, 111, 0.12);
+  --glaze-atmosphere-amber-aura: rgba(217, 163, 95, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-glaze-version="1.1"]:not([data-glz-appearance]) {
+    --glaze-atmosphere-teal-aura: rgba(15, 107, 111, 0.12);
+    --glaze-atmosphere-amber-aura: rgba(217, 163, 95, 0.06);
+  }
+}
+
+/* Decorative atmosphere is confined to the application canvas. It does not
+ * target operational state selectors or producer-authoritative status roles. */
+:root[data-glaze-version="1.1"] body {
+  background:
+    radial-gradient(circle at 16% -10%, var(--glaze-atmosphere-teal-aura), transparent 32rem),
+    radial-gradient(circle at 85% 5%, var(--glaze-atmosphere-amber-aura), transparent 30rem),
+    linear-gradient(180deg, var(--glaze-canvas-accent), var(--glaze-canvas));
+}
+
+/* V1.1 optical refinement. Structural layout spacing remains owned by the
+ * inherited Monitor/V1 foundation and is not reinterpreted here. */
+:root[data-glaze-version="1.1"] .topbar {
+  border-radius: 0 0 var(--glaze-optical-radius-hero) var(--glaze-optical-radius-hero);
+}
+
+:root[data-glaze-version="1.1"] .panel,
+:root[data-glaze-version="1.1"] .section-panel {
+  border-radius: var(--glaze-optical-radius-container);
+}
+
+:root[data-glaze-version="1.1"] .nav a,
+:root[data-glaze-version="1.1"] .mobile-nav a,
+:root[data-glaze-version="1.1"] .button,
+:root[data-glaze-version="1.1"] .icon-button,
+:root[data-glaze-version="1.1"] button,
+:root[data-glaze-version="1.1"] input,
+:root[data-glaze-version="1.1"] select,
+:root[data-glaze-version="1.1"] textarea,
+:root[data-glaze-version="1.1"] summary {
+  min-height: var(--glaze-target-min);
+}
+
+:root[data-glaze-version="1.1"] .nav a,
+:root[data-glaze-version="1.1"] .button,
+:root[data-glaze-version="1.1"] .icon-button {
+  border-radius: var(--glaze-optical-radius-control);
+}
+
+:root[data-glaze-version="1.1"] .pill,
+:root[data-glaze-version="1.1"] .glaze-chip {
+  border-radius: var(--glaze-optical-radius-capsule);
+}
+
+:root[data-glaze-version="1.1"][data-glaze-large-text="true"] {
+  --glaze-density-effective: comfortable;
+}
+
+:root[data-glaze-version="1.1"][data-glaze-large-text="true"] .hero,
+:root[data-glaze-version="1.1"][data-glaze-large-text="true"] .section-heading,
+:root[data-glaze-version="1.1"][data-glaze-large-text="true"] .toolbar-actions,
+:root[data-glaze-version="1.1"][data-glaze-large-text="true"] .two-column,
+:root[data-glaze-version="1.1"][data-glaze-large-text="true"] .three-column {
+  flex-wrap: wrap;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:root[data-glaze-version="1.1"][data-glaze-touch-assistance="true"] {
+  --glaze-target-min: var(--glaze-target-touch-assistance);
+}
+
+:root[data-glaze-version="1.1"] .glaze-tv-shell {
+  --glaze-target-min: var(--glaze-target-far-view);
+  --glaze-density-effective: immersive;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-glaze-version="1.1"] {
+    --glaze-material-clarity: solid;
+    --glaze-material-soft-glaze: var(--glaze-surface-strong);
+    --glaze-material-glaze: var(--glaze-surface-strong);
+    --glaze-material-deep-glaze: var(--glaze-surface-strong);
+    --glaze-material-live-glaze: var(--glaze-surface-strong);
+  }
+
+  :root[data-glaze-version="1.1"] body {
+    background: var(--glaze-canvas);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root[data-glaze-version="1.1"] {
+    --glaze-material-clarity: solid;
+  }
+}
+
+@media (forced-colors: active) {
+  :root[data-glaze-version="1.1"] {
+    --glaze-material-clarity: solid;
+    --glaze-atmosphere-teal-aura: transparent;
+    --glaze-atmosphere-amber-aura: transparent;
+  }
+
+  :root[data-glaze-version="1.1"] body {
+    background: Canvas;
+    color: CanvasText;
+  }
+}
