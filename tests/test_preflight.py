@@ -8,7 +8,7 @@ from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase, override_settings
 
 from monitoring.preflight import configuration_findings, runtime_findings
-from monitoring.models import Monitor
+from monitoring.models import Monitor, NotificationOutbox
 
 SAFE_SETTINGS = {
     "DEBUG": False, "DATABASES": {"default": {"ENGINE": "django.db.backends.postgresql"}}, "ALLOWED_HOSTS": ["monitor.example.test"],
@@ -17,12 +17,15 @@ SAFE_SETTINGS = {
     "CSRF_COOKIE_SECURE": True, "CSRF_COOKIE_SAMESITE": "Lax", "X_FRAME_OPTIONS": "DENY", "SECURE_CROSS_ORIGIN_OPENER_POLICY": "same-origin",
     "MONITOR_CONTENT_SECURITY_POLICY": "default-src 'self'; object-src 'none'", "MONITOR_PERMISSIONS_POLICY": "camera=(), microphone=()",
     "MONITOR_ALLOWED_NETWORKS": ["10.20.30.0/24", "fd00:1234::/64"], "MONITOR_ALLOW_LEGACY_PATH_HEARTBEATS": False,
-    "NTFY_BASE_URL": "http://ntfy:80", "NTFY_TOPIC": "goreecloud-uptime", "NTFY_TOKEN": "protected-test-token", "MANAGER_API_TOKEN": "manager-test-token",
+    "MANAGER_API_TOKEN": "manager-test-token",
+    "MONITOR_NOTIFY_ENABLED": True, "GOREECLOUD_NOTIFY_BASE_URL": "https://notify.example.test", "GOREECLOUD_NOTIFY_TOKEN": "producer-token",
 }
 
 class PreflightConfigurationTests(SimpleTestCase):
     @override_settings(**SAFE_SETTINGS)
     def test_safe_configuration_has_no_errors(self): self.assertEqual([f for f in configuration_findings() if f.severity == "error"], [])
+    @override_settings(**{**SAFE_SETTINGS, "MONITOR_NOTIFY_ENABLED": False, "GOREECLOUD_NOTIFY_BASE_URL": "", "GOREECLOUD_NOTIFY_TOKEN": ""})
+    def test_disabled_notify_path_blocks_target_acceptance(self): self.assertIn("notify-disabled", {f.code for f in configuration_findings() if f.severity == "error"})
     @override_settings(**{**SAFE_SETTINGS, "DATABASES": {"default": {"ENGINE": "django.db.backends.sqlite3"}}})
     def test_non_postgresql_database_is_blocking(self): self.assertIn("database-engine", {f.code for f in configuration_findings() if f.severity == "error"})
     @override_settings(**{**SAFE_SETTINGS, "DEBUG": True})
@@ -37,8 +40,12 @@ class PreflightConfigurationTests(SimpleTestCase):
     def test_django_insecure_secret_key_is_blocking(self): self.assertIn("secret-key", {f.code for f in configuration_findings() if f.severity == "error"})
     @override_settings(**{**SAFE_SETTINGS, "MONITOR_ALLOWED_NETWORKS": ["0.0.0.0/0"]})
     def test_all_addresses_target_allowlist_is_blocking(self): self.assertIn("allowed-network-broad", {f.code for f in configuration_findings() if f.severity == "error"})
-    @override_settings(**{**SAFE_SETTINGS, "NTFY_TOKEN": ""})
-    def test_partial_ntfy_configuration_is_blocking(self): self.assertIn("ntfy-partial", {f.code for f in configuration_findings() if f.severity == "error"})
+    @override_settings(**{**SAFE_SETTINGS, "MONITOR_NOTIFY_ENABLED": True, "GOREECLOUD_NOTIFY_BASE_URL": "https://notify.example.test", "GOREECLOUD_NOTIFY_TOKEN": ""})
+    def test_enabled_notify_without_token_is_blocking(self): self.assertIn("notify-partial", {f.code for f in configuration_findings() if f.severity == "error"})
+    @override_settings(**{**SAFE_SETTINGS, "MONITOR_NOTIFY_ENABLED": True, "GOREECLOUD_NOTIFY_BASE_URL": "http://notify.example.test", "GOREECLOUD_NOTIFY_TOKEN": "producer-token"})
+    def test_enabled_notify_without_https_is_blocking(self): self.assertIn("notify-endpoint", {f.code for f in configuration_findings() if f.severity == "error"})
+    @override_settings(**{**SAFE_SETTINGS, "MONITOR_NOTIFY_ENABLED": True, "GOREECLOUD_NOTIFY_BASE_URL": "https://notify.example.test", "GOREECLOUD_NOTIFY_TOKEN": "producer-token"})
+    def test_complete_https_notify_configuration_has_no_notify_errors(self): self.assertFalse({"notify-partial", "notify-endpoint"} & {f.code for f in configuration_findings() if f.severity == "error"})
     @override_settings(**{**SAFE_SETTINGS, "SECURE_HSTS_SECONDS": 0})
     def test_hsts_is_blocking_for_target_acceptance(self): self.assertIn("hsts", {f.code for f in configuration_findings() if f.severity == "error"})
     @override_settings(**{**SAFE_SETTINGS, "SESSION_COOKIE_SAMESITE": None})
@@ -49,6 +56,15 @@ class PreflightConfigurationTests(SimpleTestCase):
     def test_legacy_path_heartbeat_is_blocking(self): self.assertIn("legacy-path-heartbeat", {f.code for f in configuration_findings() if f.severity == "error"})
 
 class RuntimePreflightTests(TestCase):
+    def test_pending_notification_outbox_is_blocking(self):
+        NotificationOutbox.objects.create(
+            transition="DOWN",
+            payload={"source":"goreecloud-monitor","channel":"monitoring","title":"Outage","body":"Service: unavailable","severity":"critical"},
+            idempotency_key="gcm-v1-" + "a" * 64,
+        )
+        codes = {finding.code for finding in runtime_findings() if finding.severity == "error"}
+        self.assertIn("notification-outbox-pending", codes)
+
     def test_legacy_plaintext_push_credential_is_blocking(self):
         monitor = Monitor.objects.create(name="legacy", kind=Monitor.Kind.PUSH, interval_seconds=60)
         Monitor.objects.filter(pk=monitor.pk).update(heartbeat_token="legacy-reusable-secret")
