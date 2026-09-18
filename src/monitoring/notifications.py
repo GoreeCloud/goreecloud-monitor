@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 import hashlib
 import json
 import logging
@@ -24,6 +25,14 @@ _NOTIFY_MAX_LABEL_LENGTH = 160
 _NOTIFY_MAX_SUMMARY_LENGTH = 500
 _NOTIFY_MAX_TRANSITION_ID_LENGTH = 240
 _NOTIFY_MAX_PAYLOAD_BYTES = 8 * 1024
+
+
+@dataclass(frozen=True, slots=True)
+class NotifyPublishResult:
+    delivered: bool
+    attempts: int = 0
+    replayed: bool = False
+    reason: str = ""
 
 
 def _public_transition_summary(state: str, message: str) -> str:
@@ -114,16 +123,32 @@ def _notify_endpoint(base_url: str) -> str:
 
 
 
-async def publish_notify_transition(
-    name: str,
-    state: str,
-    message: str,
+def _validate_notify_payload(payload: dict[str, str]) -> dict[str, str]:
+    required = {"source", "channel", "title", "body", "severity"}
+    if not isinstance(payload, dict) or set(payload) != required:
+        raise ValueError("notification payload shape is invalid")
+    normalized: dict[str, str] = {}
+    for key in sorted(required):
+        normalized[key] = _required_notify_text(payload[key], f"payload.{key}", _NOTIFY_MAX_PAYLOAD_BYTES)
+    if normalized["source"] != "goreecloud-monitor" or normalized["channel"] != "monitoring":
+        raise ValueError("notification payload authority is invalid")
+    payload_bytes = len(
+        json.dumps(normalized, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    )
+    if payload_bytes > _NOTIFY_MAX_PAYLOAD_BYTES:
+        raise ValueError("notification payload exceeds Notify compatibility envelope")
+    return normalized
+
+
+async def publish_notify_payload(
+    payload: dict[str, str],
+    idempotency_key: str,
     *,
-    transition_id: str,
-) -> bool:
-    """Publish a minimized transition through the approved GoreeCloud Notify producer path."""
+    state: str,
+) -> NotifyPublishResult:
+    """Publish an exact persisted payload/idempotency pair through GoreeCloud Notify."""
     if not getattr(settings, "MONITOR_NOTIFY_ENABLED", False):
-        return False
+        return NotifyPublishResult(False, reason="disabled")
 
     base_url = getattr(settings, "GOREECLOUD_NOTIFY_BASE_URL", "")
     token = getattr(settings, "GOREECLOUD_NOTIFY_TOKEN", "")
@@ -136,12 +161,14 @@ async def publish_notify_transition(
             reason="partial_configuration",
             state=state,
         )
-        return False
+        return NotifyPublishResult(False, reason="partial_configuration")
 
     try:
         endpoint = _notify_endpoint(base_url)
-        event_type, payload = create_notify_payload(name, state, message)
-        idempotency_key = create_notify_idempotency_key(event_type, transition_id)
+        wire_payload = _validate_notify_payload(payload)
+        wire_key = _required_notify_text(idempotency_key, "idempotency_key", 80)
+        if not wire_key.startswith("gcm-v1-"):
+            raise ValueError("unsupported idempotency key version")
     except (TypeError, ValueError):
         log_event(
             logger,
@@ -151,23 +178,33 @@ async def publish_notify_transition(
             reason="invalid_contract_input",
             state=state,
         )
-        return False
+        return NotifyPublishResult(False, reason="invalid_contract_input")
 
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Idempotency-Key": idempotency_key,
+        "Idempotency-Key": wire_key,
     }
     max_attempts = max(1, min(5, int(getattr(settings, "MONITOR_NOTIFY_MAX_ATTEMPTS", 3))))
-    backoff_seconds = max(0.0, float(getattr(settings, "MONITOR_NOTIFY_RETRY_BACKOFF_SECONDS", 0.25)))
-    timeout_seconds = max(1.0, min(30.0, float(getattr(settings, "MONITOR_NOTIFY_TIMEOUT_SECONDS", 10.0))))
+    backoff_seconds = max(
+        0.0,
+        float(getattr(settings, "MONITOR_NOTIFY_RETRY_BACKOFF_SECONDS", 0.25)),
+    )
+    timeout_seconds = max(
+        1.0,
+        min(30.0, float(getattr(settings, "MONITOR_NOTIFY_TIMEOUT_SECONDS", 10.0))),
+    )
 
     try:
-        async with httpx.AsyncClient(timeout=timeout_seconds, trust_env=False, follow_redirects=False) as client:
+        async with httpx.AsyncClient(
+            timeout=timeout_seconds,
+            trust_env=False,
+            follow_redirects=False,
+        ) as client:
             for attempt in range(1, max_attempts + 1):
                 try:
-                    response = await client.post(endpoint, json=payload, headers=headers)
+                    response = await client.post(endpoint, json=wire_payload, headers=headers)
                 except httpx.HTTPError as exc:
                     if attempt < max_attempts:
                         if backoff_seconds:
@@ -184,7 +221,7 @@ async def publish_notify_transition(
                         exception_type=type(exc).__name__,
                         traceback=safe_traceback(exc),
                     )
-                    return False
+                    return NotifyPublishResult(False, attempts=attempt, reason="transport_error")
 
                 if response.status_code == 201:
                     log_event(
@@ -195,9 +232,13 @@ async def publish_notify_transition(
                         replayed=False,
                         attempts=attempt,
                     )
-                    return True
+                    return NotifyPublishResult(True, attempts=attempt, replayed=False)
+
                 if response.status_code == 200:
-                    replayed = response.headers.get("Idempotency-Replayed", "").strip().lower() == "true"
+                    replayed = (
+                        response.headers.get("Idempotency-Replayed", "").strip().lower()
+                        == "true"
+                    )
                     if not replayed:
                         log_event(
                             logger,
@@ -208,7 +249,11 @@ async def publish_notify_transition(
                             state=state,
                             attempts=attempt,
                         )
-                        return False
+                        return NotifyPublishResult(
+                            False,
+                            attempts=attempt,
+                            reason="invalid_replay_response",
+                        )
                     log_event(
                         logger,
                         "integration.notification.published",
@@ -217,7 +262,8 @@ async def publish_notify_transition(
                         replayed=True,
                         attempts=attempt,
                     )
-                    return True
+                    return NotifyPublishResult(True, attempts=attempt, replayed=True)
+
                 if response.status_code == 409:
                     log_event(
                         logger,
@@ -228,12 +274,18 @@ async def publish_notify_transition(
                         state=state,
                         attempts=attempt,
                     )
-                    return False
+                    return NotifyPublishResult(
+                        False,
+                        attempts=attempt,
+                        reason="idempotency_conflict",
+                    )
+
                 if response.status_code == 429 or response.status_code >= 500:
                     if attempt < max_attempts:
                         if backoff_seconds:
                             await asyncio.sleep(backoff_seconds * (2 ** (attempt - 1)))
                         continue
+
                 log_event(
                     logger,
                     "integration.notification.failed",
@@ -244,11 +296,8 @@ async def publish_notify_transition(
                     http_status=response.status_code,
                     attempts=attempt,
                 )
-                return False
+                return NotifyPublishResult(False, attempts=attempt, reason="http_rejected")
     except Exception as exc:
-        # GoreeCloud Notify is a feature-gated production candidate. An unexpected
-        # integration failure must be observable but must not crash the monitoring loop
-        # after Monitor state and its CheckResult have already been committed.
         log_event(
             logger,
             "integration.notification.failed",
@@ -259,6 +308,32 @@ async def publish_notify_transition(
             exception_type=type(exc).__name__,
             traceback=safe_traceback(exc),
         )
+        return NotifyPublishResult(False, reason="unexpected_integration_error")
+
+    return NotifyPublishResult(False, reason="unexpected_integration_error")
+
+
+async def publish_notify_transition(
+    name: str,
+    state: str,
+    message: str,
+    *,
+    transition_id: str,
+) -> bool:
+    """Build and publish one transition without durable outbox persistence."""
+    try:
+        event_type, payload = create_notify_payload(name, state, message)
+        idempotency_key = create_notify_idempotency_key(event_type, transition_id)
+    except (TypeError, ValueError):
+        log_event(
+            logger,
+            "integration.notification.refused",
+            level=logging.ERROR,
+            integration="goreecloud-notify",
+            reason="invalid_contract_input",
+            state=state,
+        )
         return False
 
-    return False
+    result = await publish_notify_payload(payload, idempotency_key, state=state)
+    return result.delivered
