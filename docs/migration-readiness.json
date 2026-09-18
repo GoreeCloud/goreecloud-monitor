@@ -25,7 +25,10 @@
     "docs/platform-conformance.json",
     "docs/everkeep.acceptance.json",
     "services/notify-producer/index.mjs",
-    "services/sentry-mcp/src/index.ts"
+    "services/sentry-mcp/src/index.ts",
+    "src/monitoring/outbox.py",
+    "src/monitoring/migrations/0003_notification_outbox.py",
+    "tests/test_notification_outbox.py"
   ],
   "pre_cutover_live_gates": [
     "preserved-uptime-kuma-evidence-reconciliation",
@@ -33,7 +36,7 @@
     "reviewed-paused-import-and-conflict-free-monitor-source-identity",
     "notify-producer-runtime-credential-and-delivery-acceptance",
     "notify-producer-replay-conflict-and-rollback-acceptance",
-    "notify-crash-durability-requirement-decision",
+    "notify-durable-outbox-restart-replay-and-retention-acceptance",
     "representative-live-monitor-validation-against-preserved-requirements",
     "controlled-down-recovered-tls-maintenance-notification-scenarios",
     "live-ping-icmp-and-resolver-specific-dns-validation",
