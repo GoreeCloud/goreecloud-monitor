@@ -2,7 +2,7 @@
 
 GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-health, heartbeat, TLS-certificate, incident, and recovery-monitoring application.
 
-> **Current state:** advanced pre-production acceptance candidate. Uptime Kuma and ntfy were permanently retired from `goreecloud-vps-01` on September 18, 2026, but predecessor retirement does not automatically promote GoreeCloud Monitor to production authority. The native monitoring foundation, hardened production topology, PostgreSQL recovery tooling, imported paused monitor definitions, DNS and low-privilege Ping/ICMP support, migration/recovery evidence tooling, and GoreeCloud Notify producer candidate are implemented at source level. Production activation remains blocked on current target-host verification, reviewed monitor activation, live check acceptance, current Stable Glaze UI 1.5.1 adoption, platform-system acceptance, target security/recovery evidence, end-to-end GoreeCloud Notify delivery, independent outage alerting, rollback, and explicit production approval.
+> **Current state:** advanced pre-production acceptance candidate. Uptime Kuma and ntfy were permanently retired from `goreecloud-vps-01` on September 18, 2026, but predecessor retirement does not automatically promote GoreeCloud Monitor to production authority. The native monitoring foundation, hardened production topology, PostgreSQL recovery tooling, imported paused monitor definitions, DNS and low-privilege Ping/ICMP support, migration/recovery evidence tooling, and GoreeCloud Notify producer candidate are implemented at source level. Production activation remains blocked on current target-host verification, reviewed monitor activation, live check acceptance, current Stable Glaze UI 1.5.1 adoption, platform-system acceptance, target security/recovery evidence, end-to-end GoreeCloud Notify delivery including durable-outbox restart/replay acceptance, independent outage alerting, rollback, and explicit production approval.
 
 ## What v0.1 includes
 
@@ -18,7 +18,7 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Push/heartbeat monitors with minimized unauthenticated acknowledgements and staff-only credential rendering
 - Unknown, Up, Down, Degraded, Paused, and Maintenance state handling
 - Failure and recovery thresholds with incident and recovery history
-- Authenticated least-privilege GoreeCloud Notify transition publishing candidate with raw-diagnostic minimization
+- Authenticated least-privilege GoreeCloud Notify transition publishing candidate with raw-diagnostic minimization and a PostgreSQL-backed durable outbox
 - Notification-integration posture that keeps GoreeCloud Notify activation fail-closed until its producer contract and target acceptance are approved
 - Read-only Manager summary API with bearer authentication
 - SSRF-aware target validation with explicit private-network allowlists
