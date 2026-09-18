@@ -28,7 +28,7 @@ A missing or empty transition identifier fails closed before the network request
 
 The current Python state-transition path emits DOWN, RECOVERED, DEGRADED, and controlled TLS-expiry events. The contract-level `HEARTBEAT_MISSED` class remains reserved for a future runtime distinction; a stale push heartbeat currently enters the normal DOWN transition path.
 
-The Python implementation is not a durable outbox. A process-loss window after Monitor state commit but before successful publication is still possible. See `docs/notify-runtime.md` for the exact durability, privacy, configuration, and acceptance boundary.
+The Python runtime now uses a PostgreSQL-backed durable outbox. Transition state, the exact minimized payload, and its opaque idempotency key are committed before network publication. Due records are replayed by the worker until accepted, while receiver-side idempotency protects the uncertain-response/restart path. This is durable at-least-once publication intent with idempotent convergence, not an exactly-once claim. See `docs/notify-runtime.md` for the exact durability, retention, privacy, configuration, and acceptance boundary.
 
 ## Authority and acceptance
 
