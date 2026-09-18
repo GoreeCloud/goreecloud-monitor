@@ -28,8 +28,7 @@ class Command(BaseCommand):
                 close_old_connections()
                 now = timezone.now()
                 monitor_ids = [m.id for m in Monitor.objects.filter(enabled=True).only("id", "last_checked_at", "interval_seconds") if m.is_due(now)]
-                if monitor_ids:
-                    asyncio.run(run_batch(monitor_ids))
+                asyncio.run(run_batch(monitor_ids))
                 if options["once"]:
                     break
                 time.sleep(settings.MONITOR_POLL_SECONDS)
