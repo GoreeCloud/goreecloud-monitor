@@ -5,23 +5,21 @@
   "platform_systems": {
     "glaze_ui": {
       "identity": "Glaze UI",
-      "required_version": "2.1",
-      "required_release": "2.1.0",
+      "required_version": "1.5",
+      "required_release": "1.5.1",
       "canonical_repository": "GoreeCloud/goreecloud-glaze-ui",
-      "canonical_release_tag": "v2.1.0",
-      "canonical_revision": "c49113eb8b93c267613fdf1bbca1f814495acad7",
-      "source_status": "adoption-candidate-source-validated",
+      "canonical_revision": "5b59d0e36950d737dba35b58ae58058684e0831b",
+      "source_status": "v1.5.1-source-adoption-candidate-acceptance-required",
       "evidence": [
         "templates/monitoring/base.html",
         "static/monitoring/css/glaze.css",
         "static/monitoring/css/glaze.accessibility.css",
         "static/monitoring/css/glaze.formfactors.css",
-        "static/monitoring/css/glaze.2.1.css",
-        "docs/glaze-ui-2.1-adoption.json",
-        "tests/test_glaze_ui.py",
-        "tests/test_glaze_ui_2_1_adoption.py"
+        "static/monitoring/css/glaze.1.5.1.css",
+        "static/monitoring/js/glaze.js",
+        "docs/glaze-ui-v1.5.1-adoption.json"
       ],
-      "blocker": "Monitor now carries an exact Glaze UI 2.1.0 Stable release anchor and a repository-local source adoption layer, but this is an Adoption Candidate rather than current-Stable conformance. Representative rendered task flows, browser/OS accessibility, Large Text and Touch Assistance resolution, Material Budget/performance evidence, applicable native/device acceptance, and central consumer-registry evidence remain required."
+      "blocker": "Glaze UI 1.5.1 source adoption is present, but representative browser/OS accessibility, large-text/reflow, responsive task continuity, application performance, visual review, rollback, governed consumer-registry, and production acceptance remain required."
     },
     "wardveil_security": {
       "identity": "Wardveil Security by GoreeCloud",
@@ -66,20 +64,55 @@
         ".github/workflows/rollback-compatibility.yml"
       ],
       "blocker": "Monitor declares an Everkeep adoption and fail-closed acceptance-policy candidate bound to the canonical Everkeep acceptance schema. Target-native database restore, recovery freshness, live rollback, and exact-revision Everkeep acceptance remain required before integration or readiness can be asserted."
+    },
+    "manager": {
+      "identity": "GoreeCloud Manager",
+      "source_status": "applicable-blocked",
+      "evidence": [],
+      "blocker": "Accepted GoreeCloud Manager operational visibility and administrative integration are not established."
+    },
+    "goreecloud_mesh": {
+      "identity": "GoreeCloud Mesh",
+      "source_status": "applicable-blocked",
+      "evidence": [],
+      "blocker": "Mesh registration, capabilities, event contracts, dependencies, and runtime acceptance are not established."
+    },
+    "goreecloud_identity": {
+      "identity": "GoreeCloud Identity",
+      "source_status": "applicable-blocked",
+      "evidence": [],
+      "blocker": "Monitor has local Django authentication but accepted GoreeCloud Identity integration is not established."
+    },
+    "goreecloud_policy": {
+      "identity": "GoreeCloud Policy",
+      "source_status": "applicable-blocked",
+      "evidence": [],
+      "blocker": "Accepted GoreeCloud Policy decision provenance, enforcement coordination, and runtime integration are not established."
+    },
+    "goreecloud_observability": {
+      "identity": "GoreeCloud Observability",
+      "source_status": "applicable-blocked",
+      "evidence": [
+        "src/monitoring/observability.py"
+      ],
+      "blocker": "Monitor has application-local logging/monitoring evidence, but accepted GoreeCloud Observability integration is not established."
     }
   },
   "production_blockers": [
-    "complete Glaze UI 2.1 Adoption Candidate rendered, accessibility, performance, native/device, and consumer-registry acceptance",
+    "Glaze UI 1.5.1 browser/OS accessibility, responsive task-continuity, application-performance, visual-review, rollback, consumer-registry, and production acceptance",
+    "GoreeCloud Manager integration and acceptance",
     "Privacy Shield runtime and central adapter acceptance",
+    "Wardveil Security target-runtime acceptance",
     "Everkeep target-native restore, recovery freshness, live rollback, and exact-revision acceptance",
+    "GoreeCloud Mesh integration and acceptance",
+    "GoreeCloud Identity integration and acceptance",
+    "GoreeCloud Policy integration and acceptance",
+    "GoreeCloud Observability integration and acceptance",
     "target database-native backup and isolated restore proof",
     "isolated persistent target deployment",
-    "repeated live Monitor-versus-Uptime-Kuma parallel comparison",
-    "controlled outage/recovery/TLS/maintenance/notification scenarios",
-    "live resolver-specific DNS acceptance",
-    "live low-privilege Ping/ICMP acceptance",
-    "target Wardveil/security validation",
-    "manual accessibility and product-identity acceptance",
-    "live rollback proof and explicit cutover approval"
+    "reviewed live monitor activation and representative HTTP/HTTPS, TCP, TLS, DNS, heartbeat, Ping/ICMP, maintenance, incident, and notification acceptance",
+    "end-to-end GoreeCloud Notify delivery including durable-outbox restart/replay acceptance",
+    "independent outage alerting",
+    "explicit production activation approval"
   ]
 }
