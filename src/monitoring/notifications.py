@@ -113,35 +113,6 @@ def _notify_endpoint(base_url: str) -> str:
     return f"https://{parsed.netloc}/api/v1/notifications"
 
 
-async def publish_transition(name: str, state: str, message: str) -> None:
-    """Publish a minimized transition through the dedicated ntfy publisher identity."""
-    configured = (settings.NTFY_BASE_URL, settings.NTFY_TOPIC, settings.NTFY_TOKEN)
-    if not any(configured):
-        return
-    if not all(configured):
-        log_event(logger, "integration.notification.refused", level=logging.ERROR, integration="ntfy", reason="partial_configuration", state=state)
-        return
-
-    endpoint = f"{settings.NTFY_BASE_URL}/{settings.NTFY_TOPIC}"
-    body = f"GoreeCloud Monitor — {name} — {state}\n{_public_transition_summary(state, message)}"
-    headers = {"Authorization": f"Bearer {settings.NTFY_TOKEN}"}
-    try:
-        async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
-            response = await client.post(endpoint, content=body.encode("utf-8"), headers=headers)
-            response.raise_for_status()
-    except Exception as exc:
-        log_event(
-            logger,
-            "integration.notification.failed",
-            level=logging.ERROR,
-            integration="ntfy",
-            state=state,
-            exception_type=type(exc).__name__,
-            traceback=safe_traceback(exc),
-        )
-        return
-    log_event(logger, "integration.notification.published", integration="ntfy", state=state)
-
 
 async def publish_notify_transition(
     name: str,
@@ -150,7 +121,7 @@ async def publish_notify_transition(
     *,
     transition_id: str,
 ) -> bool:
-    """Publish through GoreeCloud Notify when the parallel runtime feature gate is enabled."""
+    """Publish a minimized transition through the approved GoreeCloud Notify producer path."""
     if not getattr(settings, "MONITOR_NOTIFY_ENABLED", False):
         return False
 
