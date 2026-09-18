@@ -246,7 +246,7 @@ async def publish_notify_transition(
                 )
                 return False
     except Exception as exc:
-        # GoreeCloud Notify is a secondary, feature-gated migration path. An unexpected
+        # GoreeCloud Notify is a feature-gated production candidate. An unexpected
         # integration failure must be observable but must not crash the monitoring loop
         # after Monitor state and its CheckResult have already been committed.
         log_event(
