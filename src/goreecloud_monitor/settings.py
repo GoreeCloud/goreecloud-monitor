@@ -102,12 +102,9 @@ MONITOR_ALLOW_PUBLIC_TARGETS = env_bool("MONITOR_ALLOW_PUBLIC_TARGETS", True)
 MONITOR_ALLOWED_NETWORKS = env_list("MONITOR_ALLOWED_NETWORKS", "127.0.0.0/8,::1/128")
 MONITOR_ALLOW_LEGACY_PATH_HEARTBEATS = env_bool("MONITOR_ALLOW_LEGACY_PATH_HEARTBEATS", False)
 MANAGER_API_TOKEN = os.getenv("MANAGER_API_TOKEN", "")
-NTFY_BASE_URL = os.getenv("NTFY_BASE_URL", "").rstrip("/")
-NTFY_TOPIC = os.getenv("NTFY_TOPIC", "")
-NTFY_TOKEN = os.getenv("NTFY_TOKEN", "")
-
-# GoreeCloud Notify is a separate parallel publisher during migration. It remains disabled
-# unless an operator explicitly enables it and provisions the dedicated producer endpoint/token.
+# GoreeCloud Notify is the only supported Monitor notification publisher after ntfy retirement.
+# The integration remains disabled until an operator explicitly enables it with an accepted
+# Notify deployment and a dedicated least-privilege producer credential.
 MONITOR_NOTIFY_ENABLED = env_bool("MONITOR_NOTIFY_ENABLED", False)
 GOREECLOUD_NOTIFY_BASE_URL = os.getenv("GOREECLOUD_NOTIFY_BASE_URL", "").rstrip("/")
 GOREECLOUD_NOTIFY_TOKEN = os.getenv("GOREECLOUD_NOTIFY_TOKEN", "")
