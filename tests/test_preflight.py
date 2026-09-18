@@ -8,7 +8,7 @@ from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase, override_settings
 
 from monitoring.preflight import configuration_findings, runtime_findings
-from monitoring.models import Monitor
+from monitoring.models import Monitor, NotificationOutbox
 
 SAFE_SETTINGS = {
     "DEBUG": False, "DATABASES": {"default": {"ENGINE": "django.db.backends.postgresql"}}, "ALLOWED_HOSTS": ["monitor.example.test"],
@@ -56,6 +56,15 @@ class PreflightConfigurationTests(SimpleTestCase):
     def test_legacy_path_heartbeat_is_blocking(self): self.assertIn("legacy-path-heartbeat", {f.code for f in configuration_findings() if f.severity == "error"})
 
 class RuntimePreflightTests(TestCase):
+    def test_pending_notification_outbox_is_blocking(self):
+        NotificationOutbox.objects.create(
+            transition="DOWN",
+            payload={"source":"goreecloud-monitor","channel":"monitoring","title":"Outage","body":"Service: unavailable","severity":"critical"},
+            idempotency_key="gcm-v1-" + "a" * 64,
+        )
+        codes = {finding.code for finding in runtime_findings() if finding.severity == "error"}
+        self.assertIn("notification-outbox-pending", codes)
+
     def test_legacy_plaintext_push_credential_is_blocking(self):
         monitor = Monitor.objects.create(name="legacy", kind=Monitor.Kind.PUSH, interval_seconds=60)
         Monitor.objects.filter(pk=monitor.pk).update(heartbeat_token="legacy-reusable-secret")
