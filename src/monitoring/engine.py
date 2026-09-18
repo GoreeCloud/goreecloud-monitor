@@ -18,8 +18,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from .icmp import IcmpUnavailable, echo as icmp_echo
-from .models import CheckResult, Incident, MaintenanceWindow, Monitor
-from .notifications import publish_notify_transition
+from .models import CheckResult, Incident, MaintenanceWindow, Monitor, NotificationOutbox
+from .notifications import create_notify_idempotency_key, create_notify_payload
+from .outbox import drain_notification_outbox
 from .observability import log_event, safe_traceback
 from .validators import parse_dns_target, resolve_and_validate_network_target
 
@@ -210,6 +211,14 @@ def _apply_outcome(monitor_id: int, outcome: CheckOutcome, checked_at) -> tuple[
         Incident.objects.filter(monitor=monitor,ended_at__isnull=True).update(ended_at=checked_at,recovery_message=outcome.message[:500]); transition="RECOVERED" if next_state == Monitor.State.UP else "DEGRADED"
     elif next_state == Monitor.State.DEGRADED and previous_state != Monitor.State.DEGRADED: transition="DEGRADED"
     elif previous_state == Monitor.State.DEGRADED and next_state == Monitor.State.UP: transition="RECOVERED"
+    if transition:
+        transition_id = f"check-result:{monitor.id}:{check_result.id}:{checked_at.isoformat()}"
+        event_type, payload = create_notify_payload(monitor.name, transition, outcome.message)
+        NotificationOutbox.objects.create(
+            transition=transition,
+            payload=payload,
+            idempotency_key=create_notify_idempotency_key(event_type, transition_id),
+        )
     return transition, monitor.name, outcome.message, check_result.id
 
 
@@ -226,8 +235,6 @@ async def run_monitor(monitor_id: int) -> None:
     transition,name,message,check_result_id=await sync_to_async(_apply_outcome,thread_sensitive=True)(monitor_id,outcome,checked_at)
     if transition:
         log_event(logger,"monitor.state.transition",monitor_id=monitor_id,transition=transition,observed_state=outcome.observed_state,response_time_ms=round(outcome.response_time_ms,2) if outcome.response_time_ms is not None else None)
-        transition_id = f"check-result:{monitor_id}:{check_result_id}:{checked_at.isoformat()}"
-        await publish_notify_transition(name, transition, message, transition_id=transition_id)
 
 
 async def run_batch(monitor_ids: list[int]) -> None:
@@ -235,3 +242,4 @@ async def run_batch(monitor_ids: list[int]) -> None:
     async def bounded(monitor_id:int):
         async with semaphore: await run_monitor(monitor_id)
     await asyncio.gather(*(bounded(monitor_id) for monitor_id in monitor_ids))
+    await drain_notification_outbox()
