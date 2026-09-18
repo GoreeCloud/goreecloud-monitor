@@ -9,9 +9,9 @@
     "stable_eligible": false
   },
   "authority": {
-    "current_production_monitoring": "Uptime Kuma",
-    "migration_mode": "parallel-validation",
-    "retirement_requires_explicit_approval": true
+    "current_production_monitoring": "None; Uptime Kuma retired 2026-09-18 and GoreeCloud Monitor remains pending production acceptance",
+    "migration_mode": "post-retirement-replacement-activation",
+    "retirement_requires_explicit_approval": false
   },
   "required_source_evidence": [
     "src/monitoring/migration.py",
@@ -28,19 +28,19 @@
     "services/sentry-mcp/src/index.ts"
   ],
   "pre_cutover_live_gates": [
-    "fresh-sanitized-uptime-kuma-configuration-reconciliation",
+    "preserved-uptime-kuma-evidence-reconciliation",
     "target-postgresql-recovery-point-and-isolated-restore",
-    "reviewed-paused-import-and-conflict-free-parallel-source-identity",
+    "reviewed-paused-import-and-conflict-free-monitor-source-identity",
     "notify-producer-runtime-credential-and-delivery-acceptance",
     "notify-producer-replay-conflict-and-rollback-acceptance",
     "notify-crash-durability-requirement-decision",
-    "repeated-parallel-runtime-comparison",
+    "representative-live-monitor-validation-against-preserved-requirements",
     "controlled-down-recovered-tls-maintenance-notification-scenarios",
     "live-ping-icmp-and-resolver-specific-dns-validation",
     "target-wardveil-privacy-shield-everkeep-acceptance",
     "manual-glaze-ui-accessibility-acceptance",
-    "live-rollback-exercise",
-    "explicit-production-cutover-approval"
+    "monitor-rollback-and-recovery-exercise",
+    "explicit-production-activation-approval"
   ],
-  "revision_binding": "Migration evidence must bind to the exact reviewed Git commit used for the migration session."
+  "revision_binding": "Replacement-activation evidence must bind to the exact reviewed Git commit used for the production-acceptance session."
 }
