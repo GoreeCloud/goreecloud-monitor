@@ -1,10 +1,10 @@
 # Production Deployment Candidate
 
-This document describes the source-controlled production topology for GoreeCloud Monitor. It is an acceptance plan, not authorization to deploy or retire Uptime Kuma.
+This document defines the source-controlled production topology and target-acceptance boundary for GoreeCloud Monitor after the permanent retirement of Uptime Kuma and ntfy from `goreecloud-vps-01` on September 18, 2026.
+
+It is an acceptance plan, not authorization to deploy or promote Monitor to production authority.
 
 ## Intended host layout
-
-The target GoreeCloud model keeps active Compose and protected environment files in the service stack and PostgreSQL data in the authoritative Docker data structure:
 
 ```text
 /srv/docker/stacks/goreecloud-monitor/
@@ -23,71 +23,72 @@ The repository file `compose.production.yml` is the source deployment candidate.
 
 - `db` is attached only to the internal `backend` network and publishes no host port.
 - `migrate` is a one-shot database migration service attached only to `backend`.
-- `web` uses the immutable application image, a read-only root filesystem, dropped capabilities, `no-new-privileges`, and a bounded `/tmp` tmpfs. It joins only `backend` and the approved external Caddy network.
-- `worker` uses the same application image and application hardening. It joins `backend` for PostgreSQL and the approved proxy network for the monitoring/notification paths that are later authorized there.
-- No service uses privileged mode, host networking, a Docker socket, or an added Linux capability.
-- No Monitor application or PostgreSQL port is published on the host. Caddy is the intended private HTTPS gateway.
+- `web` uses the immutable application image, read-only root filesystem, dropped capabilities, `no-new-privileges`, and bounded `/tmp` tmpfs. It joins only `backend` and the approved external gateway network.
+- `worker` uses the same application image and hardening. It joins `backend` and only the approved network needed to reach monitored destinations and GoreeCloud Notify.
+- No service uses privileged mode, host networking, a Docker socket, or added Linux capabilities.
+- No Monitor or PostgreSQL port is published on the host. GoreeCloud Gateway is the intended private HTTPS ingress.
 
-The external proxy network name is supplied at deployment through `CADDY_NETWORK`; the source repository does not hard-code a future runtime network identity beyond the sanitized example. The deployment does not assign the old Uptime Kuma monitoring source address. Any later reuse of an address such as the previously modeled `172.19.0.50` must occur only after conflict-free live validation and an explicit cutover decision.
+The deployment must not reuse retired Uptime Kuma network identity merely for compatibility.
 
 ## Image identity
 
-`GOREECLOUD_MONITOR_IMAGE` must be a unique, traceable application image reference built from the accepted GoreeCloud Monitor revision. `latest` is rejected by the production contract validator.
+`GOREECLOUD_MONITOR_IMAGE` must be a unique traceable application image built from the accepted Monitor revision. `latest` is rejected.
 
-`POSTGRES_IMAGE` must contain an exact tag **and** digest, for example:
-
-```text
-postgres:17.10-bookworm@sha256:<verified digest>
-```
-
-Resolve and record the digest during the target acceptance procedure; do not copy the example placeholder into production.
+`POSTGRES_IMAGE` must use an exact tag and digest.
 
 ## Environment files
 
 Production uses three purpose-specific files:
 
-- `.env` — Compose interpolation values such as image references, protected file paths, persistent database path, and Caddy network name.
-- `monitor.env` — Django, Monitor worker, Manager, and ntfy application configuration.
+- `.env` — Compose interpolation values such as image references, protected file paths, persistent database path, and gateway network name.
+- `monitor.env` — Django, worker, platform integration, and GoreeCloud Notify producer configuration.
 - `database.env` — PostgreSQL database name, username, password, and port.
 
-The application services read `database.env` plus `monitor.env`; PostgreSQL reads only `database.env`. This avoids giving the database container unrelated Django or notification credentials and avoids duplicating the database password in multiple active files.
-
-Use `deploy/production-stack.env.example`, `deploy/monitor.env.example`, and `deploy/database.env.example` only as sanitized templates. Active files remain protected infrastructure configuration and must never enter source control.
+There is no supported ntfy runtime configuration after retirement.
 
 ## Static assets and schema migration
 
-Static assets are generated while the image is built. The application entrypoint performs no implicit migration or filesystem mutation.
-
-Schema migration is explicit through the one-shot `migrate` service. `web` and `worker` start only after that service exits successfully. A failed migration therefore blocks application startup rather than allowing a new application revision to run against an uncertain schema.
+Static assets are generated at image build time. Database migration is explicit through the one-shot `migrate` service. `web` and `worker` start only after migration succeeds.
 
 ## Source validation
 
-Resolve the production Compose file and run the repository validator:
+Resolve and validate the production Compose file:
 
 ```bash
 docker compose -f compose.production.yml config --format json \
   | python scripts/validate_production_compose.py
 ```
 
-The validator requires, among other invariants, no published ports, no privileged/host-network/device/Docker-socket access, no added capabilities, read-only application root filesystems, `cap_drop: ALL`, `no-new-privileges`, an internal database network, an external proxy network, an explicit PostgreSQL data bind mount, and a digest-pinned PostgreSQL image.
+The validator requires no published ports, no privileged/host-network/device/Docker-socket access, no added capabilities, read-only application root filesystems, `cap_drop: ALL`, `no-new-privileges`, an internal database network, the approved external gateway network, a persistent PostgreSQL bind mount, and a digest-pinned PostgreSQL image.
 
-## Target acceptance still required
+## Target acceptance required before activation
 
-A green source/CI production topology does not prove the target Infrastructure Services VM. Before deployment or cutover, separately verify:
+Before Monitor can become production monitoring authority, verify and record:
 
-1. the host's supported Docker Engine and Compose versions;
-2. the authoritative `/srv/docker/` paths, ownership, permissions, capacity, and backup scope;
-3. the exact Caddy network name and backend reachability;
-4. zero host-published Monitor/database ports after container creation;
-5. the selected private Monitor hostname and AdGuard Home rewrite;
-6. Caddy configuration validation, trusted certificate, private NetBird access, and denial from unauthorized sources;
-7. NetBird policies for the web path and every worker monitoring destination;
-8. the dedicated ntfy write-only publisher identity and ACL;
-9. target `targetpreflight` output;
-10. target PostgreSQL backup and successful isolated restoration;
-11. live Uptime Kuma export audit, paused import, manual resolution of warnings, and repeated parallel comparisons;
-12. controlled DOWN/RECOVERED, maintenance, TLS-warning, and notification tests;
-13. the unresolved ICMP/Ping coverage decision;
-14. explicit rollback and Uptime Kuma retirement approval.
+1. supported Docker Engine and Compose versions on `goreecloud-vps-01`;
+2. authoritative `/srv/docker/` paths, ownership, permissions, capacity, and backup scope;
+3. exact GoreeCloud Gateway network identity and backend reachability;
+4. zero host-published Monitor/database ports;
+5. the approved private Monitor hostname and private DNS record;
+6. Gateway configuration validation, trusted certificate, private access, and denial from unauthorized sources;
+7. NetBird policy for the web path and every worker monitoring destination;
+8. accepted GoreeCloud Notify deployment plus a dedicated least-privilege Monitor producer token;
+9. target `targetpreflight` output with no blocking findings;
+10. fresh PostgreSQL backup and successful isolated restoration against the exact candidate;
+11. reconciliation of preserved Uptime Kuma monitor definitions against services that are actually active now;
+12. representative HTTP/HTTPS, TCP, TLS, DNS, heartbeat, Ping/ICMP, maintenance, incident, DOWN, RECOVERED, DEGRADED, and TLS-expiry acceptance;
+13. durable notification outbox restart/replay proof using the same persisted payload and idempotency identity without duplicate fanout;
+14. independent outage alerting that does not depend entirely on the Monitor → Notify chain;
+15. current Glaze UI 1.5.1 and nine-system platform acceptance;
+16. rollback/recovery to a known-good Monitor release and database state;
+17. explicit production-activation approval.
 
-Until those items are evidenced, Uptime Kuma remains authoritative.
+## Uptime Kuma evidence boundary
+
+Uptime Kuma is retired. Preserved configuration, backup, and recovery artifacts may be used for requirement reconciliation, isolated reconstruction, or controlled comparison testing when authorized. They are not active production authority and are not an automatic rollback service.
+
+Restoring Uptime Kuma to production requires a separate explicit authorization.
+
+## Completion boundary
+
+A green source topology or passing target preflight does not by itself establish production authority. Monitor becomes production authority only after the applicable live target, recovery, notification, accessibility/platform, security, independent-alerting, and approval gates are complete and recorded.
