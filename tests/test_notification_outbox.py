@@ -40,6 +40,34 @@ class NotificationOutboxTests(TestCase):
         self.assertIsNone(self.item.delivered_at)
         self.assertEqual(self.item.attempt_count, 0)
 
+
+    @override_settings(
+        MONITOR_NOTIFY_ENABLED=False,
+        MONITOR_NOTIFICATION_OUTBOX_RETENTION_DAYS=30,
+    )
+    async def test_delivered_history_is_pruned_but_pending_records_are_preserved(self):
+        old = timezone.now() - timedelta(days=31)
+        await sync_to_async(NotificationOutbox.objects.filter(pk=self.item.pk).update)(
+            delivered_at=old,
+            created_at=old,
+        )
+        pending = await sync_to_async(NotificationOutbox.objects.create)(
+            transition="RECOVERED",
+            payload=_payload(),
+            idempotency_key="gcm-v1-" + "2" * 64,
+        )
+        await drain_notification_outbox()
+        self.assertFalse(
+            await sync_to_async(
+                NotificationOutbox.objects.filter(pk=self.item.pk).exists
+            )()
+        )
+        self.assertTrue(
+            await sync_to_async(
+                NotificationOutbox.objects.filter(pk=pending.pk).exists
+            )()
+        )
+
     @override_settings(MONITOR_NOTIFY_ENABLED=True)
     async def test_success_marks_record_delivered(self):
         publisher = AsyncMock(
