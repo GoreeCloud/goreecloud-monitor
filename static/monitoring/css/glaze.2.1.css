@@ -1,8 +1,9 @@
-/* GoreeCloud Monitor — Glaze UI 2.1.0 Adoption Candidate layer.
+/* HISTORICAL / NON-AUTHORITATIVE SOURCE ARTIFACT.
  *
- * This file deliberately layers the current Stable 2.1 contract over the
- * retained 1.x implementation while application-specific rendered and native
- * acceptance remains pending. It does not constitute a conformance claim.
+ * This file records a superseded GoreeCloud Monitor experiment that was
+ * labelled "Glaze UI 2.1.0". Current canonical Glaze UI Stable authority is
+ * 1.5.1, and the active Monitor shell must not load this stylesheet.
+ * Preserve only for source-history/audit context.
  */
 
 :root {
