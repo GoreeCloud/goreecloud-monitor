@@ -40,22 +40,19 @@ class EngineStateTests(TestCase):
         self.assertEqual(self.monitor.state, Monitor.State.UP)
         self.assertFalse(Incident.objects.filter(monitor=self.monitor, ended_at__isnull=True).exists())
 
-    async def test_transition_publishers_share_persisted_check_identity(self):
+    async def test_notify_publisher_uses_persisted_check_identity(self):
         self.monitor.failure_threshold = 1
         await sync_to_async(self.monitor.save)()
         outcome = CheckOutcome(False, Monitor.State.DOWN, 12.5, "failure")
-        ntfy_publish = AsyncMock()
         notify_publish = AsyncMock(return_value=True)
         with (
             patch("monitoring.engine.perform_check", new=AsyncMock(return_value=outcome)),
-            patch("monitoring.engine.publish_transition", new=ntfy_publish),
             patch("monitoring.engine.publish_notify_transition", new=notify_publish),
         ):
             await run_monitor(self.monitor.id)
 
         check_result = await sync_to_async(CheckResult.objects.get)(monitor_id=self.monitor.id)
         expected_transition_id = f"check-result:{self.monitor.id}:{check_result.id}:{check_result.checked_at.isoformat()}"
-        ntfy_publish.assert_awaited_once_with("service", "DOWN", "failure")
         notify_publish.assert_awaited_once_with(
             "service",
             "DOWN",
