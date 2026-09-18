@@ -28,19 +28,20 @@ jobs:
     env:
       PREVIOUS_CANDIDATE: e35ddda1fee65dda65b730c62cbb2414f7bf62d8
     steps:
-      - name: Checkout Ping candidate
+      - name: Checkout Monitor replacement candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Checkout frozen DNS predecessor
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.PREVIOUS_CANDIDATE }}
           path: previous
-      - name: Require only the intended Ping migration delta
+      - name: Require only the intended Ping and notification-outbox migration deltas
         shell: bash
         run: |
           set -euo pipefail
           test -f src/monitoring/migrations/0002_monitor_ping_kind.py
-          diff -ru --exclude=0002_monitor_ping_kind.py previous/src/monitoring/migrations src/monitoring/migrations
+          test -f src/monitoring/migrations/0003_notification_outbox.py
+          diff -ru             --exclude=0002_monitor_ping_kind.py             --exclude=0003_notification_outbox.py             previous/src/monitoring/migrations             src/monitoring/migrations
       - name: Build predecessor and candidate images
         run: |
           docker build --tag goreecloud-monitor:rollback-previous previous
@@ -72,7 +73,7 @@ jobs:
             goreecloud-monitor:rollback-previous \
             python manage.py shell -c \
             "from monitoring.models import Monitor; Monitor.objects.create(name='rollback-proof', kind='PUSH', interval_seconds=60, failure_threshold=1); print('predecessor state seeded')"
-      - name: Upgrade candidate and exercise Ping state
+      - name: Upgrade candidate and exercise Ping plus durable notification state
         shell: bash
         run: |
           set -euo pipefail
@@ -98,7 +99,7 @@ jobs:
             -e POSTGRES_PORT=5432 \
             goreecloud-monitor:rollback-candidate \
             python manage.py shell -c \
-            "from monitoring.models import Monitor; m=Monitor.objects.get(name='rollback-proof'); assert m.failure_threshold == 1; m.failure_threshold=2; m.save(update_fields=['failure_threshold','updated_at']); p=Monitor.objects.create(name='ping-rollback-proof',kind='PING',target='127.0.0.1',enabled=False,timeout_seconds=3); assert p.state == 'PAUSED'; print('candidate state and Ping definition verified')"
+            "from monitoring.models import Monitor, NotificationOutbox; m=Monitor.objects.get(name='rollback-proof'); assert m.failure_threshold == 1; m.failure_threshold=2; m.save(update_fields=['failure_threshold','updated_at']); p=Monitor.objects.create(name='ping-rollback-proof',kind='PING',target='127.0.0.1',enabled=False,timeout_seconds=3); assert p.state == 'PAUSED'; o=NotificationOutbox.objects.create(transition='DOWN',payload={'source':'goreecloud-monitor','channel':'monitoring','title':'Outage','body':'rollback proof','severity':'critical'},idempotency_key='gcm-v1-'+'b'*64); assert o.pk; print('candidate Ping and durable outbox state verified')"
       - name: Prepare database for predecessor rollback
         shell: bash
         run: |
@@ -114,7 +115,7 @@ jobs:
             -e POSTGRES_PORT=5432 \
             goreecloud-monitor:rollback-candidate \
             python manage.py shell -c \
-            "from monitoring.models import Monitor; deleted,_=Monitor.objects.filter(kind='PING').delete(); assert deleted >= 1; print('candidate-only Ping definitions removed before rollback')"
+            "from monitoring.models import Monitor, NotificationOutbox; deleted,_=Monitor.objects.filter(kind='PING').delete(); assert deleted >= 1; assert NotificationOutbox.objects.exists(); print('candidate-only Ping definitions removed and outbox presence verified before rollback')"
           docker run --rm --network host \
             -e DJANGO_DEBUG=true \
             -e DJANGO_SECRET_KEY=ci-rollback-only \
@@ -141,4 +142,4 @@ jobs:
             -e POSTGRES_PORT=5432 \
             goreecloud-monitor:rollback-previous \
             python manage.py shell -c \
-            "from monitoring.models import Monitor; m=Monitor.objects.get(name='rollback-proof'); assert m.failure_threshold == 2; assert not Monitor.objects.filter(kind='PING').exists(); print('migration-aware predecessor rollback compatibility verified')"
+            "from monitoring.models import Monitor; m=Monitor.objects.get(name='rollback-proof'); assert m.failure_threshold == 2; assert not Monitor.objects.filter(kind='PING').exists(); print('migration-aware predecessor rollback compatibility verified after outbox table rollback')"
