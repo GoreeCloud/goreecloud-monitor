@@ -87,7 +87,7 @@ def runtime_findings() -> list[PreflightFinding]:
     except Exception:
         add("error", "migration-check", "The target database migration state could not be verified.")
     if not Monitor.objects.exists():
-        add("warning", "no-monitors", "No monitor definitions exist yet; this is acceptable before migration import but not final parallel acceptance.")
+        add("warning", "no-monitors", "No monitor definitions exist yet; this is acceptable before replacement activation but not final production acceptance.")
     elif any(not heartbeat_token_is_digest(value) for value in Monitor.objects.filter(kind=Monitor.Kind.PUSH).values_list("heartbeat_token", flat=True)):
         add("error", "legacy-heartbeat-verifier", "One or more push monitors still store a legacy reusable heartbeat credential. Rotate them before target acceptance.")
     return findings
