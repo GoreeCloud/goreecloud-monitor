@@ -8,7 +8,7 @@ from django.conf import settings
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 
-from .models import Monitor, heartbeat_token_is_digest
+from .models import Monitor, NotificationOutbox, heartbeat_token_is_digest
 
 
 @dataclass(slots=True)
@@ -90,6 +90,9 @@ def runtime_findings() -> list[PreflightFinding]:
         add("warning", "no-monitors", "No monitor definitions exist yet; this is acceptable before replacement activation but not final production acceptance.")
     elif any(not heartbeat_token_is_digest(value) for value in Monitor.objects.filter(kind=Monitor.Kind.PUSH).values_list("heartbeat_token", flat=True)):
         add("error", "legacy-heartbeat-verifier", "One or more push monitors still store a legacy reusable heartbeat credential. Rotate them before target acceptance.")
+    pending_outbox = NotificationOutbox.objects.filter(delivered_at__isnull=True).count()
+    if pending_outbox:
+        add("error", "notification-outbox-pending", f"{pending_outbox} durable notification outbox record(s) remain undelivered; drain and verify them before target acceptance.")
     return findings
 
 
