@@ -6,7 +6,7 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 
 ## What v0.1 includes
 
-- Authenticated Glaze UI 1.0 operational shell with System, Light, and Dark appearance
+- Authenticated operational shell with System, Light, and Dark appearance; current Stable Glaze UI 1.5.1 adoption remains required
 - Wardveil Security by GoreeCloud protection identity with a staff-only, secret-free security-posture surface
 - Unique canonical GoreeCloud Monitor application icon with a complete local web/favicon family and shared Linux/AppImage and Android launcher identity inputs
 - Responsive Overview, Monitors, Incidents, Maintenance, Notifications, Security, Settings, authentication, and monitor-detail surfaces
@@ -28,14 +28,14 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Docker/Compose development topology and a separate hardened production deployment candidate
 - Maintenance windows, configurable check-history retention, and heartbeat-token rotation
 - Minimized health endpoints, CI, tests, backup/recovery documentation
-- Conservative Uptime Kuma/kuma-cli audit, paused-by-default import, definition comparison, and live state/latency comparison tooling
-- Sanitized documented-baseline reconciliation against live Uptime Kuma configuration evidence
-- Minimized read-only live Uptime Kuma runtime evidence collection
-- Repeated fail-closed parallel-comparison assessment with coverage-drift detection
+- Preserved Uptime Kuma/kuma-cli audit, paused-import, definition-comparison, and historical/recovery comparison tooling
+- Sanitized reconciliation tooling for preserved Uptime Kuma configuration evidence
+- Minimized Uptime Kuma runtime-evidence collection retained for authorized isolated recovery/testing
+- Fail-closed historical/comparison assessment with coverage-drift detection
 - Fail-closed production target preflight including Wardveil-aligned transport, cookie, and browser-policy gates
 - Production Compose contract validation with zero host-published application/database ports and a worker-only narrow ping-socket group policy
 - Migration-aware immediate-predecessor PostgreSQL application rollback proof for the Ping model-state migration
-- Cutover and rollback evidence requirements that preserve Uptime Kuma until explicit retirement approval
+- Recovery and activation evidence requirements that preserve predecessor evidence without restoring Uptime Kuma to production
 
 ## Glaze UI 1.5.1
 
@@ -108,7 +108,7 @@ Plain DNS monitor targets such as `example.com` use the Monitor worker's configu
 
 Before an explicit resolver is queried, all of its resolved addresses must satisfy the same `MONITOR_ALLOW_PUBLIC_TARGETS` and `MONITOR_ALLOWED_NETWORKS` destination policy used by other active network targets. The Uptime Kuma migration layer preserves supported `dns_resolve_server` configuration by converting it to this form instead of silently substituting Monitor's system resolver.
 
-This closes the source implementation gap for resolver-specific DNS semantics. The current live Uptime Kuma resolver-specific checks still require isolated-target execution and comparison before production acceptance. See `docs/dns-resolver-semantics.md`.
+This closes the source implementation gap for resolver-specific DNS semantics. Preserved resolver-specific requirements still require live Monitor execution and target-environment validation before production acceptance. See `docs/dns-resolver-semantics.md`.
 
 ## Ping / ICMP semantics
 
@@ -116,33 +116,18 @@ Ping is a first-class `PING` monitor. The worker resolves the configured hostnam
 
 Monitor deliberately does not add `CAP_NET_RAW`, privileged mode, host networking, the Docker socket, or a permanent probe sidecar to provide Ping. `python manage.py checkicmpruntime` exercises the same Ping path and is used by the disposable production-topology validation. Uptime Kuma `ping` definitions can now map to paused native `PING` definitions.
 
-This closes the source implementation blocker, not the live acceptance gate. The existing live Uptime Kuma Ping check still requires target-host execution from the approved parallel worker identity and comparison evidence before the review can be cleared. See `docs/icmp-ping.md`.
+This closes the source implementation blocker, not the live acceptance gate. The preserved VPS Ping requirement still requires target-host execution from the approved Monitor worker identity and acceptance evidence before production approval. See `docs/icmp-ping.md`.
 
 ## Live acceptance evidence
 
-Collect configuration evidence only through the approved administrative path from an exact reviewed checkout:
+Collect current Monitor target evidence only from an exact reviewed checkout and the approved administrative path. Any preserved Uptime Kuma evidence is historical/recovery material and may be used only for authorized reconstruction, requirement reconciliation, or isolated comparison testing.
 
-```bash
-python3 scripts/collect_live_acceptance_evidence.py
-```
+Current acceptance must be based on the actual Monitor target: reviewed definitions, worker execution, target responses, incidents, notification delivery, PostgreSQL recovery, private publication, runtime security, and explicit production approval.
 
-Collect minimized Uptime Kuma runtime state separately when a comparison observation is required:
+The legacy collection and comparison utilities remain documented for evidence continuity, but they do not require or authorize restoration of Uptime Kuma to production.
 
-```bash
-python3 scripts/collect_uptime_kuma_runtime_evidence.py
-```
+See `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, and `docs/notify-runtime.md`.
 
-Both collectors preserve a strict evidence boundary. Sanitized evidence remains Internal and must not be committed or published. Runtime comparison becomes meaningful only against a reviewed isolated Monitor target.
-
-Repeated parity observations can be aggregated with:
-
-```bash
-python manage.py assessparallel /path/to/observation-*.json --require-ready
-```
-
-A ready repeated series proves only the state/latency comparison contract for those observations. It does not replace controlled outage/recovery, TLS, maintenance, notification, DNS, Ping/ICMP, restore, rollback, Wardveil target validation, or cutover evidence.
-
-See `docs/live-acceptance-evidence.md` and `docs/uptime-kuma-runtime-evidence.md`.
 
 ## Retired Uptime Kuma evidence and Monitor activation
 
@@ -171,4 +156,4 @@ See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md
 
 ## License
 
-MIT. See `LICENSE`.
+Current GoreeCloud Monitor source is licensed under **GNU Affero General Public License v3.0 only (AGPL-3.0-only)**. Previously distributed copies that were released under the MIT License retain the permissions already granted to those copies. See `LICENSE` and `LICENSE-NOTICE.md`.
