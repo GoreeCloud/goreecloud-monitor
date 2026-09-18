@@ -15,6 +15,15 @@ from .observability import log_event
 logger = logging.getLogger("monitoring.access")
 
 
+def _prune_delivered_outbox(retention_days: int) -> int:
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    deleted, _ = NotificationOutbox.objects.filter(
+        delivered_at__isnull=False,
+        delivered_at__lt=cutoff,
+    ).delete()
+    return int(deleted)
+
+
 def _pending_outbox_ids(limit: int) -> list[int]:
     now = timezone.now()
     return list(
@@ -79,7 +88,23 @@ def _record_publish_result(outbox_id: int, result: NotifyPublishResult) -> None:
 
 
 async def drain_notification_outbox(limit: int = 100) -> int:
-    """Attempt due persisted Notify deliveries and return the delivered record count."""
+    """Prune delivered history, attempt due Notify deliveries, and return delivered count."""
+    retention_days = int(
+        getattr(settings, "MONITOR_NOTIFICATION_OUTBOX_RETENTION_DAYS", 30)
+    )
+    pruned = await sync_to_async(
+        _prune_delivered_outbox,
+        thread_sensitive=True,
+    )(retention_days)
+    if pruned:
+        log_event(
+            logger,
+            "integration.notification.outbox_pruned",
+            integration="goreecloud-notify",
+            records=pruned,
+            retention_days=retention_days,
+        )
+
     if not getattr(settings, "MONITOR_NOTIFY_ENABLED", False):
         return 0
 
