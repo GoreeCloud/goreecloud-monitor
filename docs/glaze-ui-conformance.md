@@ -1,62 +1,64 @@
-# GoreeCloud Monitor — Glaze UI 2.1 Adoption Candidate
+# GoreeCloud Monitor — Glaze UI 1.5.1 consumer adoption record
 
-## Status
+## Current authority
 
-- Required current Stable design-system release: **Glaze UI 2.1.0**
-- Canonical source: `GoreeCloud/goreecloud-glaze-ui`
-- Stable release tag: `v2.1.0`
-- Stable promotion revision: `c49113eb8b93c267613fdf1bbca1f814495acad7`
-- Repository status: **Adoption Candidate**
-- Current-Stable conformance claim: **false**
-- Production Stable eligibility from this gate: **false**
+The current official Stable GoreeCloud design-system target is **Glaze UI 1.5.1** from `GoreeCloud/goreecloud-glaze-ui`.
 
-Monitor now carries a repository-local Glaze UI 2.1 source adoption layer. That source work is migration evidence; it is not a substitute for application-specific rendered, browser/OS accessibility, performance, native/device, or human Visual Excellence acceptance.
+Authoritative shared records include:
 
-The previous 1.0/1.4 source and gate records remain in the repository as historical migration and audit evidence only. They no longer define the active consumer target.
+- `VERSION` = `1.5.1`;
+- `GLAZE_UI_V1_5.md`;
+- `contracts/v1.5.1/stable-scope.json`;
+- `acceptance/v1.5.1-stable.md`;
+- `consumers/registry.json`.
 
-## 2.1 material and interaction mapping
+The reviewed V1.5 implementation anchor is `ee1032a0822ab8e103f8afe48e5c1859fde65cc9`; the V1.5.1 source-qualification anchor is `5b59d0e36950d737dba35b58ae58058684e0831b`.
 
-Monitor preserves its successful operational information architecture while adopting the current Stable material hierarchy:
+Monitor is explicitly listed in the canonical consumer registry as **adoption-required** for 1.5.1.
 
-**Canvas → Surface → Soft Glaze → Glaze → Deep Glaze → Live Glaze**
+## Superseded 2.1 record
 
-Durable reading and operational content remain solid by default. Glazed material is bounded to navigation, controls, transient interaction, overlays, and live/attention-priority interaction chrome. The migration does not turn monitoring state into decoration and does not replace producer-authoritative service, security, privacy, continuity, identity, or mesh state.
+Monitor previously carried a repository-local "Glaze UI 2.1.0 Adoption Candidate" record and active 2.1-labelled CSS. Current canonical Glaze UI has no authoritative `v2.1.0` Stable scope or acceptance record, and its current Stable authority remains 1.5.1.
 
-The repository-local 2.1 bridge is `static/monitoring/css/glaze.2.1.css`. Existing `glaze.css`, accessibility, form-factor, staff-administration, and Wardveil presentation layers remain implementation inputs beneath that versioned bridge rather than being falsely relabeled as independently accepted 2.1 implementations.
+The old `docs/glaze-ui-2.1-adoption.json` and `static/monitoring/css/glaze.2.1.css` are therefore historical/non-authoritative migration provenance only. They must not define current consumer state.
 
-## Accessibility and density
+## Current source adoption
 
-The 2.1 source layer raises the general effective target floor to **48 CSS pixels** and preserves the **56 CSS pixel** far-view floor. It includes an explicit **56 CSS pixel Touch Assistance** override, an explicit Large Text rendering hook that prevents Compact density from remaining authoritative when readable reflow is required, and Solid material fallbacks for reduced-transparency, increased-contrast, and forced-colors states.
+The active Monitor shell now loads `static/monitoring/css/glaze.1.5.1.css` and declares Glaze UI 1.5.1 as a **source-adoption candidate**.
 
-The existing Monitor accessibility layers continue to provide visible focus, reduced-motion behavior, reduced-transparency fallbacks, increased-contrast behavior, forced-colors handling, skip navigation, safe-area-aware composition, and no-backdrop-filter fallbacks.
+The browser presentation adapter in `static/monitoring/js/glaze.js` resolves only bounded local presentation context:
 
-Source hooks do not prove platform preference detection or complete 200% text reflow. Those behaviors remain acceptance gates and must be verified in representative browser/OS and applicable native contexts before conformance can be claimed.
+- single / stacked / split pane mode from viewport width;
+- compact / standard / comfortable control density from viewport and large-text state;
+- Solid Accessible material fallback for Reduced Transparency, increased contrast, and Forced Colors;
+- Reduced Motion presentation from the browser accessibility preference;
+- exact 1.5.1 source identity and presentation-only authority metadata.
 
-## Form factors
+The resolver does not infer authorization, grant permission, change monitoring state, execute fallback actions, redefine Wardveil Security/Privacy Shield/Everkeep/Identity/Policy/Observability truth, or manufacture production acceptance.
 
-Monitor retains the existing Mobile, Tablet, Desktop, Wide, and TV/far-view composition foundations while migrating their shared target and density semantics to the 2.1 contract. Width remains only one adaptation signal; supported production contexts must still be validated for actual input method, viewing distance, text scale, focus behavior, safe areas, and task continuity.
+## Preserved useful source work
 
-## Platform authority boundaries
+Useful material, target-floor, form-factor, and accessibility work from earlier Monitor source remains preserved where compatible:
 
-Glaze UI standardizes presentation only. Monitor continues to treat the following systems as authoritative for their own state:
+- 48px ordinary target floor;
+- 56px Touch Assistance / far-view floor;
+- Canvas → Surface → Soft Glaze → Glaze → Deep Glaze → Live Glaze semantic material vocabulary;
+- Reduced Transparency, Reduced Motion, increased contrast, and Forced Colors fallback behavior;
+- mobile/tablet/desktop/far-view composition foundations.
 
-- **Wardveil Security** for security/protection state and security evidence.
-- **Privacy Shield** for privacy-control state and privacy evidence.
-- **Everkeep** for continuity/recovery state and evidence.
-- **GoreeCloud Identity** for identity/authentication state where integrated.
-- **GoreeCloud Mesh** for coordination/connectivity state where integrated.
-- **GoreeCloud Notify** for notification-delivery authority where the Monitor producer adapter is used.
+These source behaviors still require application-specific acceptance.
 
-A local style, cached value, migration fixture, or simulated state must never be presented as proof that one of these platform systems executed successfully.
+## Remaining acceptance
 
-## Fail-closed evidence
+Monitor must remain nonconformant and production-ineligible from this gate until applicable exact-revision evidence exists for:
 
-`docs/glaze-ui-2.1-adoption.json` is the active machine-readable adoption ledger. It pins the exact current Stable release, records source-backed gates, and keeps unresolved gates explicit. `tests/test_glaze_ui_2_1_adoption.py` verifies the source target, exact release provenance, target floors, material hierarchy, accessibility hooks, platform-authority boundary, and fail-closed production posture.
+- representative browser/OS accessibility;
+- large-text/reflow behavior;
+- representative responsive task continuity;
+- application-specific performance budget;
+- visual-excellence review;
+- known-good rollback;
+- governed consumer-registry acceptance;
+- production approval.
 
-`docs/glaze-ui-1.4-gates.json` remains historical evidence only.
-
-## Remaining acceptance before a current-Stable claim
-
-Monitor must still complete representative rendered task-flow review; browser/OS keyboard, pointer, touch, reduced-motion, reduced-transparency, increased-contrast, forced-colors, 200% Large Text, and Touch Assistance acceptance; application-specific Material Budget/performance evidence; applicable native/package/device acceptance; human Visual Excellence review; and central consumer-registry evidence.
-
-Until those gates are complete, the truthful status is **Glaze UI 2.1 Adoption Candidate**, not `aligned-current-stable` and not production-accepted conformance.
+Shared Glaze UI Stable status never automatically grants Monitor Stable or production status.
