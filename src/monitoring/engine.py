@@ -19,7 +19,7 @@ from django.utils import timezone
 
 from .icmp import IcmpUnavailable, echo as icmp_echo
 from .models import CheckResult, Incident, MaintenanceWindow, Monitor
-from .notifications import publish_notify_transition, publish_transition
+from .notifications import publish_notify_transition
 from .observability import log_event, safe_traceback
 from .validators import parse_dns_target, resolve_and_validate_network_target
 
@@ -227,10 +227,7 @@ async def run_monitor(monitor_id: int) -> None:
     if transition:
         log_event(logger,"monitor.state.transition",monitor_id=monitor_id,transition=transition,observed_state=outcome.observed_state,response_time_ms=round(outcome.response_time_ms,2) if outcome.response_time_ms is not None else None)
         transition_id = f"check-result:{monitor_id}:{check_result_id}:{checked_at.isoformat()}"
-        await asyncio.gather(
-            publish_transition(name,transition,message),
-            publish_notify_transition(name,transition,message,transition_id=transition_id),
-        )
+        await publish_notify_transition(name, transition, message, transition_id=transition_id)
 
 
 async def run_batch(monitor_ids: list[int]) -> None:
