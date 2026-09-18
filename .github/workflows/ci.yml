@@ -104,9 +104,9 @@ jobs:
           DJANGO_SECURE_SSL_REDIRECT: "true"
           DJANGO_HSTS_SECONDS: "31536000"
           MONITOR_ALLOWED_NETWORKS: 10.20.30.0/24,fd00:1234::/64
-          NTFY_BASE_URL: http://ntfy:80
-          NTFY_TOPIC: goreecloud-uptime
-          NTFY_TOKEN: ci-write-only-publisher-token
+          MONITOR_NOTIFY_ENABLED: "true"
+          GOREECLOUD_NOTIFY_BASE_URL: https://notify.example.invalid
+          GOREECLOUD_NOTIFY_TOKEN: ci-producer-token
           MANAGER_API_TOKEN: ci-manager-token
         run: python manage.py targetpreflight --json
       - name: Create logical PostgreSQL backup
@@ -233,9 +233,12 @@ jobs:
           MONITOR_ALLOW_PUBLIC_TARGETS=true
           MONITOR_ALLOWED_NETWORKS=127.0.0.0/8,::1/128
           MANAGER_API_TOKEN=
-          NTFY_BASE_URL=
-          NTFY_TOPIC=
-          NTFY_TOKEN=
+          MONITOR_NOTIFY_ENABLED=true
+          GOREECLOUD_NOTIFY_BASE_URL=https://notify.example.invalid
+          GOREECLOUD_NOTIFY_TOKEN=ci-producer-token
+          MONITOR_NOTIFY_MAX_ATTEMPTS=1
+          MONITOR_NOTIFY_RETRY_BACKOFF_SECONDS=0
+          MONITOR_NOTIFY_TIMEOUT_SECONDS=2
           EOF
           echo "GOREECLOUD_MONITOR_IMAGE=goreecloud-monitor:deployment-ci" >> "$GITHUB_ENV"
           echo "MONITOR_DB_ENV_FILE=$RUNNER_TEMP/database.env" >> "$GITHUB_ENV"
