@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from monitoring.engine import CheckOutcome, _apply_outcome, check_dns, check_push, run_monitor
-from monitoring.models import CheckResult, Incident, Monitor
+from monitoring.models import CheckResult, Incident, Monitor, NotificationOutbox
 
 
 class EngineStateTests(TestCase):
@@ -40,25 +40,30 @@ class EngineStateTests(TestCase):
         self.assertEqual(self.monitor.state, Monitor.State.UP)
         self.assertFalse(Incident.objects.filter(monitor=self.monitor, ended_at__isnull=True).exists())
 
-    async def test_notify_publisher_uses_persisted_check_identity(self):
+    async def test_transition_persists_exact_notify_outbox_record(self):
         self.monitor.failure_threshold = 1
         await sync_to_async(self.monitor.save)()
         outcome = CheckOutcome(False, Monitor.State.DOWN, 12.5, "failure")
-        notify_publish = AsyncMock(return_value=True)
-        with (
-            patch("monitoring.engine.perform_check", new=AsyncMock(return_value=outcome)),
-            patch("monitoring.engine.publish_notify_transition", new=notify_publish),
-        ):
+        with patch("monitoring.engine.perform_check", new=AsyncMock(return_value=outcome)):
             await run_monitor(self.monitor.id)
 
         check_result = await sync_to_async(CheckResult.objects.get)(monitor_id=self.monitor.id)
-        expected_transition_id = f"check-result:{self.monitor.id}:{check_result.id}:{check_result.checked_at.isoformat()}"
-        notify_publish.assert_awaited_once_with(
-            "service",
-            "DOWN",
-            "failure",
-            transition_id=expected_transition_id,
+        outbox = await sync_to_async(NotificationOutbox.objects.get)()
+        self.assertEqual(outbox.transition, "DOWN")
+        self.assertEqual(outbox.payload["source"], "goreecloud-monitor")
+        self.assertEqual(outbox.payload["channel"], "monitoring")
+        self.assertIn("service", outbox.payload["body"])
+        self.assertTrue(outbox.idempotency_key.startswith("gcm-v1-"))
+        expected_transition_id = (
+            f"check-result:{self.monitor.id}:{check_result.id}:{check_result.checked_at.isoformat()}"
         )
+        from monitoring.notifications import create_notify_idempotency_key
+
+        self.assertEqual(
+            outbox.idempotency_key,
+            create_notify_idempotency_key("DOWN", expected_transition_id),
+        )
+
 
     async def test_push_monitor_detects_stale_heartbeat(self):
         self.monitor.last_heartbeat_at = timezone.now() - timedelta(seconds=100)
