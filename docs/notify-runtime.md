@@ -27,6 +27,7 @@ Bounded retry controls:
 - `MONITOR_NOTIFY_MAX_ATTEMPTS` — default 3, bounded to 1–5.
 - `MONITOR_NOTIFY_RETRY_BACKOFF_SECONDS` — default 0.25 seconds.
 - `MONITOR_NOTIFY_TIMEOUT_SECONDS` — default 10 seconds, bounded to 1–30 seconds.
+- `MONITOR_NOTIFICATION_OUTBOX_RETENTION_DAYS` — default 30 days, bounded to 1–365; applies only to already-delivered outbox metadata, never pending delivery records.
 
 The token belongs only in protected runtime configuration. It must not be committed, rendered in UI, placed in notification content, written to evidence artifacts, or emitted in logs.
 
