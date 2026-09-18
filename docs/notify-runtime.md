@@ -80,13 +80,15 @@ The runtime fails closed on:
 
 Transport failures, HTTP `429`, and HTTP `5xx` responses may be retried up to the configured bounded attempt count. Every retry reuses the same payload and idempotency key. Redirects and environment proxy/credential inheritance are disabled.
 
-## Durability limitation
+## Durable outbox
 
-This source layer provides bounded **in-process** retry only. It is not a durable notification outbox.
+Monitor now persists a `NotificationOutbox` record in the **same PostgreSQL transaction** that commits a transition-producing CheckResult and incident state. The record stores the minimized exact Notify payload and its opaque versioned idempotency key before any network delivery is attempted.
 
-Monitor commits state and the CheckResult before publication begins. If the worker process or host terminates after that commit but before Notify publication is confirmed, no persisted pending-publication record currently guarantees later replay.
+The worker drains due outbox records on every cycle, including cycles with no due monitors. A failed delivery remains pending with persisted attempt state and bounded exponential backoff. A successful first write or receiver-confirmed replay marks the record delivered. Target preflight fails closed while any durable notification record remains undelivered.
 
-Therefore this implementation must not be described as exactly-once delivery or crash-durable at-least-once delivery. Production acceptance must explicitly decide whether a durable outbox/replay mechanism is mandatory; until that decision and the remaining live acceptance gates are closed, this remains a release-candidate integration.
+This closes the source-level process-loss gap that existed when publication began only after the database commit. It does **not** establish exactly-once delivery. A process may still terminate after Notify accepted a request but before Monitor records success; recovery therefore relies on replaying the same persisted idempotency key and on Notify's accepted idempotency contract to converge safely.
+
+Production acceptance still requires live proof that a pending record survives worker/container restart, is replayed with the same payload/key, converges without duplicate notification fanout, and remains recoverable through PostgreSQL backup/restore. Delivered-outbox retention must also remain bounded by the approved production retention design.
 
 ## Observability and failure isolation
 
@@ -105,7 +107,8 @@ Production activation remains blocked until applicable evidence exists for:
 - controlled retry replay returning `200` with `Idempotency-Replayed: true` and no duplicate fanout;
 - controlled changed-payload/same-key `409` rejection;
 - representative DOWN, RECOVERED, DEGRADED, and TLS-expiry delivery and administrator receipt;
-- an explicit decision on crash-durable outbox/replay semantics;
+- live worker/container restart proof for the durable outbox, including same-key replay and no duplicate fanout;
+- approved bounded retention for delivered outbox records;
 - independent outage alerting that does not depend entirely on the Monitor → Notify chain;
 - target backup/restore, live check, Wardveil Security, Privacy Shield, Everkeep, current Glaze UI, rollback, and production-approval evidence.
 
