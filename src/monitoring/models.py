@@ -163,6 +163,29 @@ class Incident(models.Model):
         return self.ended_at is None
 
 
+class NotificationOutbox(models.Model):
+    """Durable exact-payload delivery record for GoreeCloud Notify transitions."""
+
+    transition = models.CharField(max_length=16)
+    payload = models.JSONField()
+    idempotency_key = models.CharField(max_length=80, unique=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    next_attempt_at = models.DateTimeField(default=timezone.now, db_index=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    attempt_count = models.PositiveIntegerField(default=0)
+    delivered_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    last_failure_reason = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(
+                fields=["delivered_at", "next_attempt_at"],
+                name="notify_outbox_due_idx",
+            )
+        ]
+
+
 class MaintenanceWindow(models.Model):
     name = models.CharField(max_length=160)
     starts_at = models.DateTimeField()
