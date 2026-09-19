@@ -184,6 +184,27 @@ class ViewTests(TestCase):
         self.assertEqual(first.json()["event_id"], event_id)
         self.assertEqual(JobEvent.objects.filter(monitor=monitor).count(), 1)
 
+    def test_job_success_replay_treats_omitted_and_zero_exit_code_as_equivalent(self):
+        monitor = Monitor.objects.create(name="success-replay-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        raw = monitor.issue_heartbeat_token()
+        event_id = str(uuid4())
+        first = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "success", "event_id": event_id},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        replay = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "success", "event_id": event_id, "exit_code": 0},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(replay.status_code, 200)
+        self.assertTrue(replay.json()["replayed"])
+        self.assertEqual(JobEvent.objects.filter(monitor=monitor).count(), 1)
+
     def test_job_signal_conflicting_idempotency_replay_is_rejected(self):
         monitor = Monitor.objects.create(name="conflicting-replay-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
         raw = monitor.issue_heartbeat_token()
