@@ -44,7 +44,7 @@ A `start` event without a `run_id` receives a generated run identifier in the re
 - A recent successful completion keeps the job healthy until the next deadline.
 - A reported failure produces a failed Down observation and enters the ordinary Monitor failure-threshold/incident pipeline; the configured failure threshold controls when the monitor state transitions to Down.
 - A started job is considered running.
-- If `job_max_runtime_seconds` is non-zero and a started job exceeds that limit, Monitor evaluates it as Down.
+- A started job must complete within its runtime limit. An explicit non-zero `job_max_runtime_seconds` sets that limit; when it is `0`, Monitor uses `job_grace_seconds` as the started-job runtime limit. Exceeding the limit evaluates the job as Down.
 - If the required simple or cron completion does not arrive before the configured grace deadline, Monitor evaluates it as Down.
 - Recovery uses the existing Monitor recovery-threshold and incident-closing logic.
 
