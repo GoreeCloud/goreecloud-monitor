@@ -5,7 +5,7 @@
 <section class="panel section-panel">
   <div class="callout"><strong>Store this credential before continuing</strong><p>Place it only in the approved job runner's protected secret store. Do not put it in URLs, documentation, screenshots, shell history, or ordinary logs. If it is lost, rotate it.</p></div>
   <div class="field-stack"><label>Bearer credential<input type="text" readonly value="{{ job_token }}" autocomplete="off" spellcheck="false"></label><label>Job signal endpoint<input type="text" readonly value="{{ job_endpoint }}" autocomplete="off" spellcheck="false"></label></div>
-  <div class="callout"><strong>Submission contract</strong><p>Send an HTTPS POST with <code>Authorization: Bearer &lt;credential&gt;</code> and JSON containing <code>event</code> as <code>start</code>, <code>success</code>, <code>failure</code>, or <code>log</code>. Optional <code>run_id</code> correlates a run.</p></div>
+  <div class="callout"><strong>Submission contract</strong><p>Send an HTTPS POST with <code>Authorization: Bearer &lt;credential&gt;</code> and JSON containing <code>event</code> as <code>start</code>, <code>success</code>, <code>failure</code>, or <code>log</code>. Optional <code>run_id</code> correlates a run. For retry-safe delivery, send a stable UUID <code>event_id</code> for each logical signal. The endpoint enforces a per-monitor rate limit and returns retry guidance when exceeded.</p></div>
   <div class="actions"><a class="button primary" href="{% url 'monitoring:monitor-detail' monitor.pk %}">I stored the credential</a></div>
 </section>
 {% endblock %}
