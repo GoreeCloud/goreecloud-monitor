@@ -47,18 +47,22 @@ The current source must support representative monitoring for:
 - maintenance windows;
 - incident creation, update, recovery, and history.
 
-The current source has generic push/heartbeat monitoring, but it does **not yet** implement full Healthchecks-style scheduled-job monitoring. The following scheduled-job scope is planned and must remain represented as planned until verified in source and tests:
+The current source implements the first scheduled-job/dead-man monitoring foundation. It does **not yet** provide complete Healthchecks-style parity. Current source support includes:
 
 - first-class Scheduled Job / Dead-Man monitor definitions;
 - simple period + grace schedules;
 - cron expressions with explicit time-zone behavior;
+- authenticated start, success, failure/exit-status, and bounded log/event signals;
+- rotatable per-check signal credentials stored only as one-way verifiers;
+- run IDs/correlation, duration history, execution-overrun detection, missed-completion detection, and event history;
+- mapping missed or failed jobs into the existing Monitor Down/incident/Notify transition pipeline.
+
+The following scheduled-job scope remains planned or partial:
+
 - systemd OnCalendar compatibility when justified;
-- start, success, failure/exit-status, and bounded log/event signals;
-- rotatable per-check signal credentials and rate limiting;
-- run IDs/correlation and duration history;
-- execution-overrun and missed-completion detection;
-- explicit Started/Late/Down/Recovered job semantics mapped into the Monitor state/incident model;
-- bounded job-event history and retention;
+- signal-ingestion rate limiting and stronger replay/idempotency controls;
+- richer explicit Started/Late presentation beyond the existing Up/Down incident mapping;
+- dedicated job-event retention and recovery controls;
 - tags/labels and collections/projects;
 - scoped management API support for job checks;
 - controlled optional auto-provisioning;
@@ -167,7 +171,7 @@ Production authority remains blocked until applicable evidence verifies:
 - target PostgreSQL backup and isolated restore;
 - reviewed active monitor definitions;
 - private Gateway/DNS/NetBird publication;
-- representative HTTP/HTTPS, TCP, TLS, DNS, heartbeat, and Ping/ICMP behavior;
+- representative HTTP/HTTPS, TCP, TLS, DNS, heartbeat, Ping/ICMP, and scheduled-job behavior;
 - incident/maintenance/state-transition behavior;
 - accepted GoreeCloud Notify deployment and dedicated producer identity;
 - durable outbox restart/replay with no duplicate fanout;
