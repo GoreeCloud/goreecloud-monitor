@@ -57,6 +57,50 @@ class MonitorModelTests(TestCase):
         self.assertNotEqual(monitor.heartbeat_token, raw)
         self.assertEqual(monitor.heartbeat_token, hash_heartbeat_token(raw))
 
+
+    def test_scheduled_job_accepts_simple_interval_configuration(self):
+        monitor = Monitor(
+            name="nightly-backup",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_schedule_mode=Monitor.JobScheduleMode.SIMPLE,
+            job_grace_seconds=300,
+            job_max_runtime_seconds=1800,
+        )
+        monitor.full_clean(exclude=["heartbeat_token"])
+
+    def test_scheduled_job_accepts_strict_cron_and_timezone(self):
+        monitor = Monitor(
+            name="cron-backup",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.CRON,
+            job_cron_expression="0 3 * * *",
+            job_timezone="America/Chicago",
+        )
+        monitor.full_clean(exclude=["heartbeat_token"])
+
+    def test_scheduled_job_rejects_invalid_cron_or_timezone(self):
+        bad_cron = Monitor(
+            name="bad-cron",
+            kind=Monitor.Kind.JOB,
+            job_schedule_mode=Monitor.JobScheduleMode.CRON,
+            job_cron_expression="0 0 31 2 *",
+            job_timezone="UTC",
+        )
+        with self.assertRaises(ValidationError):
+            bad_cron.full_clean(exclude=["heartbeat_token"])
+
+        bad_zone = Monitor(
+            name="bad-zone",
+            kind=Monitor.Kind.JOB,
+            job_schedule_mode=Monitor.JobScheduleMode.CRON,
+            job_cron_expression="0 3 * * *",
+            job_timezone="Mars/Olympus",
+        )
+        with self.assertRaises(ValidationError):
+            bad_zone.full_clean(exclude=["heartbeat_token"])
+
     def test_disabled_monitor_is_paused(self):
         monitor = Monitor.objects.create(name="paused", kind=Monitor.Kind.PUSH, enabled=False)
         self.assertEqual(monitor.state, Monitor.State.PAUSED)
