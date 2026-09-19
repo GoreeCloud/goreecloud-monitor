@@ -4,7 +4,7 @@
 **Document External Version Number:** 1.0.0  
 **Status:** Repository user manual for the current pre-production source  
 **As of:** September 18, 2026  
-**Central manual status:** No dedicated central `User Manual — Monitor` record was found during the September 18, 2026 repository-control reconciliation.
+**Central manual:** `GoreeCloud/User Manuals/User Manual — GoreeCloud Monitor.docx`
 
 ## Before using Monitor
 
