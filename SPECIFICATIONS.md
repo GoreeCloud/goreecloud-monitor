@@ -52,6 +52,7 @@ The current source implements the first scheduled-job/dead-man monitoring founda
 - first-class Scheduled Job / Dead-Man monitor definitions;
 - simple period + grace schedules;
 - cron expressions with explicit time-zone behavior;
+- native systemd OnCalendar expressions, including multiple newline-separated calendar expressions and embedded time-zone suffixes where supported by the pinned parser;
 - authenticated start, success, failure/exit-status, and bounded log/event signals;
 - rotatable per-check signal credentials stored only as one-way verifiers;
 - run IDs/correlation, duration history, execution-overrun detection, missed-completion detection, and event history;
@@ -61,7 +62,6 @@ The current source implements the first scheduled-job/dead-man monitoring founda
 
 The following scheduled-job scope remains planned or partial:
 
-- systemd OnCalendar compatibility when justified;
 - tags/labels and collections/projects;
 - scoped management API support for job checks;
 - controlled optional auto-provisioning;
