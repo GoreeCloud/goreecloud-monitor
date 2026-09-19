@@ -347,8 +347,12 @@ def job_signal(request: HttpRequest) -> JsonResponse:
     if event_type not in {value for value, _ in JobEvent.EventType.choices}:
         return JsonResponse({"detail": "Unsupported job event"}, status=400)
 
-    run_id = str(payload.get("run_id", "")).strip()
-    message = str(payload.get("message", "")).strip()
+    raw_run_id = payload.get("run_id", "")
+    raw_message = payload.get("message", "")
+    if not isinstance(raw_run_id, str) or not isinstance(raw_message, str):
+        return JsonResponse({"detail": "run_id and message must be strings"}, status=400)
+    run_id = raw_run_id.strip()
+    message = raw_message.strip()
     exit_code = payload.get("exit_code")
     if len(run_id) > 128 or len(message) > 500:
         return JsonResponse({"detail": "Job signal field exceeds limit"}, status=400)
@@ -360,6 +364,8 @@ def job_signal(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"detail": "exit_code must be a 32-bit integer"}, status=400)
     if event_type == JobEvent.EventType.SUCCESS and exit_code not in {None, 0}:
         return JsonResponse({"detail": "A success event cannot carry a non-zero exit_code"}, status=400)
+    if event_type in {JobEvent.EventType.START, JobEvent.EventType.LOG} and exit_code is not None:
+        return JsonResponse({"detail": "exit_code is valid only for terminal job events"}, status=400)
 
     received_at = timezone.now()
     event = record_job_event(
