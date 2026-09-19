@@ -1,9 +1,9 @@
 # GoreeCloud Monitor — Benefits
 
-**Document Internal Version Number:** 2026.09.18.1  
-**Document External Version Number:** 1.0.0  
+**Document Internal Version Number:** 2026.09.19.1  
+**Document External Version Number:** 1.1.0  
 **Status:** Current supportable benefit record  
-**As of:** September 18, 2026
+**As of:** September 19, 2026
 
 ## Purpose
 
@@ -12,10 +12,12 @@ This file records benefits supported by the current GoreeCloud Monitor design an
 ## Benefits
 
 - **First-party monitoring authority:** monitoring behavior and evidence remain under GoreeCloud-controlled source.
-- **Broad protocol coverage:** HTTP/HTTPS, TCP, TLS, DNS, heartbeat, and low-privilege Ping/ICMP checks are implemented.
+- **Broad monitoring coverage:** HTTP/HTTPS, TCP, TLS, DNS, heartbeat, low-privilege Ping/ICMP, and scheduled-job/dead-man monitoring are implemented at source level.
 - **Private deployment model:** the production candidate is designed for private Gateway/NetBird publication with no public backend port.
 - **Durable alert intent:** transition notifications are persisted before delivery and retried across worker cycles.
 - **Reduced duplicate risk:** idempotency-aware replay supports convergence after uncertain delivery outcomes.
+- **Scheduled-workload visibility:** periodic jobs can report start, success, failure, and bounded log events while Monitor detects missed schedules and runtime overruns.
+- **Run-duration evidence:** correlated job runs retain bounded duration and exit-status metadata without requiring a separate log platform.
 - **Recovery-first operation:** PostgreSQL backup/restore, migration, and rollback compatibility are part of release validation.
 - **Least-privilege containers:** production source avoids privileged mode, host networking, added capabilities, and Docker-socket access.
 - **Security-oriented defaults:** strong authentication, secure cookies, CSP, Permissions Policy, and minimized logging are built into the source.
