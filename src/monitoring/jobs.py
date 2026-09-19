@@ -62,6 +62,11 @@ def evaluate_job_monitor(monitor: Monitor, now: datetime | None = None) -> JobEv
 
     if monitor.job_schedule_mode == Monitor.JobScheduleMode.CRON:
         last_due = _last_scheduled_time(monitor, now)
+        # A newly created monitor must not inherit an obligation for cron occurrences that
+        # happened before the monitor existed. Its first enforceable window starts with the
+        # first scheduled occurrence at or after creation.
+        if last_due < monitor.created_at:
+            return JobEvaluation(True, Monitor.State.UNKNOWN, "Awaiting the first scheduled job window")
         deadline = last_due + timedelta(seconds=monitor.job_grace_seconds)
         if latest_success and latest_success.received_at >= last_due:
             return JobEvaluation(True, Monitor.State.UP, "Scheduled job completed for the current cron window")
