@@ -342,25 +342,52 @@ class ViewTests(TestCase):
         self.assertContains(response, "/api/v1/heartbeat/")
         self.assertContains(response, "Non-recoverable credential")
 
+    @override_settings(
+        MONITOR_CHECK_RETENTION_DAYS=30,
+        MONITOR_JOB_EVENT_RETENTION_DAYS=90,
+    )
+    def test_settings_reports_bounded_history_retention(self):
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("monitoring:settings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["retention_days"], 30)
+        self.assertEqual(response.context["job_event_retention_days"], 90)
+        self.assertContains(response, "Job event retention")
+        self.assertContains(response, "90 days")
+
     def test_settings_requires_staff(self):
         self.assertEqual(self.client.get(reverse("monitoring:settings")).status_code, 302)
         self.client.force_login(self.user)
         self.assertEqual(self.client.get(reverse("monitoring:settings")).status_code, 403)
 
-    @override_settings(NTFY_BASE_URL="http://ntfy:80", NTFY_TOPIC="goreecloud-uptime", NTFY_TOKEN="")
-    def test_settings_does_not_claim_partial_ntfy_configuration(self):
+    @override_settings(
+        MONITOR_NOTIFY_ENABLED=True,
+        GOREECLOUD_NOTIFY_BASE_URL="https://notify.example.test",
+        GOREECLOUD_NOTIFY_TOKEN="",
+    )
+    def test_settings_does_not_claim_partial_notify_configuration(self):
         self.client.force_login(self.staff)
         response = self.client.get(reverse("monitoring:settings"))
-        self.assertFalse(response.context["ntfy_enabled"])
+        self.assertFalse(response.context["notify_enabled"])
 
-    @override_settings(NTFY_BASE_URL="http://ntfy:80", NTFY_TOPIC="goreecloud-uptime", NTFY_TOKEN="write-only-token")
-    def test_settings_reports_complete_ntfy_configuration(self):
+    @override_settings(
+        MONITOR_NOTIFY_ENABLED=True,
+        GOREECLOUD_NOTIFY_BASE_URL="https://notify.example.test",
+        GOREECLOUD_NOTIFY_TOKEN="producer-token",
+    )
+    def test_settings_reports_complete_notify_configuration(self):
         self.client.force_login(self.staff)
         response = self.client.get(reverse("monitoring:settings"))
-        self.assertTrue(response.context["ntfy_enabled"])
+        self.assertTrue(response.context["notify_enabled"])
         self.assertEqual(response.context["glaze_version"], "1.0.0")
 
-    @override_settings(MONITOR_ALLOWED_NETWORKS=["10.20.30.0/24", "fd00:1234::/64"], MANAGER_API_TOKEN="manager-secret", NTFY_BASE_URL="http://ntfy:80", NTFY_TOPIC="goreecloud-uptime", NTFY_TOKEN="publisher-secret")
+    @override_settings(
+        MONITOR_ALLOWED_NETWORKS=["10.20.30.0/24", "fd00:1234::/64"],
+        MANAGER_API_TOKEN="manager-secret",
+        MONITOR_NOTIFY_ENABLED=True,
+        GOREECLOUD_NOTIFY_BASE_URL="https://notify.example.test",
+        GOREECLOUD_NOTIFY_TOKEN="publisher-secret",
+    )
     def test_security_posture_is_staff_only_and_secret_free(self):
         self.client.force_login(self.user)
         self.assertEqual(self.client.get(reverse("monitoring:security")).status_code, 403)
@@ -374,13 +401,18 @@ class ViewTests(TestCase):
         self.assertNotContains(response, "manager-secret")
         self.assertNotContains(response, "publisher-secret")
 
-    @override_settings(NTFY_BASE_URL="http://ntfy:80", NTFY_TOPIC="goreecloud-uptime", NTFY_TOKEN="super-secret-publisher-token")
-    def test_notifications_reports_posture_without_exposing_token(self):
+    @override_settings(
+        MONITOR_NOTIFY_ENABLED=True,
+        GOREECLOUD_NOTIFY_BASE_URL="https://notify.example.test",
+        GOREECLOUD_NOTIFY_TOKEN="super-secret-publisher-token",
+    )
+    def test_notifications_reports_notify_posture_without_exposing_token(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse("monitoring:notifications"))
-        self.assertTrue(response.context["ntfy_enabled"])
+        self.assertTrue(response.context["notify_enabled"])
         self.assertNotContains(response, "super-secret-publisher-token")
         self.assertContains(response, "Operational events, not delivery receipts")
+        self.assertNotContains(response, "ntfy migration path")
 
     def test_incident_history_requires_login_and_supports_status_filter(self):
         monitor = Monitor.objects.create(name="service-a", kind=Monitor.Kind.HTTPS, target="https://example.com")

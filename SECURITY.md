@@ -37,6 +37,8 @@ External job signals are rate-limited per monitor using the database as the seri
 
 The private-ingress requirement remains in force until target-runtime validation is complete. Rate limiting and replay convergence reduce abuse/retry risk but do not authorize public exposure by themselves.
 
+Scheduled-job event history is automatically pruned according to `MONITOR_JOB_EVENT_RETENTION_DAYS` (default 90 days). The latest terminal event and any unmatched latest START may be retained beyond that ordinary window because they are required to evaluate current job state safely. Idempotent replay is durable only while the event carrying a given `event_id` remains retained; callers must not treat event IDs as permanent global reservations after retention has expired.
+
 Migration `0005_job_event_idempotency` adds the event ID field and uniqueness constraint. Its immediate predecessor, migration `0004_scheduled_job_monitor`, already understands JOB definitions and JobEvent rows. Controlled downgrade to `0004` preserves job/event rows but drops persisted `event_id` values and therefore removes replay identities; use a pre-upgrade backup when those identifiers must be recoverable.
 
 ## Outbound request and SSRF controls
