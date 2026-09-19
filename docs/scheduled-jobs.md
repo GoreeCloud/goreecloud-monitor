@@ -33,13 +33,14 @@ The request body must be JSON and may contain only:
 
 - `event` — required. Supported values: `start`, `success`, `failure`/`fail`, or `log`.
 - `run_id` — optional correlation identifier, maximum 128 characters.
-- `exit_code` — optional signed 32-bit integer.
+- `exit_code` — optional signed 32-bit integer. A `success` event may omit it or send `0`; non-zero exit codes are rejected on `success` and should be reported with a `failure` event.
 - `message` — optional bounded diagnostic text, maximum 500 characters.
 
 A `start` event without a `run_id` receives a generated run identifier in the response. A later terminal event may provide that identifier. If a terminal event omits it, Monitor correlates the most recent unmatched start when practical.
 
 ## State evaluation
 
+- A newly created cron monitor does not inherit missed occurrences from before its creation time; its first enforceable window begins with the first schedule at or after creation.
 - A recent successful completion keeps the job healthy until the next deadline.
 - A reported failure evaluates as Down and enters the ordinary Monitor failure/incident pipeline.
 - A started job is considered running.
