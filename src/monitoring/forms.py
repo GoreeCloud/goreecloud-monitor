@@ -44,7 +44,7 @@ class MonitorForm(forms.ModelForm):
             "job_cron_expression": "Required only for cron-scheduled jobs, for example 0 3 * * *.",
             "job_timezone": "IANA time zone used to interpret cron schedules, for example UTC or America/Chicago.",
             "job_grace_seconds": "Additional time allowed after the expected schedule before the job becomes Down.",
-            "job_max_runtime_seconds": "Maximum allowed run time after a START signal; 0 disables overrun detection.",
+            "job_max_runtime_seconds": "Maximum allowed run time after a START signal; 0 uses the job grace value as the runtime limit.",
         }
         widgets = {
             "expected_body_text": forms.TextInput(attrs={"autocomplete": "off"}),
