@@ -26,7 +26,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      PREVIOUS_CANDIDATE: 23d7a24592643a9bf8698889acf19d68d8f36604
+      PREVIOUS_CANDIDATE: 7009ef61d41283c7d84b1c4ac25931ce870bed2c
     steps:
       - name: Checkout Monitor replacement candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -35,15 +35,15 @@ jobs:
         with:
           ref: ${{ env.PREVIOUS_CANDIDATE }}
           path: previous
-      - name: Require only the intended scheduled-job migration delta
+      - name: Require only the intended job-signal hardening migration delta
         shell: bash
         run: |
           set -euo pipefail
-          test -f previous/src/monitoring/migrations/0003_notification_outbox.py
-          test -f src/monitoring/migrations/0003_notification_outbox.py
+          test -f previous/src/monitoring/migrations/0004_scheduled_job_monitor.py
           test -f src/monitoring/migrations/0004_scheduled_job_monitor.py
+          test -f src/monitoring/migrations/0005_job_event_idempotency.py
           diff -ru \
-            --exclude=0004_scheduled_job_monitor.py \
+            --exclude=0005_job_event_idempotency.py \
             previous/src/monitoring/migrations \
             src/monitoring/migrations
       - name: Build predecessor and candidate images
@@ -76,8 +76,8 @@ jobs:
             -e POSTGRES_PORT=5432 \
             goreecloud-monitor:rollback-previous \
             python manage.py shell -c \
-            "from monitoring.models import Monitor, NotificationOutbox; Monitor.objects.create(name='rollback-proof', kind='PUSH', interval_seconds=60, failure_threshold=1); p=Monitor.objects.create(name='ping-rollback-proof',kind='PING',target='127.0.0.1',enabled=False,timeout_seconds=3); assert p.state == 'PAUSED'; o=NotificationOutbox.objects.create(transition='DOWN',payload={'source':'goreecloud-monitor','channel':'monitoring','title':'Outage','body':'rollback proof','severity':'critical'},idempotency_key='gcm-v1-'+'b'*64); assert o.pk; print('current-main predecessor state seeded')"
-      - name: Upgrade candidate and exercise scheduled-job plus preserved state
+            "from monitoring.jobs import record_job_event; from monitoring.models import JobEvent, Monitor, NotificationOutbox; Monitor.objects.create(name='rollback-proof', kind='PUSH', interval_seconds=60, failure_threshold=1); p=Monitor.objects.create(name='ping-rollback-proof',kind='PING',target='127.0.0.1',enabled=False,timeout_seconds=3); assert p.state == 'PAUSED'; o=NotificationOutbox.objects.create(transition='DOWN',payload={'source':'goreecloud-monitor','channel':'monitoring','title':'Outage','body':'rollback proof','severity':'critical'},idempotency_key='gcm-v1-'+'b'*64); assert o.pk; j=Monitor.objects.create(name='job-rollback-proof',kind='JOB',interval_seconds=3600,job_grace_seconds=60); record_job_event(j.id,JobEvent.EventType.START,run_id='rollback-run'); record_job_event(j.id,JobEvent.EventType.SUCCESS,run_id='rollback-run'); assert JobEvent.objects.filter(monitor=j).count() == 2; print('current-main predecessor state seeded')"
+      - name: Upgrade candidate and exercise job-signal replay plus preserved state
         shell: bash
         run: |
           set -euo pipefail
@@ -103,7 +103,7 @@ jobs:
             -e POSTGRES_PORT=5432 \
             goreecloud-monitor:rollback-candidate \
             python manage.py shell -c \
-            "from monitoring.jobs import record_job_event; from monitoring.models import JobEvent, Monitor, NotificationOutbox; m=Monitor.objects.get(name='rollback-proof'); assert m.failure_threshold == 1; m.failure_threshold=2; m.save(update_fields=['failure_threshold','updated_at']); p=Monitor.objects.get(name='ping-rollback-proof'); assert p.kind == 'PING' and p.state == 'PAUSED'; assert NotificationOutbox.objects.filter(idempotency_key='gcm-v1-'+'b'*64).exists(); j=Monitor.objects.create(name='job-rollback-proof',kind='JOB',interval_seconds=3600,job_grace_seconds=60,job_max_runtime_seconds=300); start=record_job_event(j.id,JobEvent.EventType.START,run_id='rollback-run'); done=record_job_event(j.id,JobEvent.EventType.SUCCESS,run_id='rollback-run'); assert done.duration_ms is not None; print('candidate scheduled-job schema and preserved predecessor state verified')"
+            "from monitoring.jobs import record_job_signal; from monitoring.models import JobEvent, Monitor, NotificationOutbox; m=Monitor.objects.get(name='rollback-proof'); assert m.failure_threshold == 1; m.failure_threshold=2; m.save(update_fields=['failure_threshold','updated_at']); p=Monitor.objects.get(name='ping-rollback-proof'); assert p.kind == 'PING' and p.state == 'PAUSED'; assert NotificationOutbox.objects.filter(idempotency_key='gcm-v1-'+'b'*64).exists(); j=Monitor.objects.get(name='job-rollback-proof'); assert JobEvent.objects.filter(monitor=j).count() == 2; eid='123e4567-e89b-12d3-a456-426614174000'; first=record_job_signal(j.id,JobEvent.EventType.LOG,event_id=eid,message='rollback hardening proof',max_per_minute=5); replay=record_job_signal(j.id,JobEvent.EventType.LOG,event_id=eid,message='rollback hardening proof',max_per_minute=5); assert not first.replayed and replay.replayed; assert JobEvent.objects.filter(monitor=j).count() == 3; assert JobEvent.objects.get(monitor=j,event_id=eid).message == 'rollback hardening proof'; print('candidate job-signal hardening and preserved predecessor state verified')"
       - name: Prepare database for predecessor rollback
         shell: bash
         run: |
@@ -119,7 +119,7 @@ jobs:
             -e POSTGRES_PORT=5432 \
             goreecloud-monitor:rollback-candidate \
             python manage.py shell -c \
-            "from monitoring.models import JobEvent, Monitor, NotificationOutbox; assert Monitor.objects.filter(name='ping-rollback-proof',kind='PING').exists(); assert Monitor.objects.filter(name='job-rollback-proof',kind='JOB').exists(); assert JobEvent.objects.filter(monitor__name='job-rollback-proof').count() == 2; assert NotificationOutbox.objects.filter(idempotency_key='gcm-v1-'+'b'*64).exists(); Monitor.objects.filter(kind='JOB').delete(); assert not Monitor.objects.filter(kind='JOB').exists(); print('candidate-only scheduled-job state explicitly removed before predecessor rollback')"
+            "from monitoring.models import JobEvent, Monitor, NotificationOutbox; assert Monitor.objects.filter(name='ping-rollback-proof',kind='PING').exists(); assert Monitor.objects.filter(name='job-rollback-proof',kind='JOB').exists(); assert JobEvent.objects.filter(monitor__name='job-rollback-proof').count() == 3; assert JobEvent.objects.filter(monitor__name='job-rollback-proof',event_id='123e4567-e89b-12d3-a456-426614174000').exists(); assert NotificationOutbox.objects.filter(idempotency_key='gcm-v1-'+'b'*64).exists(); print('candidate idempotency state verified before schema rollback')"
           docker run --rm --network host \
             -e DJANGO_DEBUG=true \
             -e DJANGO_SECRET_KEY=ci-rollback-only \
@@ -130,7 +130,7 @@ jobs:
             -e POSTGRES_HOST=127.0.0.1 \
             -e POSTGRES_PORT=5432 \
             goreecloud-monitor:rollback-candidate \
-            python manage.py migrate monitoring 0003 --noinput
+            python manage.py migrate monitoring 0004 --noinput
       - name: Roll application back and verify predecessor state
         shell: bash
         run: |
@@ -146,4 +146,4 @@ jobs:
             -e POSTGRES_PORT=5432 \
             goreecloud-monitor:rollback-previous \
             python manage.py shell -c \
-            "from monitoring.models import Monitor, NotificationOutbox; m=Monitor.objects.get(name='rollback-proof'); assert m.failure_threshold == 2; p=Monitor.objects.get(name='ping-rollback-proof'); assert p.kind == 'PING' and p.state == 'PAUSED'; assert NotificationOutbox.objects.filter(idempotency_key='gcm-v1-'+'b'*64).exists(); assert not Monitor.objects.filter(kind='JOB').exists(); print('current-main rollback compatibility verified after scheduled-job schema rollback')"
+            "from monitoring.models import JobEvent, Monitor, NotificationOutbox; m=Monitor.objects.get(name='rollback-proof'); assert m.failure_threshold == 2; p=Monitor.objects.get(name='ping-rollback-proof'); assert p.kind == 'PING' and p.state == 'PAUSED'; j=Monitor.objects.get(name='job-rollback-proof'); assert j.kind == 'JOB'; assert JobEvent.objects.filter(monitor=j).count() == 3; assert NotificationOutbox.objects.filter(idempotency_key='gcm-v1-'+'b'*64).exists(); print('current-main rollback compatibility verified after idempotency schema rollback')"
