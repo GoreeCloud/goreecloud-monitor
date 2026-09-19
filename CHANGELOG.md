@@ -11,6 +11,7 @@
 - Added staff-only scheduled-job Recovery & Export views with current evaluator/anchor state and versioned paginated JSON export of retained event evidence. Exports exclude reusable credentials and stored verifiers and are explicitly supplemental to PostgreSQL recovery.
 - During retention UI validation, removed stale ntfy UI configuration reads that referenced settings no longer present after ntfy retirement; Settings, Security, and Notifications now use the GoreeCloud Notify runtime configuration and remain secret-free.
 - Added run identifiers, start/completion correlation, duration capture, missed-schedule detection, and started-job completion deadlines. An explicit maximum runtime overrides the grace-based runtime limit.
+- Added explicit presentation-only scheduled-job lifecycle phases: Awaiting, Started, Completed, Failed, and Late. These phases are derived by the existing evaluator and do not change underlying Monitor state, incident thresholds, or Notify transition semantics.
 - Added exact-cron-boundary handling so the scheduled minute itself is the current window rather than briefly falling back to the preceding occurrence.
 - Added bounded JobEvent history and staff-only schedule/event diagnostics while keeping credential verifiers and detailed operational metadata out of non-staff surfaces.
 - Reused the existing failure/recovery threshold, incident, and durable GoreeCloud Notify outbox pipeline rather than creating a parallel alert subsystem.
@@ -18,7 +19,7 @@
 - Added migration `0005_job_event_idempotency`; the candidate rollback workflow verifies that JOB definitions and JobEvent rows survive downgrade to `0004` while candidate-only `event_id` replay identities are intentionally dropped.
 - Hardened target preflight to reject reusable plaintext JOB credentials, and hardened signal parsing against unknown fields, oversized payloads, invalid metadata types, contradictory success exit codes, and exit codes on non-terminal events.
 - Added regression coverage for simple and cron schedules, creation-time boundaries, exact cron minutes, high log-event volume, failure/incident integration, start-time overruns, bearer authentication, run correlation, credential secrecy, and preflight enforcement.
-- Full Healthchecks-style parity remains incomplete. Systemd OnCalendar evaluation, richer Started/Late presentation, tags/projects, scoped management APIs, policy-gated auto-provisioning, status/reporting surfaces, and separately approved email ingestion remain roadmap work.
+- Full Healthchecks-style parity remains incomplete. Systemd OnCalendar evaluation, tags/projects, scoped management APIs, policy-gated auto-provisioning, status/reporting surfaces, and separately approved email ingestion remain roadmap work.
 - This source candidate does not establish live VPS activation, production authority, target recovery acceptance, or Stable status.
 
 ## Unreleased - Native low-privilege Ping / ICMP parity
