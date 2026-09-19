@@ -1,0 +1,11 @@
+{% extends "monitoring/base.html" %}
+{% block title %}Scheduled job credential · GoreeCloud Monitor{% endblock %}
+{% block content %}
+<section class="hero"><div class="hero-copy"><div class="eyebrow">Wardveil protected credential</div><h1>Scheduled job credential issued</h1><p>This secret is shown once. Monitor stores only a one-way verifier and cannot recover it after you leave this page.</p></div><span class="pill up">Issued</span></section>
+<section class="panel section-panel">
+  <div class="callout"><strong>Store this credential before continuing</strong><p>Place it only in the approved job runner's protected secret store. Do not put it in URLs, documentation, screenshots, shell history, or ordinary logs. If it is lost, rotate it.</p></div>
+  <div class="field-stack"><label>Bearer credential<input type="text" readonly value="{{ job_token }}" autocomplete="off" spellcheck="false"></label><label>Job signal endpoint<input type="text" readonly value="{{ job_endpoint }}" autocomplete="off" spellcheck="false"></label></div>
+  <div class="callout"><strong>Submission contract</strong><p>Send an HTTPS POST with <code>Authorization: Bearer &lt;credential&gt;</code> and JSON containing <code>event</code> as <code>start</code>, <code>success</code>, <code>failure</code>, or <code>log</code>. Optional <code>run_id</code> correlates a run.</p></div>
+  <div class="actions"><a class="button primary" href="{% url 'monitoring:monitor-detail' monitor.pk %}">I stored the credential</a></div>
+</section>
+{% endblock %}
