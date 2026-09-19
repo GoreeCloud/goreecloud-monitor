@@ -1,0 +1,164 @@
+schema_version: "0.4"
+
+component:
+  type: application
+  id: goreecloud-monitor
+  product_name: GoreeCloud Monitor
+  repository: GoreeCloud/goreecloud-monitor
+
+lifecycle: release-candidate
+version: "0.1.0"
+
+supported_platforms:
+  - web
+  - server
+
+api:
+  versions:
+    - v1
+  endpoints:
+    - name: heartbeat
+      url: /api/v1/heartbeat/
+      purpose: Authenticated push-heartbeat ingestion for supported monitors.
+    - name: manager-summary
+      url: /api/v1/summary/
+      purpose: Read-only bounded operational summary for approved Manager integration.
+    - name: health-live
+      url: /health/live/
+      purpose: Process/application liveness.
+    - name: health-ready
+      url: /health/ready/
+      purpose: Application/database readiness.
+
+platform_systems:
+  manager:
+    result: applicable-blocked
+    version: null
+    evidence: []
+    notes: Accepted GoreeCloud Manager operational visibility and administrative integration are not established.
+  privacy_shield:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - docs/privacy-shield.adapter.json
+      - tests/test_privacy_shield_adapter.py
+    notes: A source-side Privacy Shield adapter candidate exists, but runtime and central adapter acceptance remain incomplete.
+  wardveil_security:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - docs/wardveil.adoption.json
+      - tests/test_wardveil_adoption.py
+      - SECURITY.md
+    notes: Wardveil Security source adoption evidence exists, but target-runtime acceptance and production approval remain incomplete.
+  everkeep:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - docs/everkeep.adoption.json
+      - docs/everkeep.acceptance.json
+      - docs/backup.md
+      - docs/recovery.md
+    notes: Everkeep source adoption and acceptance-policy evidence exist, but target-native PostgreSQL restore/recovery and exact-revision acceptance remain incomplete.
+  glaze_ui:
+    result: applicable-migration-required
+    version: "1.5.1"
+    evidence:
+      - docs/glaze-ui-v1.5.1-adoption.json
+      - docs/glaze-ui-conformance.md
+      - templates/monitoring/base.html
+      - static/monitoring/css/glaze.1.5.1.css
+      - static/monitoring/js/glaze.js
+    notes: The active web shell implements a Glaze UI 1.5.1 source-adoption candidate. Representative browser/OS accessibility, large-text/reflow, performance, visual review, rollback, consumer-registry, and production acceptance remain outstanding.
+  mesh:
+    result: applicable-blocked
+    version: null
+    evidence: []
+    notes: GoreeCloud Mesh registration, capabilities, event contracts, dependencies, and runtime acceptance are not established.
+    capabilities: []
+    dependencies: []
+    published_events: []
+    consumed_events: []
+  identity:
+    result: applicable-blocked
+    version: null
+    evidence: []
+    notes: Monitor uses local Django authentication; accepted GoreeCloud Identity integration is not established.
+  policy:
+    result: applicable-blocked
+    version: null
+    evidence: []
+    notes: Accepted GoreeCloud Policy decision provenance, freshness, enforcement coordination, and runtime integration are not established.
+  observability:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - src/monitoring/observability.py
+    notes: Monitor has application-local operational logging/evidence, but accepted GoreeCloud Observability integration is not established.
+
+health:
+  health_endpoint: /health/live/
+  readiness_endpoint: /health/ready/
+
+continuity:
+  backup:
+    required: true
+    requirements:
+      - Use application-consistent PostgreSQL backup for the production target.
+      - Record the exact candidate revision, database state, protected backup destination, and retention.
+  restore:
+    required: true
+    requirements:
+      - Perform an isolated restore against the exact candidate before production activation.
+      - Validate monitor definitions, incidents, maintenance state, and notification outbox state after restore.
+  export:
+    required: true
+    requirements:
+      - Preserve supported portable operational/configuration exports without including active reusable credentials.
+  portability:
+    required: true
+    requirements:
+      - Preserve documented monitor semantics and migration evidence across supported releases.
+
+external_dependencies:
+  - name: PostgreSQL
+    purpose: Persistent production monitor, incident, maintenance, authentication, audit, and durable notification-outbox state.
+    required: true
+  - name: GoreeCloud Notify
+    purpose: Minimized transition-notification delivery after Notify is independently accepted.
+    required: true
+
+compatibility:
+  platform_contract: "0.4"
+  glaze_ui_required: "1.5.1"
+  requires:
+    - goreecloud-platform-contract==0.4
+    - glaze-ui==1.5.1
+  provides:
+    - goreecloud-monitor-api-v1
+    - goreecloud-monitor-notify-producer-v1
+
+evidence:
+  acceptance_tests: []
+  release: []
+
+conformance:
+  status: nonconformant
+  validated_at: null
+  evidence:
+    - docs/platform-conformance.json
+    - docs/glaze-ui-v1.5.1-adoption.json
+    - docs/wardveil.adoption.json
+    - docs/privacy-shield.adapter.json
+    - docs/everkeep.acceptance.json
+  blockers:
+    - Glaze UI 1.5.1 application-specific accessibility, performance, rollback, consumer-registry, and production acceptance remain incomplete.
+    - GoreeCloud Manager integration and acceptance are not established.
+    - Privacy Shield runtime and central adapter acceptance are not established.
+    - Wardveil Security target-runtime acceptance is not established.
+    - Everkeep target-native PostgreSQL restore/recovery and exact-revision acceptance are not established.
+    - GoreeCloud Mesh integration and acceptance are not established.
+    - GoreeCloud Identity integration and acceptance are not established.
+    - GoreeCloud Policy integration and acceptance are not established.
+    - GoreeCloud Observability integration and acceptance are not established.
+    - Live VPS readback, target backup/restore, reviewed monitor activation, representative protocol checks, accepted Notify delivery, independent outage alerting, rollback/recovery, and explicit production activation approval remain incomplete.
