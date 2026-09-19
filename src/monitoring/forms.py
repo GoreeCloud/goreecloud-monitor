@@ -26,15 +26,25 @@ class MonitorForm(forms.ModelForm):
             "dns_record_type",
             "expected_dns_answer",
             "heartbeat_grace_seconds",
+            "job_schedule_mode",
+            "job_cron_expression",
+            "job_timezone",
+            "job_grace_seconds",
+            "job_max_runtime_seconds",
         ]
         help_texts = {
             "target": (
                 "Use the service URL or host for HTTP/TCP checks. Ping checks use a hostname or IP address and no port. "
                 "DNS checks accept a query name or dns://resolver[:port]/query-name when a specific resolver must be validated. "
-                "Push monitors leave this blank."
+                "Push and scheduled-job monitors leave this blank."
             ),
             "dns_record_type": "DNS checks support A, AAAA, and CNAME records.",
             "expected_dns_answer": "Optional exact DNS answer that must be present after normalization.",
+            "job_schedule_mode": "Simple uses interval + grace. Cron uses a five-field cron expression and explicit IANA timezone.",
+            "job_cron_expression": "Required only for cron-scheduled jobs, for example 0 3 * * *.",
+            "job_timezone": "IANA time zone used to interpret cron schedules, for example UTC or America/Chicago.",
+            "job_grace_seconds": "Additional time allowed after the expected schedule before the job becomes Down.",
+            "job_max_runtime_seconds": "Maximum allowed run time after a START signal; 0 disables overrun detection.",
         }
         widgets = {
             "expected_body_text": forms.TextInput(attrs={"autocomplete": "off"}),
