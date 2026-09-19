@@ -114,6 +114,8 @@ services:
 networks:
   backend:
     internal: true
+    driver_opts:
+      com.docker.network.bridge.name: ${MONITOR_BACKEND_BRIDGE_NAME:?MONITOR_BACKEND_BRIDGE_NAME is required}
     ipam:
       config:
         - subnet: ${MONITOR_BACKEND_SUBNET:?MONITOR_BACKEND_SUBNET is required}
