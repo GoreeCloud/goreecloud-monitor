@@ -32,6 +32,9 @@ class MonitorForm(forms.ModelForm):
             "job_grace_seconds",
             "job_max_runtime_seconds",
         ]
+        labels = {
+            "job_cron_expression": "Schedule expression",
+        }
         help_texts = {
             "target": (
                 "Use the service URL or host for HTTP/TCP checks. Ping checks use a hostname or IP address and no port. "
@@ -40,9 +43,18 @@ class MonitorForm(forms.ModelForm):
             ),
             "dns_record_type": "DNS checks support A, AAAA, and CNAME records.",
             "expected_dns_answer": "Optional exact DNS answer that must be present after normalization.",
-            "job_schedule_mode": "Simple uses interval + grace. Cron uses a five-field cron expression and explicit IANA timezone.",
-            "job_cron_expression": "Required only for cron-scheduled jobs, for example 0 3 * * *.",
-            "job_timezone": "IANA time zone used to interpret cron schedules, for example UTC or America/Chicago.",
+            "job_schedule_mode": (
+                "Simple uses interval + grace. Cron uses a five-field crontab expression. "
+                "systemd OnCalendar uses native calendar syntax."
+            ),
+            "job_cron_expression": (
+                "Required for Cron or systemd OnCalendar schedules. "
+                "OnCalendar may contain multiple newline-separated expressions."
+            ),
+            "job_timezone": (
+                "Default IANA time zone for Cron and OnCalendar schedules, for example UTC or America/Chicago. "
+                "An OnCalendar expression may also contain its own time-zone suffix."
+            ),
             "job_grace_seconds": "Additional time allowed after the expected schedule before the job becomes Down.",
             "job_max_runtime_seconds": "Maximum allowed run time after a START signal; 0 uses the job grace value as the runtime limit.",
         }
