@@ -58,12 +58,13 @@ The current source implements the first scheduled-job/dead-man monitoring founda
 - run IDs/correlation, duration history, execution-overrun detection, missed-completion detection, and event history;
 - derived scheduled-job lifecycle phases (`Awaiting`, `Started`, `Completed`, `Failed`, `Late`) presented without replacing the underlying Monitor Up/Down/Unknown incident state;
 - mapping missed or failed jobs into the existing Monitor Down/incident/Notify transition pipeline;
-- staff-only scheduled-job recovery snapshots plus versioned, paginated JSON export of retained event evidence without credential material.
+- staff-only scheduled-job recovery snapshots plus versioned, paginated JSON export of retained event evidence without credential material;
+- least-privilege read-only Manager JOB list/detail endpoints with lifecycle and schedule summaries plus bounded recent event type/time/exit/duration metadata, excluding credentials, run/event identifiers, messages, and mutation operations.
 
 The following scheduled-job scope remains planned or partial:
 
 - tags/labels and collections/projects;
-- scoped management API support for job checks;
+- accepted Manager integration/rate-limit requirements for scheduled-job read visibility; any write-capable job administration requires separate explicit GoreeCloud Identity/Policy authorization because the current Manager contract is read-only;
 - controlled optional auto-provisioning;
 - private status badges/JSON summaries, repeated-down reminders, and periodic job-health reports;
 - separate evaluation of email-based signal ingestion.
