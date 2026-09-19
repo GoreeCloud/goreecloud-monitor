@@ -195,9 +195,14 @@ def record_job_signal(
         existing = JobEvent.objects.filter(monitor=monitor, event_id=event_id).first()
         if existing is not None:
             request_run_id = run_id.strip()
+            same_exit_code = existing.exit_code == exit_code or (
+                event_type == JobEvent.EventType.SUCCESS
+                and existing.exit_code in {None, 0}
+                and exit_code in {None, 0}
+            )
             same_payload = (
                 existing.event_type == event_type
-                and existing.exit_code == exit_code
+                and same_exit_code
                 and existing.message == message[:500]
                 and (not request_run_id or existing.run_id == request_run_id)
             )
