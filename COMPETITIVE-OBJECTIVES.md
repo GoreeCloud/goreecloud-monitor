@@ -39,8 +39,8 @@ These are improvement and differentiation objectives, not claims that GoreeCloud
 
 ## Healthchecks benchmark boundary
 
-Healthchecks is a primary benchmark for scheduled-job, cron-style dead-man, backup-heartbeat, and task-run monitoring. This benchmark does **not** mean GoreeCloud Monitor is a Healthchecks fork, that Healthchecks remains an active GoreeCloud dependency, or that the capabilities above are already implemented.
+Healthchecks is a primary benchmark for scheduled-job, cron-style dead-man, backup-heartbeat, and task-run monitoring. This benchmark does **not** mean GoreeCloud Monitor is a Healthchecks fork or that Healthchecks remains an active GoreeCloud dependency. The current source implements the first scheduled-job foundation, while the full benchmark scope remains incomplete.
 
-The current source already has generic push/heartbeat monitoring, but full Healthchecks-style scheduled-job parity is planned work. Current functionality remains authoritative in `FEATURES.md`; implementation obligations and priority remain authoritative in `FEATURE-ROADMAP.md` and GoreeCloud Tasks Management.
+The current source includes first-class JOB monitors, simple/cron schedule evaluation, authenticated lifecycle signals, run-duration correlation, overrun detection, missed-run evaluation, and event history. Full Healthchecks-style parity remains planned/partial. Current functionality remains authoritative in `FEATURES.md`; remaining obligations and priority remain authoritative in `FEATURE-ROADMAP.md` and GoreeCloud Tasks Management.
 
 Healthchecks capabilities worth learning from include period/grace and cron-style scheduling, explicit start/success/failure signals, run-duration tracking, event history, tags/projects, scoped APIs, auto-provisioning, status summaries, reminders/reports, and optional alternate signal-ingestion paths. GoreeCloud may implement these differently when security, privacy, maintainability, platform integration, or product scope requires a stronger design.
