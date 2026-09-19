@@ -100,6 +100,10 @@ class EngineStateTests(TestCase):
             job_timezone="UTC",
             job_grace_seconds=60,
         )
+        Monitor.objects.filter(pk=monitor.pk).update(
+            created_at=datetime(2026, 9, 19, 12, 0, 0, tzinfo=UTC)
+        )
+        monitor.refresh_from_db()
         completed_at = datetime(2026, 9, 19, 12, 5, 20, tzinfo=UTC)
         record_job_event(monitor.id, JobEvent.EventType.SUCCESS, received_at=completed_at)
         outcome = evaluate_job_monitor(
@@ -141,6 +145,10 @@ class EngineStateTests(TestCase):
             job_timezone="UTC",
             job_grace_seconds=60,
         )
+        Monitor.objects.filter(pk=monitor.pk).update(
+            created_at=datetime(2026, 9, 19, 12, 0, 0, tzinfo=UTC)
+        )
+        monitor.refresh_from_db()
         outcome = evaluate_job_monitor(
             monitor,
             datetime(2026, 9, 19, 12, 6, 5, tzinfo=UTC),
