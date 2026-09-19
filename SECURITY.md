@@ -8,7 +8,7 @@ Wardveil is the platform-wide security identity and presentation layer. It does 
 
 ## Scope
 
-Monitor is security-sensitive because it authenticates administrators, stores operational history, accepts push-heartbeat credentials, makes outbound network requests, publishes minimized transition alerts, and exposes a read-only platform summary API.
+Monitor is security-sensitive because it authenticates administrators, stores operational history, accepts push-heartbeat and scheduled-job credentials/events, makes outbound network requests, publishes minimized transition alerts, and exposes a read-only platform summary API.
 
 ## Authentication and authorization
 
@@ -26,6 +26,16 @@ New and rotated raw credentials are displayed only on a one-time issuance respon
 `MONITOR_ALLOW_LEGACY_PATH_HEARTBEATS` defaults to `false`. When enabled temporarily for migration, the legacy path endpoint can accept an existing source credential and immediately replace an accepted plaintext database value with its verifier. Production target preflight fails closed if legacy path compatibility is enabled or if any legacy plaintext push credential remains.
 
 A rollback to a predecessor that understands the historical column as a reusable raw token is **not** credential-compatible after a push credential has been issued or rotated by this hardening layer. Because Monitor has not reached production/cutover, no production sender relies on that predecessor contract. Before production acceptance, the live rollback procedure must use the accepted hardened release boundary or include explicit push-credential reissuance/reconfiguration evidence.
+
+## Scheduled-job signal credentials and input
+
+Scheduled-job signals use `POST /api/v1/jobs/signal/` with `Authorization: Bearer <credential>`. JOB monitors reuse the hardened one-way verifier model used by push heartbeats: a new/rotated raw credential is shown once, while only its SHA-256 verifier is persisted.
+
+The signal endpoint accepts JSON only, limits the request body to 8 KiB, rejects unknown fields, limits `run_id` to 128 characters and message text to 500 characters, validates exit codes as signed 32-bit integers, and accepts only the supported event types. Credentials must never be placed in URLs or event messages.
+
+Signal rate limiting and stronger replay/idempotency controls remain required roadmap hardening before complete Healthchecks-style parity or production acceptance. Until those controls are implemented and target-validated, do not expose the signal endpoint outside the approved private Monitor ingress boundary.
+
+A predecessor at database migration `0003_notification_outbox` does not understand JOB definitions or JobEvent rows. Controlled application rollback requires preserving any required job evidence, stopping affected senders, removing candidate-only JOB definitions, migrating back to `0003`, and then verifying the predecessor state. Use a pre-upgrade database backup when scheduled-job evidence must survive rollback.
 
 ## Outbound request and SSRF controls
 
