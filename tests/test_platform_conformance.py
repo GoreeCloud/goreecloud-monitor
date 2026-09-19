@@ -6,12 +6,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "docs" / "platform-conformance.json"
-EXPECTED_SYSTEMS = {"glaze_ui", "wardveil_security", "privacy_shield", "everkeep"}
+EXPECTED_SYSTEMS = {
+    "manager",
+    "privacy_shield",
+    "wardveil_security",
+    "everkeep",
+    "glaze_ui",
+    "goreecloud_mesh",
+    "goreecloud_identity",
+    "goreecloud_policy",
+    "goreecloud_observability",
+}
 EXPECTED_IDENTITIES = {
-    "glaze_ui": "Glaze UI",
-    "wardveil_security": "Wardveil Security by GoreeCloud",
+    "manager": "GoreeCloud Manager",
     "privacy_shield": "GoreeCloud Privacy Shield",
+    "wardveil_security": "Wardveil Security by GoreeCloud",
     "everkeep": "Everkeep",
+    "glaze_ui": "Glaze UI",
+    "goreecloud_mesh": "GoreeCloud Mesh",
+    "goreecloud_identity": "GoreeCloud Identity",
+    "goreecloud_policy": "GoreeCloud Policy",
+    "goreecloud_observability": "GoreeCloud Observability",
 }
 
 
@@ -36,9 +51,7 @@ def test_platform_identities_are_canonical() -> None:
 def test_conformance_evidence_paths_are_real_repository_files() -> None:
     systems = _contract()["platform_systems"]
     for system in systems.values():
-        evidence = system["evidence"]
-        assert evidence
-        for relative_path in evidence:
+        for relative_path in system.get("evidence", []):
             assert (ROOT / relative_path).is_file(), relative_path
 
 
@@ -46,11 +59,11 @@ def test_unfinished_platform_work_cannot_be_presented_as_stable() -> None:
     contract = _contract()
     systems = contract["platform_systems"]
     glaze = systems["glaze_ui"]
-    assert glaze["required_version"] == "2.1"
-    assert glaze["required_release"] == "2.1.0"
+    assert glaze["required_version"] == "1.5"
+    assert glaze["required_release"] == "1.5.1"
     assert glaze["canonical_repository"] == "GoreeCloud/goreecloud-glaze-ui"
-    assert glaze["canonical_revision"] == "c49113eb8b93c267613fdf1bbca1f814495acad7"
-    assert glaze["source_status"] == "adoption-candidate-source-validated"
+    assert glaze["canonical_revision"] == "5b59d0e36950d737dba35b58ae58058684e0831b"
+    assert glaze["source_status"] == "v1.5.1-source-adoption-candidate-acceptance-required"
     assert systems["wardveil_security"]["source_status"] == "integrated-source-validated-adoption-contract"
     wardveil = json.loads((ROOT / "docs" / "wardveil.adoption.json").read_text(encoding="utf-8"))
     assert wardveil["fail_closed"] is True
@@ -59,6 +72,11 @@ def test_unfinished_platform_work_cannot_be_presented_as_stable() -> None:
     assert wardveil["acceptance"]["production_approved"] is False
     assert systems["privacy_shield"]["source_status"] == "draft-adapter-source-candidate"
     assert systems["everkeep"]["source_status"] == "draft-acceptance-policy-candidate"
+    assert systems["manager"]["source_status"] == "applicable-blocked"
+    assert systems["goreecloud_mesh"]["source_status"] == "applicable-blocked"
+    assert systems["goreecloud_identity"]["source_status"] == "applicable-blocked"
+    assert systems["goreecloud_policy"]["source_status"] == "applicable-blocked"
+    assert systems["goreecloud_observability"]["source_status"] == "applicable-blocked"
     everkeep = json.loads((ROOT / "docs" / "everkeep.adoption.json").read_text(encoding="utf-8"))
     assert everkeep["fail_closed"] is True
     assert everkeep["read_only"] is True

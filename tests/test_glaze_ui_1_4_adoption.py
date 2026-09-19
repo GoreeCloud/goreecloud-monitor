@@ -15,7 +15,7 @@ class GlazeUi14HistoricalEvidenceTests(SimpleTestCase):
         super().setUpClass()
         cls.base = Path(settings.BASE_DIR)
         cls.historical = json.loads((cls.base / "docs/glaze-ui-1.4-gates.json").read_text(encoding="utf-8"))
-        cls.current = json.loads((cls.base / "docs/glaze-ui-2.1-adoption.json").read_text(encoding="utf-8"))
+        cls.current = json.loads((cls.base / "docs/glaze-ui-v1.5.1-adoption.json").read_text(encoding="utf-8"))
         cls.platform = json.loads((cls.base / "docs/platform-conformance.json").read_text(encoding="utf-8"))
 
     def test_1_4_evidence_is_retained_for_migration_and_audit(self):
@@ -26,8 +26,8 @@ class GlazeUi14HistoricalEvidenceTests(SimpleTestCase):
 
     def test_1_4_is_not_the_current_consumer_target(self):
         glaze = self.platform["platform_systems"]["glaze_ui"]
-        self.assertEqual(glaze["required_release"], "2.1.0")
-        self.assertEqual(self.current["target_release"], "2.1.0")
-        self.assertEqual(self.current["adoption_status"], "adoption-candidate")
+        self.assertEqual(glaze["required_release"], "1.5.1")
+        self.assertEqual(self.current["required_target_release"], "1.5.1")
+        self.assertEqual(self.current["adoption_status"], "source-adoption-candidate")
         self.assertNotEqual(glaze["required_release"], self.historical["target_release"])
         self.assertFalse(self.platform["stable_eligible"])

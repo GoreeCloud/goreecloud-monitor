@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "application": "goreecloud-monitor",
+  "required_target_release": "1.5.1",
+  "current_source_mapping_release": "1.5.1",
+  "canonical_repository": "GoreeCloud/goreecloud-glaze-ui",
+  "stable_scope": "contracts/v1.5.1/stable-scope.json",
+  "family_contract": "GLAZE_UI_V1_5.md",
+  "reviewed_implementation_anchor": "ee1032a0822ab8e103f8afe48e5c1859fde65cc9",
+  "source_qualification_anchor": "5b59d0e36950d737dba35b58ae58058684e0831b",
+  "adoption_status": "source-adoption-candidate",
+  "conformance_claim": false,
+  "production_eligible": false,
+  "supported_surfaces": [
+    "web"
+  ],
+  "source_implementation": {
+    "web": {
+      "status": "source-evidence-present-acceptance-required",
+      "evidence": [
+        "templates/monitoring/base.html",
+        "static/monitoring/css/glaze.1.5.1.css",
+        "static/monitoring/css/glaze.accessibility.css",
+        "static/monitoring/css/glaze.formfactors.css",
+        "static/monitoring/js/glaze.js"
+      ]
+    },
+    "authority_boundary": {
+      "status": "source-evidence-present",
+      "notes": "Glaze UI is presentation-only and does not manufacture authorization, permission, privacy, security, identity, policy, continuity, monitoring, or deployment truth."
+    }
+  },
+  "required_acceptance": [
+    "representative-browser-os-accessibility",
+    "large-text-reflow-and-contrast",
+    "responsive-task-continuity",
+    "application-performance-budget",
+    "visual-excellence-review",
+    "rollback-validation",
+    "governed-consumer-registry-acceptance",
+    "exact-revision-production-approval"
+  ],
+  "blockers": [
+    "Representative browser/OS accessibility and visual acceptance for the exact Monitor candidate is not yet recorded.",
+    "Large Text, responsive task continuity, and application-specific performance evidence remain incomplete.",
+    "Known-good application rollback and governed Glaze consumer-registry acceptance remain incomplete.",
+    "Exact-revision production approval is not present."
+  ]
+}

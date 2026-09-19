@@ -102,9 +102,16 @@ MONITOR_ALLOW_PUBLIC_TARGETS = env_bool("MONITOR_ALLOW_PUBLIC_TARGETS", True)
 MONITOR_ALLOWED_NETWORKS = env_list("MONITOR_ALLOWED_NETWORKS", "127.0.0.0/8,::1/128")
 MONITOR_ALLOW_LEGACY_PATH_HEARTBEATS = env_bool("MONITOR_ALLOW_LEGACY_PATH_HEARTBEATS", False)
 MANAGER_API_TOKEN = os.getenv("MANAGER_API_TOKEN", "")
-NTFY_BASE_URL = os.getenv("NTFY_BASE_URL", "").rstrip("/")
-NTFY_TOPIC = os.getenv("NTFY_TOPIC", "")
-NTFY_TOKEN = os.getenv("NTFY_TOKEN", "")
+# GoreeCloud Notify is the only supported Monitor notification publisher after ntfy retirement.
+# The integration remains disabled until an operator explicitly enables it with an accepted
+# Notify deployment and a dedicated least-privilege producer credential.
+MONITOR_NOTIFY_ENABLED = env_bool("MONITOR_NOTIFY_ENABLED", False)
+GOREECLOUD_NOTIFY_BASE_URL = os.getenv("GOREECLOUD_NOTIFY_BASE_URL", "").rstrip("/")
+GOREECLOUD_NOTIFY_TOKEN = os.getenv("GOREECLOUD_NOTIFY_TOKEN", "")
+MONITOR_NOTIFY_MAX_ATTEMPTS = max(1, min(5, int(os.getenv("MONITOR_NOTIFY_MAX_ATTEMPTS", "3"))))
+MONITOR_NOTIFY_RETRY_BACKOFF_SECONDS = max(0.0, float(os.getenv("MONITOR_NOTIFY_RETRY_BACKOFF_SECONDS", "0.25")))
+MONITOR_NOTIFY_TIMEOUT_SECONDS = max(1.0, min(30.0, float(os.getenv("MONITOR_NOTIFY_TIMEOUT_SECONDS", "10"))))
+MONITOR_NOTIFICATION_OUTBOX_RETENTION_DAYS = max(1, min(365, int(os.getenv("MONITOR_NOTIFICATION_OUTBOX_RETENTION_DAYS", "30"))))
 
 LOGGING = {
     "version": 1,

@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from ipaddress import ip_network
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 
-from .models import Monitor, heartbeat_token_is_digest
+from .models import Monitor, NotificationOutbox, heartbeat_token_is_digest
 
 
 @dataclass(slots=True)
@@ -49,9 +50,20 @@ def configuration_findings() -> list[PreflightFinding]:
             add("error", "allowed-network-invalid", "MONITOR_ALLOWED_NETWORKS contains an invalid network entry.")
             continue
         if network.prefixlen == 0: add("error", "allowed-network-broad", "MONITOR_ALLOWED_NETWORKS must not contain an all-addresses /0 network.")
-    ntfy_values = (getattr(settings, "NTFY_BASE_URL", ""), getattr(settings, "NTFY_TOPIC", ""), getattr(settings, "NTFY_TOKEN", ""))
-    if any(ntfy_values) and not all(ntfy_values): add("error", "ntfy-partial", "ntfy must be fully configured with base URL, topic, and write-only publisher token or fully disabled.")
-    elif not any(ntfy_values): add("warning", "ntfy-disabled", "ntfy transition publishing is not configured in this environment.")
+
+    notify_enabled = bool(getattr(settings, "MONITOR_NOTIFY_ENABLED", False))
+    notify_base_url = str(getattr(settings, "GOREECLOUD_NOTIFY_BASE_URL", ""))
+    notify_token = str(getattr(settings, "GOREECLOUD_NOTIFY_TOKEN", ""))
+    if notify_enabled:
+        if not notify_base_url or not notify_token:
+            add("error", "notify-partial", "GoreeCloud Notify publishing requires both the HTTPS base URL and a dedicated producer token.")
+        else:
+            parsed_notify = urlsplit(notify_base_url)
+            if parsed_notify.scheme != "https" or not parsed_notify.netloc or parsed_notify.username or parsed_notify.password or parsed_notify.query or parsed_notify.fragment:
+                add("error", "notify-endpoint", "GoreeCloud Notify publishing requires a credential-free HTTPS base URL without query or fragment components.")
+    else:
+        add("error", "notify-disabled", "GoreeCloud Notify transition publishing must be enabled for target-environment production acceptance.")
+
     if not getattr(settings, "MANAGER_API_TOKEN", ""): add("warning", "manager-disabled", "The read-only GoreeCloud Manager integration token is not configured.")
     return findings
 
@@ -75,9 +87,12 @@ def runtime_findings() -> list[PreflightFinding]:
     except Exception:
         add("error", "migration-check", "The target database migration state could not be verified.")
     if not Monitor.objects.exists():
-        add("warning", "no-monitors", "No monitor definitions exist yet; this is acceptable before migration import but not final parallel acceptance.")
+        add("warning", "no-monitors", "No monitor definitions exist yet; this is acceptable before replacement activation but not final production acceptance.")
     elif any(not heartbeat_token_is_digest(value) for value in Monitor.objects.filter(kind=Monitor.Kind.PUSH).values_list("heartbeat_token", flat=True)):
         add("error", "legacy-heartbeat-verifier", "One or more push monitors still store a legacy reusable heartbeat credential. Rotate them before target acceptance.")
+    pending_outbox = NotificationOutbox.objects.filter(delivered_at__isnull=True).count()
+    if pending_outbox:
+        add("error", "notification-outbox-pending", f"{pending_outbox} durable notification outbox record(s) remain undelivered; drain and verify them before target acceptance.")
     return findings
 
 
