@@ -80,6 +80,40 @@ class MonitorModelTests(TestCase):
         )
         monitor.full_clean(exclude=["heartbeat_token"])
 
+    def test_scheduled_job_accepts_oncalendar_expression(self):
+        monitor = Monitor(
+            name="oncalendar-backup",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.ONCALENDAR,
+            job_cron_expression="*-*-* 03:00:00",
+            job_timezone="America/Chicago",
+        )
+        monitor.full_clean(exclude=["heartbeat_token"])
+
+    def test_scheduled_job_accepts_multiple_oncalendar_expressions(self):
+        monitor = Monitor(
+            name="oncalendar-multiple",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.ONCALENDAR,
+            job_cron_expression="*-*-* 03:00:00\n*-*-* 15:00:00",
+            job_timezone="UTC",
+        )
+        monitor.full_clean(exclude=["heartbeat_token"])
+
+    def test_scheduled_job_rejects_invalid_oncalendar_expression(self):
+        monitor = Monitor(
+            name="bad-oncalendar",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.ONCALENDAR,
+            job_cron_expression="Mon 123:456",
+            job_timezone="UTC",
+        )
+        with self.assertRaises(ValidationError):
+            monitor.full_clean(exclude=["heartbeat_token"])
+
     def test_scheduled_job_rejects_invalid_cron_or_timezone(self):
         bad_cron = Monitor(
             name="bad-cron",
