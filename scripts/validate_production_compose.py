@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import re
 import sys
 from typing import Any
 
@@ -120,6 +121,11 @@ def main() -> None:
         fail("backend network is not internal")
     if proxy.get("external") is not True:
         fail("proxy network is not external")
+
+    backend_driver_opts = backend.get("driver_opts") or {}
+    backend_bridge_name = str(backend_driver_opts.get("com.docker.network.bridge.name") or "")
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,15}", backend_bridge_name):
+        fail("backend bridge name must be an explicit Linux interface-safe name of at most 15 characters")
 
     backend_ipam = backend.get("ipam") or {}
     backend_ipam_config = backend_ipam.get("config") or []
