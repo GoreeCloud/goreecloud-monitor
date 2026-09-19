@@ -3,7 +3,9 @@ from __future__ import annotations
 import hashlib
 import re
 import secrets
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from croniter import croniter
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -35,6 +37,11 @@ class Monitor(models.Model):
         PING = "PING", "Ping / ICMP"
         DNS = "DNS", "DNS"
         PUSH = "PUSH", "Push / heartbeat"
+        JOB = "JOB", "Scheduled job / dead-man"
+
+    class JobScheduleMode(models.TextChoices):
+        SIMPLE = "SIMPLE", "Simple interval"
+        CRON = "CRON", "Cron schedule"
 
     class State(models.TextChoices):
         UNKNOWN = "UNKNOWN", "Unknown"
@@ -67,6 +74,11 @@ class Monitor(models.Model):
     heartbeat_token = models.CharField(max_length=64, unique=True, default=generate_heartbeat_token)
     heartbeat_grace_seconds = models.PositiveIntegerField(default=60)
     last_heartbeat_at = models.DateTimeField(null=True, blank=True)
+    job_schedule_mode = models.CharField(max_length=8, choices=JobScheduleMode.choices, default=JobScheduleMode.SIMPLE)
+    job_cron_expression = models.CharField(max_length=120, blank=True)
+    job_timezone = models.CharField(max_length=64, default="UTC")
+    job_grace_seconds = models.PositiveIntegerField(default=60)
+    job_max_runtime_seconds = models.PositiveIntegerField(default=0)
     state = models.CharField(max_length=16, choices=State.choices, default=State.UNKNOWN)
     consecutive_failures = models.PositiveIntegerField(default=0)
     consecutive_successes = models.PositiveIntegerField(default=0)
@@ -93,7 +105,7 @@ class Monitor(models.Model):
         validate_target_syntax(self.kind, self.target, self.port)
         if self.interval_seconds < 5:
             raise ValidationError({"interval_seconds": "Intervals below 5 seconds are not supported."})
-        if self.timeout_seconds > self.interval_seconds and self.kind != self.Kind.PUSH:
+        if self.timeout_seconds > self.interval_seconds and self.kind not in {self.Kind.PUSH, self.Kind.JOB}:
             raise ValidationError({"timeout_seconds": "Timeout must not exceed the check interval."})
         if self.failure_threshold < 1 or self.recovery_threshold < 1:
             raise ValidationError("Failure and recovery thresholds must be at least 1.")
@@ -106,8 +118,20 @@ class Monitor(models.Model):
                 raise ValidationError("HEAD monitors cannot use body or JSON assertions.")
         if self.kind == self.Kind.DNS and self.dns_record_type.upper() not in ALLOWED_DNS_TYPES:
             raise ValidationError({"dns_record_type": "Supported DNS record types are A, AAAA, and CNAME."})
-        if self.kind == self.Kind.PUSH and self.target:
-            raise ValidationError({"target": "Push monitors do not use a target URL."})
+        if self.kind in {self.Kind.PUSH, self.Kind.JOB} and self.target:
+            raise ValidationError({"target": "Signal-driven monitors do not use a target URL."})
+        if self.kind == self.Kind.JOB:
+            try:
+                ZoneInfo(self.job_timezone)
+            except (ZoneInfoNotFoundError, ValueError) as exc:
+                raise ValidationError({"job_timezone": "Use a valid IANA time-zone name such as UTC or America/Chicago."}) from exc
+            if self.job_schedule_mode == self.JobScheduleMode.CRON:
+                if not self.job_cron_expression.strip():
+                    raise ValidationError({"job_cron_expression": "Cron-scheduled jobs require a cron expression."})
+                if not croniter.is_valid(self.job_cron_expression.strip(), strict=True):
+                    raise ValidationError({"job_cron_expression": "Cron expression is invalid or cannot produce a real schedule."})
+            elif self.job_cron_expression.strip():
+                raise ValidationError({"job_cron_expression": "Simple-interval jobs must leave the cron expression blank."})
 
     def save(self, *args, **kwargs):
         if not self.heartbeat_token:
@@ -131,7 +155,8 @@ class Monitor(models.Model):
         now = now or timezone.now()
         if not self.last_checked_at:
             return True
-        return (now - self.last_checked_at).total_seconds() >= self.interval_seconds
+        evaluation_interval = min(self.interval_seconds, 30) if self.kind == self.Kind.JOB else self.interval_seconds
+        return (now - self.last_checked_at).total_seconds() >= evaluation_interval
 
 
 class CheckResult(models.Model):
@@ -145,6 +170,30 @@ class CheckResult(models.Model):
     class Meta:
         ordering = ["-checked_at"]
         indexes = [models.Index(fields=["monitor", "-checked_at"], name="check_monitor_checked_idx")]
+
+
+class JobEvent(models.Model):
+    class EventType(models.TextChoices):
+        START = "START", "Start"
+        SUCCESS = "SUCCESS", "Success"
+        FAILURE = "FAILURE", "Failure"
+        LOG = "LOG", "Log"
+
+    monitor = models.ForeignKey(Monitor, on_delete=models.CASCADE, related_name="job_events")
+    received_at = models.DateTimeField(default=timezone.now, db_index=True)
+    event_type = models.CharField(max_length=16, choices=EventType.choices)
+    run_id = models.CharField(max_length=128, blank=True)
+    exit_code = models.IntegerField(null=True, blank=True)
+    duration_ms = models.FloatField(null=True, blank=True)
+    message = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ["-received_at", "-id"]
+        indexes = [models.Index(fields=["monitor", "-received_at"], name="jobevent_monitor_time_idx")]
+
+    def clean(self) -> None:
+        if self.monitor_id and self.monitor.kind != Monitor.Kind.JOB:
+            raise ValidationError({"monitor": "Job events may only belong to JOB monitors."})
 
 
 class Incident(models.Model):
