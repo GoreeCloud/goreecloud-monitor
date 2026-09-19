@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import uuid
 
 from django.conf import settings
 from django.contrib import messages
@@ -20,7 +21,7 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from .audit import record_security_event
 from .forms import MaintenanceWindowForm, MonitorForm
-from .jobs import record_job_event
+from .jobs import JobSignalRateLimited, JobSignalReplayConflict, record_job_signal
 from .models import CheckResult, Incident, JobEvent, MaintenanceWindow, Monitor, hash_heartbeat_token, heartbeat_token_is_digest
 
 
@@ -338,7 +339,7 @@ def job_signal(request: HttpRequest) -> JsonResponse:
         payload = json.loads(request.body or b"{}")
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({"detail": "Invalid job signal payload"}, status=400)
-    if not isinstance(payload, dict) or not set(payload).issubset({"event", "run_id", "exit_code", "message"}):
+    if not isinstance(payload, dict) or not set(payload).issubset({"event", "event_id", "run_id", "exit_code", "message"}):
         return JsonResponse({"detail": "Invalid job signal payload"}, status=400)
 
     event_name = str(payload.get("event", "")).strip().upper()
@@ -347,10 +348,17 @@ def job_signal(request: HttpRequest) -> JsonResponse:
     if event_type not in {value for value, _ in JobEvent.EventType.choices}:
         return JsonResponse({"detail": "Unsupported job event"}, status=400)
 
+    raw_event_id = payload.get("event_id", "")
     raw_run_id = payload.get("run_id", "")
     raw_message = payload.get("message", "")
-    if not isinstance(raw_run_id, str) or not isinstance(raw_message, str):
-        return JsonResponse({"detail": "run_id and message must be strings"}, status=400)
+    if not isinstance(raw_event_id, str) or not isinstance(raw_run_id, str) or not isinstance(raw_message, str):
+        return JsonResponse({"detail": "event_id, run_id, and message must be strings"}, status=400)
+    event_id = raw_event_id.strip()
+    if event_id:
+        try:
+            event_id = str(uuid.UUID(event_id))
+        except ValueError:
+            return JsonResponse({"detail": "event_id must be a UUID"}, status=400)
     run_id = raw_run_id.strip()
     message = raw_message.strip()
     exit_code = payload.get("exit_code")
@@ -368,20 +376,33 @@ def job_signal(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"detail": "exit_code is valid only for terminal job events"}, status=400)
 
     received_at = timezone.now()
-    event = record_job_event(
-        monitor.pk,
-        event_type,
-        run_id=run_id,
-        exit_code=exit_code,
-        message=message,
-        received_at=received_at,
-    )
+    try:
+        result = record_job_signal(
+            monitor.pk,
+            event_type,
+            event_id=event_id,
+            run_id=run_id,
+            exit_code=exit_code,
+            message=message,
+            received_at=received_at,
+            max_per_minute=settings.MONITOR_JOB_SIGNAL_MAX_PER_MINUTE,
+        )
+    except JobSignalReplayConflict:
+        return JsonResponse({"detail": "event_id was already used for a different signal"}, status=409)
+    except JobSignalRateLimited as exc:
+        response = JsonResponse({"detail": "Scheduled-job signal rate limit exceeded"}, status=429)
+        response.headers["Retry-After"] = str(exc.retry_after_seconds)
+        return response
+
+    event = result.event
     return JsonResponse(
         {
             "ok": True,
             "event": event.event_type.lower(),
-            "received_at": received_at.isoformat(),
+            "event_id": event.event_id or None,
+            "received_at": event.received_at.isoformat(),
             "run_id": event.run_id or None,
+            "replayed": result.replayed,
         }
     )
 
