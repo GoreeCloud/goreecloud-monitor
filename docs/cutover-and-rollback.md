@@ -12,7 +12,7 @@ Before Monitor is promoted to production monitoring authority:
 4. Create a fresh PostgreSQL backup and prove isolated restore.
 5. Reconcile preserved Uptime Kuma definitions against current active services; do not import retired endpoints blindly.
 6. Activate imported or recreated monitor definitions only after explicit review.
-7. Validate representative HTTP/HTTPS, TCP, TLS, DNS, heartbeat, Ping/ICMP, maintenance, incident, and threshold behavior.
+7. Validate representative HTTP/HTTPS, TCP, TLS, DNS, heartbeat, Ping/ICMP, scheduled-job start/success/failure/missed-run/overrun, maintenance, incident, and threshold behavior.
 8. Validate GoreeCloud Notify first-write, replay, conflict, restart/replay, and administrator receipt.
 9. Validate independent outage alerting for failures that prevent the ordinary Monitor → Notify chain from operating.
 10. Record explicit production-activation approval.
@@ -38,6 +38,7 @@ Rollback or controlled deactivation should occur when required acceptance proper
 - database integrity or migration uncertainty;
 - repeated false DOWN/RECOVERED transitions;
 - missed monitored failures;
+- missed scheduled-job failures, false late-job incidents, incorrect cron/time-zone evaluation, or broken job credential handling;
 - broken Ping/DNS/TLS semantics on required targets;
 - persistent Notify delivery failures or outbox backlog;
 - duplicate notification fanout;
@@ -60,6 +61,16 @@ Do not silently restore Uptime Kuma as production authority. Any production rest
 ## Database rollback boundary
 
 Database rollback is not equivalent to application rollback. Every migration-bearing release must prove immediate-predecessor compatibility or preserve a verified pre-upgrade database backup and complete release unit.
+
+The scheduled-job foundation introduces migration `0004_scheduled_job_monitor`. A predecessor at migration `0003_notification_outbox` does not understand `JOB` definitions or `JobEvent` rows. Before a controlled downgrade to that predecessor:
+
+1. preserve/export any scheduled-job definitions or event evidence that must survive the rollback;
+2. stop scheduled-job signal senders or rotate/revoke their candidate credentials as appropriate;
+3. remove candidate-only `JOB` monitor rows so the predecessor cannot encounter an unsupported monitor type;
+4. migrate the candidate database back to `monitoring 0003`;
+5. start the predecessor image and verify preserved non-JOB monitors plus the notification outbox.
+
+Dropping candidate-only scheduled-job schema is a controlled rollback action and can discard `JobEvent` history. Use a pre-upgrade backup when that data must be recoverable rather than relying on destructive schema downgrade.
 
 ## Completion boundary
 
