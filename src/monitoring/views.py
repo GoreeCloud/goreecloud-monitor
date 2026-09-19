@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hmac
+import json
 
 from django.conf import settings
 from django.contrib import messages
@@ -19,7 +20,8 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from .audit import record_security_event
 from .forms import MaintenanceWindowForm, MonitorForm
-from .models import CheckResult, Incident, MaintenanceWindow, Monitor, hash_heartbeat_token, heartbeat_token_is_digest
+from .jobs import record_job_event
+from .models import CheckResult, Incident, JobEvent, MaintenanceWindow, Monitor, hash_heartbeat_token, heartbeat_token_is_digest
 
 
 GLAZE_UI_VERSION = "1.0.0"
@@ -45,23 +47,37 @@ def _heartbeat_issue_response(request: HttpRequest, monitor: Monitor, raw_token:
     )
 
 
-def _resolve_push_monitor(raw_token: str) -> Monitor | None:
+def _job_credential_issue_response(request: HttpRequest, monitor: Monitor, raw_token: str) -> HttpResponse:
+    return render(
+        request,
+        "monitoring/job_token_issued.html",
+        {
+            "monitor": monitor,
+            "job_token": raw_token,
+            "job_endpoint": request.build_absolute_uri(reverse("monitoring:job-signal")),
+        },
+    )
+
+
+def _resolve_signal_monitor(raw_token: str, kinds: set[str]) -> Monitor | None:
     if not raw_token or len(raw_token) > 256:
         return None
     digest = hash_heartbeat_token(raw_token)
     monitor = (
-        Monitor.objects.filter(kind=Monitor.Kind.PUSH, enabled=True)
+        Monitor.objects.filter(kind__in=kinds, enabled=True)
         .filter(Q(heartbeat_token=digest) | Q(heartbeat_token=raw_token))
         .first()
     )
     if monitor is None:
         return None
     if not heartbeat_token_is_digest(monitor.heartbeat_token):
-        # Transitional compatibility: the first accepted legacy credential is immediately
-        # upgraded to a one-way verifier. Production preflight refuses any legacy rows.
         Monitor.objects.filter(pk=monitor.pk, heartbeat_token=raw_token).update(heartbeat_token=digest)
         monitor.heartbeat_token = digest
     return monitor
+
+
+def _resolve_push_monitor(raw_token: str) -> Monitor | None:
+    return _resolve_signal_monitor(raw_token, {Monitor.Kind.PUSH})
 
 
 def _bearer_credential(request: HttpRequest) -> str:
@@ -132,7 +148,7 @@ class MonitorListView(LoginRequiredMixin, ListView):
 @login_required
 def monitor_detail(request: HttpRequest, pk: int) -> HttpResponse:
     monitor = get_object_or_404(Monitor, pk=pk)
-    return render(request, "monitoring/monitor_detail.html", {"monitor": monitor, "checks": monitor.checks.all()[:50], "incidents": monitor.incidents.all()[:20]})
+    return render(request, "monitoring/monitor_detail.html", {"monitor": monitor, "checks": monitor.checks.all()[:50], "incidents": monitor.incidents.all()[:20], "job_events": monitor.job_events.all()[:50] if monitor.kind == Monitor.Kind.JOB else []})
 
 
 class MonitorCreateView(StaffRequiredMixin, CreateView):
@@ -148,6 +164,10 @@ class MonitorCreateView(StaffRequiredMixin, CreateView):
             raw_token = self.object.issue_heartbeat_token()
             record_security_event("heartbeat.credential.issued", user=self.request.user, object_type="monitor", object_id=self.object.pk)
             return _heartbeat_issue_response(self.request, self.object, raw_token)
+        if self.object.kind == Monitor.Kind.JOB:
+            raw_token = self.object.issue_heartbeat_token()
+            record_security_event("job.credential.issued", user=self.request.user, object_type="monitor", object_id=self.object.pk)
+            return _job_credential_issue_response(self.request, self.object, raw_token)
         messages.success(self.request, "Monitor created.")
         return response
 
@@ -280,8 +300,11 @@ def security_view(request: HttpRequest) -> HttpResponse:
 def rotate_heartbeat_token(request: HttpRequest, pk: int) -> HttpResponse:
     if not request.user.is_staff:
         raise PermissionDenied
-    monitor = get_object_or_404(Monitor, pk=pk, kind=Monitor.Kind.PUSH)
+    monitor = get_object_or_404(Monitor, pk=pk, kind__in=[Monitor.Kind.PUSH, Monitor.Kind.JOB])
     raw_token = monitor.issue_heartbeat_token()
+    if monitor.kind == Monitor.Kind.JOB:
+        record_security_event("job.credential.rotated", user=request.user, object_type="monitor", object_id=monitor.pk)
+        return _job_credential_issue_response(request, monitor, raw_token)
     record_security_event("heartbeat.credential.rotated", user=request.user, object_type="monitor", object_id=monitor.pk)
     return _heartbeat_issue_response(request, monitor, raw_token)
 
