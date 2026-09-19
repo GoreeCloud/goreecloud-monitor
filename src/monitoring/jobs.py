@@ -19,17 +19,6 @@ class JobEvaluation:
     message: str
 
 
-def _latest_terminal(events: list[JobEvent]) -> JobEvent | None:
-    return next(
-        (event for event in events if event.event_type in {JobEvent.EventType.SUCCESS, JobEvent.EventType.FAILURE}),
-        None,
-    )
-
-
-def _latest_start(events: list[JobEvent]) -> JobEvent | None:
-    return next((event for event in events if event.event_type == JobEvent.EventType.START), None)
-
-
 def _last_scheduled_time(monitor: Monitor, now: datetime) -> datetime:
     zone = ZoneInfo(monitor.job_timezone)
     local_now = now.astimezone(zone)
@@ -39,9 +28,18 @@ def _last_scheduled_time(monitor: Monitor, now: datetime) -> datetime:
 def evaluate_job_monitor(monitor: Monitor, now: datetime | None = None) -> JobEvaluation:
     """Evaluate one scheduled-job monitor without performing network I/O."""
     now = now or timezone.now()
-    events = list(monitor.job_events.order_by("-received_at", "-id")[:200])
-    latest_terminal = _latest_terminal(events)
-    latest_start = _latest_start(events)
+    latest_terminal = (
+        monitor.job_events.filter(
+            event_type__in=[JobEvent.EventType.SUCCESS, JobEvent.EventType.FAILURE]
+        )
+        .order_by("-received_at", "-id")
+        .first()
+    )
+    latest_start = (
+        monitor.job_events.filter(event_type=JobEvent.EventType.START)
+        .order_by("-received_at", "-id")
+        .first()
+    )
 
     if latest_start and (latest_terminal is None or latest_start.received_at > latest_terminal.received_at):
         runtime = max(0.0, (now - latest_start.received_at).total_seconds())
