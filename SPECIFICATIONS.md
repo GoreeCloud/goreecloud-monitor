@@ -61,7 +61,7 @@ The following scheduled-job scope remains planned or partial:
 
 - systemd OnCalendar compatibility when justified;
 - richer explicit Started/Late presentation beyond the existing Up/Down incident mapping;
-- dedicated job-event retention and recovery controls;
+- dedicated job-event recovery/export views beyond ordinary database backup/restore;
 - tags/labels and collections/projects;
 - scoped management API support for job checks;
 - controlled optional auto-provisioning;
