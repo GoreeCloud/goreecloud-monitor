@@ -324,6 +324,61 @@ def push_heartbeat(request: HttpRequest) -> JsonResponse:
 
 
 @csrf_exempt
+@require_http_methods(["POST"])
+def job_signal(request: HttpRequest) -> JsonResponse:
+    raw_token = _bearer_credential(request)
+    monitor = _resolve_signal_monitor(raw_token, {Monitor.Kind.JOB})
+    if monitor is None:
+        response = JsonResponse({"detail": "Unauthorized"}, status=401)
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response
+    if request.content_type != "application/json" or len(request.body) > 8192:
+        return JsonResponse({"detail": "Invalid job signal payload"}, status=400)
+    try:
+        payload = json.loads(request.body or b"{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"detail": "Invalid job signal payload"}, status=400)
+    if not isinstance(payload, dict) or not set(payload).issubset({"event", "run_id", "exit_code", "message"}):
+        return JsonResponse({"detail": "Invalid job signal payload"}, status=400)
+
+    event_name = str(payload.get("event", "")).strip().upper()
+    aliases = {"FAIL": JobEvent.EventType.FAILURE, "FAILED": JobEvent.EventType.FAILURE}
+    event_type = aliases.get(event_name, event_name)
+    if event_type not in {value for value, _ in JobEvent.EventType.choices}:
+        return JsonResponse({"detail": "Unsupported job event"}, status=400)
+
+    run_id = str(payload.get("run_id", "")).strip()
+    message = str(payload.get("message", "")).strip()
+    exit_code = payload.get("exit_code")
+    if len(run_id) > 128 or len(message) > 500:
+        return JsonResponse({"detail": "Job signal field exceeds limit"}, status=400)
+    if exit_code is not None and (
+        isinstance(exit_code, bool)
+        or not isinstance(exit_code, int)
+        or not -(2**31) <= exit_code < 2**31
+    ):
+        return JsonResponse({"detail": "exit_code must be a 32-bit integer"}, status=400)
+
+    received_at = timezone.now()
+    event = record_job_event(
+        monitor.pk,
+        event_type,
+        run_id=run_id,
+        exit_code=exit_code,
+        message=message,
+        received_at=received_at,
+    )
+    return JsonResponse(
+        {
+            "ok": True,
+            "event": event.event_type.lower(),
+            "received_at": received_at.isoformat(),
+            "run_id": event.run_id or None,
+        }
+    )
+
+
+@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def push_heartbeat_legacy(request: HttpRequest, token: str) -> JsonResponse:
     if not settings.MONITOR_ALLOW_LEGACY_PATH_HEARTBEATS:
