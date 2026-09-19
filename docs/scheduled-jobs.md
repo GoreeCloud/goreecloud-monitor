@@ -10,12 +10,13 @@ This capability is native GoreeCloud Monitor functionality. Healthchecks is a be
 
 Create a monitor with type `Scheduled job / dead-man`.
 
-Two schedule modes are available:
+Three schedule modes are available:
 
 - **Simple interval** — the job must complete within `interval_seconds + job_grace_seconds` after the last successful completion. Before the first success, the creation time is the initial baseline.
-- **Cron schedule** — a strict cron expression is evaluated in the configured IANA time zone. The job must complete inside the current schedule window plus the configured grace period.
+- **Cron schedule** — a strict five-field cron expression is evaluated in the configured IANA time zone. The job must complete inside the current schedule window plus the configured grace period.
+- **systemd OnCalendar** — a native calendar expression is evaluated without translating it to cron. Multiple newline-separated expressions are supported, and an expression may include a systemd-style time-zone suffix. The configured IANA job time zone is the default when the expression does not provide one.
 
-Cron parsing uses the repository-pinned `croniter` dependency with strict validation. IANA time-zone lookup uses the repository-pinned Python `tzdata` fallback so schedule interpretation does not depend on host image zone-data availability.
+Cron parsing uses the repository-pinned `croniter` dependency with strict validation. OnCalendar parsing/evaluation uses the repository-pinned `oncalendar` Python dependency in-process; Monitor does not execute `systemd-analyze`, invoke a shell, or require systemd in the runtime container. Fractional-second OnCalendar expressions are intentionally rejected because the pinned parser does not support them. IANA time-zone lookup uses the repository-pinned Python `tzdata` fallback so schedule interpretation does not depend on host image zone-data availability.
 
 ## Signals
 
@@ -56,11 +57,12 @@ The JOB evaluator also derives a presentation-only lifecycle phase from the same
 - **Late** — a required completion or started-run runtime deadline has been exceeded. Underlying observation is Down and ordinary failure thresholds apply.
 
 - A newly created cron monitor does not inherit missed occurrences from before its creation time; its first enforceable window begins with the first schedule at or after creation.
+- A newly created OnCalendar monitor similarly begins with the first calendar occurrence at or after creation. After a successful completion, the next OnCalendar occurrence becomes the next required deadline.
 - A recent successful completion keeps the job healthy until the next deadline.
 - A reported failure produces a failed Down observation and enters the ordinary Monitor failure-threshold/incident pipeline; the configured failure threshold controls when the monitor state transitions to Down.
 - A started job is considered running.
 - A started job must complete within its runtime limit. An explicit non-zero `job_max_runtime_seconds` sets that limit; when it is `0`, Monitor uses `job_grace_seconds` as the started-job runtime limit. Exceeding the limit evaluates the job as Down.
-- If the required simple or cron completion does not arrive before the configured grace deadline, Monitor evaluates it as Down.
+- If the required simple, cron, or OnCalendar completion does not arrive before the configured grace deadline, Monitor evaluates it as Down.
 - Recovery uses the existing Monitor recovery-threshold and incident-closing logic.
 
 Scheduled-job transitions use the same durable GoreeCloud Notify outbox as other Monitor transitions when Notify is enabled and accepted.
@@ -103,7 +105,6 @@ The same recovery surface provides a versioned `goreecloud-monitor-job-events-v1
 
 The current foundation does not yet provide the complete planned Healthchecks-style feature set. Outstanding work includes:
 
-- systemd OnCalendar evaluation/support;
 - tags/labels and projects/collections;
 - scoped job-management APIs;
 - policy-gated automatic provisioning;
