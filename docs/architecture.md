@@ -6,7 +6,7 @@ GoreeCloud Monitor intentionally separates its web/API process from the check wo
 Caddy / private HTTPS
         |
         v
-Django web + Glaze UI + read-only Manager API
+Django web + Glaze UI + read-only Manager APIs
         |
         +------------------+
         |                  |
@@ -18,6 +18,8 @@ Django web + Glaze UI + read-only Manager API
                          v
                  approved targets
 ```
+
+The Manager boundary is read-only. `/api/v1/summary/` exposes aggregate operational status; `/api/v1/jobs/` and `/api/v1/jobs/<id>/` expose bounded scheduled-job operational summaries and sanitized recent signal metadata. Manager receives no reusable credentials, credential verifiers, run IDs, event IDs, operator messages, raw targets, or mutation endpoints.
 
 ## Boundaries
 

@@ -26,7 +26,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      PREVIOUS_CANDIDATE: 792009511d70db88d02e6e418ef24329422b6f39
+      PREVIOUS_CANDIDATE: 1125e6433a96068d89448379ee1196cdfa589a12
     steps:
       - name: Checkout Monitor candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,10 +39,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f previous/src/monitoring/migrations/0005_job_event_idempotency.py
-          test -f src/monitoring/migrations/0005_job_event_idempotency.py
+          test -f previous/src/monitoring/migrations/0006_job_oncalendar_schedule.py
           test -f src/monitoring/migrations/0006_job_oncalendar_schedule.py
-          diff -ru --exclude 0006_job_oncalendar_schedule.py previous/src/monitoring/migrations src/monitoring/migrations
+          diff -ru previous/src/monitoring/migrations src/monitoring/migrations
       - name: Build predecessor and candidate images
         run: |
           docker build --tag goreecloud-monitor:rollback-previous previous
@@ -73,7 +72,7 @@ jobs:
             -e POSTGRES_PORT=5432 \
             goreecloud-monitor:rollback-previous \
             python manage.py shell -c \
-            "from datetime import timedelta; from django.utils import timezone; from monitoring.models import CheckResult, JobEvent, Monitor, NotificationOutbox; now=timezone.now(); p=Monitor.objects.create(name='rollback-proof',kind='PUSH',interval_seconds=60,failure_threshold=1); ping=Monitor.objects.create(name='ping-rollback-proof',kind='PING',target='127.0.0.1',enabled=False,timeout_seconds=3); assert ping.state == 'PAUSED'; j=Monitor.objects.create(name='job-retention-proof',kind='JOB',interval_seconds=3600,job_grace_seconds=60); CheckResult.objects.create(monitor=p,checked_at=now-timedelta(days=31),success=True,observed_state='UP',message='expired-check'); CheckResult.objects.create(monitor=p,checked_at=now-timedelta(days=1),success=True,observed_state='UP',message='recent-check'); JobEvent.objects.create(monitor=j,received_at=now-timedelta(days=120),event_type='FAILURE',run_id='old-failure',exit_code=1); JobEvent.objects.create(monitor=j,received_at=now-timedelta(days=100),event_type='START',run_id='latest-run'); JobEvent.objects.create(monitor=j,received_at=now-timedelta(days=99),event_type='SUCCESS',event_id='123e4567-e89b-12d3-a456-426614174000',run_id='latest-run',duration_ms=1000); JobEvent.objects.create(monitor=j,received_at=now-timedelta(days=98),event_type='LOG',message='expired-log'); JobEvent.objects.create(monitor=j,received_at=now-timedelta(days=1),event_type='LOG',message='recent-log'); o=NotificationOutbox.objects.create(transition='DOWN',payload={'source':'goreecloud-monitor','channel':'monitoring','title':'Outage','body':'rollback proof','severity':'critical'},idempotency_key='gcm-v1-'+'b'*64); assert o.pk; print('predecessor retention state seeded')"
+            "from datetime import timedelta; from django.utils import timezone; from monitoring.models import CheckResult, JobEvent, Monitor, NotificationOutbox; now=timezone.now(); p=Monitor.objects.create(name='rollback-proof',kind='PUSH',interval_seconds=60,failure_threshold=1); ping=Monitor.objects.create(name='ping-rollback-proof',kind='PING',target='127.0.0.1',enabled=False,timeout_seconds=3); assert ping.state == 'PAUSED'; j=Monitor.objects.create(name='job-retention-proof',kind='JOB',interval_seconds=3600,job_grace_seconds=60); oc=Monitor.objects.create(name='oncalendar-rollback-proof',kind='JOB',interval_seconds=60,job_schedule_mode='ONCAL',job_cron_expression='*-*-* 03:00:00',job_timezone='UTC',enabled=True); CheckResult.objects.create(monitor=p,checked_at=now-timedelta(days=31),success=True,observed_state='UP',message='expired-check'); CheckResult.objects.create(monitor=p,checked_at=now-timedelta(days=1),success=True,observed_state='UP',message='recent-check'); JobEvent.objects.create(monitor=j,received_at=now-timedelta(days=120),event_type='FAILURE',run_id='old-failure',exit_code=1); JobEvent.objects.create(monitor=j,received_at=now-timedelta(days=100),event_type='START',run_id='latest-run'); JobEvent.objects.create(monitor=j,received_at=now-timedelta(days=99),event_type='SUCCESS',event_id='123e4567-e89b-12d3-a456-426614174000',run_id='latest-run',duration_ms=1000); JobEvent.objects.create(monitor=j,received_at=now-timedelta(days=98),event_type='LOG',message='expired-log'); JobEvent.objects.create(monitor=j,received_at=now-timedelta(days=1),event_type='LOG',message='recent-log'); o=NotificationOutbox.objects.create(transition='DOWN',payload={'source':'goreecloud-monitor','channel':'monitoring','title':'Outage','body':'rollback proof','severity':'critical'},idempotency_key='gcm-v1-'+'b'*64); assert oc.job_schedule_mode == 'ONCAL'; assert o.pk; print('predecessor state seeded')"
       - name: Run candidate retention and verify preserved current state
         shell: bash
         run: |
@@ -100,23 +99,8 @@ jobs:
             -e POSTGRES_PORT=5432 \
             goreecloud-monitor:rollback-candidate \
             python manage.py shell -c \
-            "from django.utils import timezone; from monitoring.models import CheckResult, JobEvent, Monitor, NotificationOutbox; from monitoring.retention import prune_monitor_history; result=prune_monitor_history(now=timezone.now(),check_retention_days=30,job_event_retention_days=90); assert result.check_results_deleted == 1; assert result.job_events_deleted == 3; p=Monitor.objects.get(name='rollback-proof'); assert CheckResult.objects.filter(monitor=p,message='recent-check').exists(); assert not CheckResult.objects.filter(monitor=p,message='expired-check').exists(); j=Monitor.objects.get(name='job-retention-proof'); assert JobEvent.objects.filter(monitor=j,event_type='SUCCESS',event_id='123e4567-e89b-12d3-a456-426614174000').exists(); assert JobEvent.objects.filter(monitor=j,message='recent-log').exists(); assert JobEvent.objects.filter(monitor=j).count() == 2; oc=Monitor.objects.create(name='oncalendar-rollback-proof',kind='JOB',interval_seconds=60,job_schedule_mode='ONCAL',job_cron_expression='*-*-* 03:00:00',job_timezone='UTC',enabled=True); assert oc.job_schedule_mode == 'ONCAL'; assert NotificationOutbox.objects.filter(idempotency_key='gcm-v1-'+'b'*64).exists(); print('candidate retention and OnCalendar state verified')"
-      - name: Downgrade candidate schema safely
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker run --rm --network host \
-            -e DJANGO_DEBUG=true \
-            -e DJANGO_SECRET_KEY=ci-rollback-only \
-            -e DATABASE_ENGINE=postgres \
-            -e POSTGRES_DB=goreecloud_monitor \
-            -e POSTGRES_USER=goreecloud_monitor \
-            -e POSTGRES_PASSWORD=ci-rollback-password \
-            -e POSTGRES_HOST=127.0.0.1 \
-            -e POSTGRES_PORT=5432 \
-            goreecloud-monitor:rollback-candidate \
-            python manage.py migrate monitoring 0005_job_event_idempotency --noinput
-      - name: Roll application back after safe schema downgrade
+            "from django.utils import timezone; from monitoring.models import CheckResult, JobEvent, Monitor, NotificationOutbox; from monitoring.retention import prune_monitor_history; result=prune_monitor_history(now=timezone.now(),check_retention_days=30,job_event_retention_days=90); assert result.check_results_deleted == 1; assert result.job_events_deleted == 3; p=Monitor.objects.get(name='rollback-proof'); assert CheckResult.objects.filter(monitor=p,message='recent-check').exists(); assert not CheckResult.objects.filter(monitor=p,message='expired-check').exists(); j=Monitor.objects.get(name='job-retention-proof'); assert JobEvent.objects.filter(monitor=j,event_type='SUCCESS',event_id='123e4567-e89b-12d3-a456-426614174000').exists(); assert JobEvent.objects.filter(monitor=j,message='recent-log').exists(); assert JobEvent.objects.filter(monitor=j).count() == 2; oc=Monitor.objects.get(name='oncalendar-rollback-proof'); assert oc.job_schedule_mode == 'ONCAL'; assert oc.enabled is True; assert NotificationOutbox.objects.filter(idempotency_key='gcm-v1-'+'b'*64).exists(); print('candidate source-only state verified')"
+      - name: Roll application back without schema change
         shell: bash
         run: |
           set -euo pipefail
@@ -131,4 +115,4 @@ jobs:
             -e POSTGRES_PORT=5432 \
             goreecloud-monitor:rollback-previous \
             python manage.py shell -c \
-            "from monitoring.models import CheckResult, JobEvent, Monitor, NotificationOutbox; p=Monitor.objects.get(name='rollback-proof'); j=Monitor.objects.get(name='job-retention-proof'); assert CheckResult.objects.filter(monitor=p,message='recent-check').exists(); assert JobEvent.objects.filter(monitor=j,event_type='SUCCESS',event_id='123e4567-e89b-12d3-a456-426614174000').exists(); assert JobEvent.objects.filter(monitor=j,message='recent-log').exists(); assert JobEvent.objects.filter(monitor=j).count() == 2; oc=Monitor.objects.get(name='oncalendar-rollback-proof'); assert oc.job_schedule_mode == 'SIMPLE'; assert oc.enabled is False; assert oc.state == 'PAUSED'; assert oc.job_cron_expression == ''; assert '*-*-* 03:00:00' in oc.last_message; assert NotificationOutbox.objects.filter(idempotency_key='gcm-v1-'+'b'*64).exists(); print('immediate predecessor reads retained state and safely paused former OnCalendar schedule')"
+            "from monitoring.models import CheckResult, JobEvent, Monitor, NotificationOutbox; p=Monitor.objects.get(name='rollback-proof'); j=Monitor.objects.get(name='job-retention-proof'); assert CheckResult.objects.filter(monitor=p,message='recent-check').exists(); assert JobEvent.objects.filter(monitor=j,event_type='SUCCESS',event_id='123e4567-e89b-12d3-a456-426614174000').exists(); assert JobEvent.objects.filter(monitor=j,message='recent-log').exists(); assert JobEvent.objects.filter(monitor=j).count() == 2; oc=Monitor.objects.get(name='oncalendar-rollback-proof'); assert oc.job_schedule_mode == 'ONCAL'; assert oc.enabled is True; assert oc.job_cron_expression == '*-*-* 03:00:00'; assert NotificationOutbox.objects.filter(idempotency_key='gcm-v1-'+'b'*64).exists(); print('immediate predecessor reads source-only candidate state without schema change')"

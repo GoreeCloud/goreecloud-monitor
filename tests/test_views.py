@@ -686,6 +686,118 @@ class ViewTests(TestCase):
         self.assertEqual(response["WWW-Authenticate"], "Bearer")
         self.assertEqual(self.client.get(reverse("monitoring:manager-summary"), HTTP_AUTHORIZATION="Bearer manager-secret").status_code, 200)
 
+    @override_settings(MANAGER_API_TOKEN="manager-secret")
+    def test_manager_jobs_api_is_read_only_bounded_and_job_only(self):
+        first = Monitor.objects.create(
+            name="manager-job-a",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_schedule_mode=Monitor.JobScheduleMode.CRON,
+            job_cron_expression="0 3 * * *",
+            job_timezone="UTC",
+        )
+        second = Monitor.objects.create(
+            name="manager-job-b",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=7200,
+        )
+        Monitor.objects.create(
+            name="not-a-job",
+            kind=Monitor.Kind.PUSH,
+            interval_seconds=60,
+        )
+
+        endpoint = reverse("monitoring:manager-jobs")
+        unauthorized = self.client.get(endpoint)
+        self.assertEqual(unauthorized.status_code, 401)
+        self.assertEqual(unauthorized["WWW-Authenticate"], "Bearer")
+        self.assertEqual(self.client.post(endpoint, HTTP_AUTHORIZATION="Bearer manager-secret").status_code, 405)
+
+        page = self.client.get(
+            endpoint,
+            {"limit": "1"},
+            HTTP_AUTHORIZATION="Bearer manager-secret",
+        )
+        self.assertEqual(page.status_code, 200)
+        payload = page.json()
+        self.assertEqual(payload["schema"], "goreecloud-monitor-manager-jobs-v1")
+        self.assertEqual(payload["page"]["returned"], 1)
+        self.assertTrue(payload["page"]["has_more"])
+        self.assertEqual(payload["jobs"][0]["id"], first.pk)
+        self.assertNotIn("heartbeat_token", page.content.decode("utf-8"))
+        self.assertNotIn("not-a-job", page.content.decode("utf-8"))
+
+        next_page = self.client.get(
+            endpoint,
+            {"limit": "10", "after_id": str(payload["page"]["next_after_id"])},
+            HTTP_AUTHORIZATION="Bearer manager-secret",
+        )
+        self.assertEqual([row["id"] for row in next_page.json()["jobs"]], [second.pk])
+        self.assertEqual(
+            self.client.get(endpoint, {"limit": "101"}, HTTP_AUTHORIZATION="Bearer manager-secret").status_code,
+            400,
+        )
+
+    @override_settings(MANAGER_API_TOKEN="manager-secret")
+    def test_manager_job_detail_exposes_sanitized_signal_metadata_only(self):
+        job = Monitor.objects.create(
+            name="manager-job-detail",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.ONCALENDAR,
+            job_cron_expression="*-*-* 03:00:00",
+            job_timezone="America/Chicago",
+        )
+        raw = job.issue_heartbeat_token()
+        event = JobEvent.objects.create(
+            monitor=job,
+            event_type=JobEvent.EventType.FAILURE,
+            event_id=str(uuid4()),
+            run_id="private-run-id",
+            exit_code=9,
+            duration_ms=1234,
+            message="private operator diagnostic",
+        )
+        Incident.objects.create(monitor=job, failure_reason="private failure reason")
+
+        endpoint = reverse("monitoring:manager-job-detail", args=[job.pk])
+        response = self.client.get(endpoint, HTTP_AUTHORIZATION="Bearer manager-secret")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["schema"], "goreecloud-monitor-manager-job-v1")
+        self.assertEqual(payload["job"]["id"], job.pk)
+        self.assertEqual(payload["job"]["schedule"]["mode"], "ONCAL")
+        self.assertEqual(payload["job"]["schedule"]["expression"], "*-*-* 03:00:00")
+        self.assertEqual(payload["recent_events"][0]["event_type"], "FAILURE")
+        self.assertEqual(payload["recent_events"][0]["exit_code"], 9)
+        self.assertEqual(payload["recent_events"][0]["duration_ms"], 1234)
+        rendered = response.content.decode("utf-8")
+        self.assertNotIn(raw, rendered)
+        job.refresh_from_db()
+        self.assertNotIn(job.heartbeat_token, rendered)
+        self.assertNotIn(event.event_id, rendered)
+        self.assertNotIn("private-run-id", rendered)
+        self.assertNotIn("private operator diagnostic", rendered)
+        self.assertNotIn("private failure reason", rendered)
+        self.assertEqual(self.client.post(endpoint, HTTP_AUTHORIZATION="Bearer manager-secret").status_code, 405)
+        self.assertEqual(
+            self.client.get(endpoint, {"event_limit": "101"}, HTTP_AUTHORIZATION="Bearer manager-secret").status_code,
+            400,
+        )
+
+    @override_settings(MANAGER_API_TOKEN="manager-secret")
+    def test_manager_job_detail_rejects_non_job_monitor(self):
+        monitor = Monitor.objects.create(
+            name="manager-push",
+            kind=Monitor.Kind.PUSH,
+            interval_seconds=60,
+        )
+        response = self.client.get(
+            reverse("monitoring:manager-job-detail", args=[monitor.pk]),
+            HTTP_AUTHORIZATION="Bearer manager-secret",
+        )
+        self.assertEqual(response.status_code, 404)
+
     @override_settings(DEBUG=False)
     def test_unknown_page_uses_glaze_error_surface_without_path_disclosure(self):
         response = self.client.get("/definitely-not-a-monitor-page/?secret=query-value")

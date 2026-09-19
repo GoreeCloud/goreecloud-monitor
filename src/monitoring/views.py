@@ -659,12 +659,109 @@ def _manager_authorized(request: HttpRequest) -> bool:
     return bool(supplied and hmac.compare_digest(supplied, configured))
 
 
+def _manager_unauthorized_response() -> JsonResponse:
+    response = JsonResponse({"detail": "Unauthorized"}, status=401)
+    response.headers["WWW-Authenticate"] = "Bearer"
+    return response
+
+
+def _manager_job_summary(monitor: Monitor, *, include_expression: bool = False) -> dict[str, object]:
+    evaluation = evaluate_job_monitor(monitor)
+    latest_event = monitor.job_events.order_by("-received_at", "-id").first()
+    active_incident = monitor.incidents.filter(ended_at__isnull=True).exists()
+    payload: dict[str, object] = {
+        "id": monitor.id,
+        "name": monitor.name,
+        "enabled": monitor.enabled,
+        "state": monitor.state,
+        "lifecycle_phase": evaluation.phase,
+        "schedule": {
+            "mode": monitor.job_schedule_mode,
+            "interval_seconds": monitor.interval_seconds,
+            "timezone": monitor.job_timezone,
+            "grace_seconds": monitor.job_grace_seconds,
+            "max_runtime_seconds": monitor.job_max_runtime_seconds,
+        },
+        "last_signal_at": latest_event.received_at.isoformat() if latest_event else None,
+        "last_event_type": latest_event.event_type if latest_event else None,
+        "last_duration_ms": latest_event.duration_ms if latest_event else None,
+        "active_incident": active_incident,
+    }
+    if include_expression:
+        payload["schedule"]["expression"] = monitor.job_cron_expression or None
+    return payload
+
+
+@require_http_methods(["GET"])
+def manager_jobs(request: HttpRequest) -> JsonResponse:
+    if not _manager_authorized(request):
+        return _manager_unauthorized_response()
+
+    limit = _parse_positive_int(request.GET.get("limit"), default=50, maximum=100)
+    after_id = _parse_positive_int(
+        request.GET.get("after_id"),
+        default=1,
+        maximum=2**63 - 1,
+    )
+    if limit is None or after_id is None:
+        return JsonResponse({"detail": "Invalid pagination parameters"}, status=400)
+
+    queryset = Monitor.objects.filter(kind=Monitor.Kind.JOB, id__gte=after_id).order_by("id")
+    rows = list(queryset[: limit + 1])
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+    next_after_id = rows[-1].id + 1 if has_more and rows else None
+    jobs = [_manager_job_summary(monitor) for monitor in rows]
+
+    return JsonResponse(
+        {
+            "schema": "goreecloud-monitor-manager-jobs-v1",
+            "generated_at": timezone.now().isoformat(),
+            "page": {
+                "limit": limit,
+                "returned": len(jobs),
+                "has_more": has_more,
+                "next_after_id": next_after_id,
+            },
+            "jobs": jobs,
+        }
+    )
+
+
+@require_http_methods(["GET"])
+def manager_job_detail(request: HttpRequest, pk: int) -> JsonResponse:
+    if not _manager_authorized(request):
+        return _manager_unauthorized_response()
+
+    limit = _parse_positive_int(request.GET.get("event_limit"), default=20, maximum=100)
+    if limit is None:
+        return JsonResponse({"detail": "Invalid event_limit"}, status=400)
+
+    monitor = get_object_or_404(Monitor, pk=pk, kind=Monitor.Kind.JOB)
+    recent_events = [
+        {
+            "received_at": event.received_at.isoformat(),
+            "event_type": event.event_type,
+            "exit_code": event.exit_code,
+            "duration_ms": event.duration_ms,
+        }
+        for event in monitor.job_events.order_by("-received_at", "-id")[:limit]
+    ]
+    return JsonResponse(
+        {
+            "schema": "goreecloud-monitor-manager-job-v1",
+            "generated_at": timezone.now().isoformat(),
+            "job": _manager_job_summary(monitor, include_expression=True),
+            "retained_event_count": monitor.job_events.count(),
+            "recent_events": recent_events,
+        }
+    )
+
+
 @require_http_methods(["GET"])
 def manager_summary(request: HttpRequest) -> JsonResponse:
     if not _manager_authorized(request):
-        response = JsonResponse({"detail": "Unauthorized"}, status=401)
-        response.headers["WWW-Authenticate"] = "Bearer"
-        return response
+        return _manager_unauthorized_response()
     counts = {state: 0 for state, _ in Monitor.State.choices}
     for row in Monitor.objects.values("state").annotate(total=Count("id")):
         counts[row["state"]] = row["total"]

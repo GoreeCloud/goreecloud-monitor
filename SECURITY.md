@@ -14,7 +14,7 @@ Monitor is security-sensitive because it authenticates administrators, stores op
 
 - Administrative UI requires Django authentication; monitor and maintenance mutation require staff status.
 - Protected Settings, Wardveil posture, exact target-network allowlists, raw diagnostic details, and credential issuance/rotation are staff-only.
-- Manager integration is read-only and uses a separate bearer credential with constant-time comparison.
+- Manager integration is read-only and uses a separate bearer credential with constant-time comparison. Its JOB list/detail endpoints expose bounded operational metadata only and never expose reusable credentials, stored verifiers, event IDs, run IDs, operator messages, incident failure text, or mutation operations.
 - Login, logout, authentication failure, privileged configuration mutation, and credential issuance/rotation generate minimized Wardveil security events.
 
 ## Push heartbeat credentials

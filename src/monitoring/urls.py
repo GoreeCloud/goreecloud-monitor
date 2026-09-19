@@ -28,4 +28,6 @@ urlpatterns = [
     path("health/live/", views.health_live, name="health-live"),
     path("health/ready/", views.health_ready, name="health-ready"),
     path("api/v1/summary/", views.manager_summary, name="manager-summary"),
+    path("api/v1/jobs/", views.manager_jobs, name="manager-jobs"),
+    path("api/v1/jobs/<int:pk>/", views.manager_job_detail, name="manager-job-detail"),
 ]

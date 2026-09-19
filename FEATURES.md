@@ -29,6 +29,7 @@ A feature listed here is not automatically production-accepted.
 - Derived scheduled-job lifecycle presentation with Awaiting, Started, Completed, Failed, and Late phases while preserving the existing Monitor state/incident model.
 - Automatic bounded CheckResult and scheduled-job event-history pruning with current JOB evaluation state preserved.
 - Staff-only scheduled-job recovery snapshots and versioned paginated JSON exports of retained job-event evidence, with credentials excluded.
+- Bearer-authenticated read-only Manager JOB list/detail endpoints with lifecycle, schedule, incident, and bounded sanitized signal metadata; no job credential, run ID, event ID, message, or mutation surface is exposed.
 - Configurable check intervals and failure/recovery thresholds.
 - Monitor pause/enable state.
 - Maintenance windows.
