@@ -15,7 +15,7 @@ Two schedule modes are available:
 - **Simple interval** — the job must complete within `interval_seconds + job_grace_seconds` after the last successful completion. Before the first success, the creation time is the initial baseline.
 - **Cron schedule** — a strict cron expression is evaluated in the configured IANA time zone. The job must complete inside the current schedule window plus the configured grace period.
 
-Cron parsing uses the repository-pinned `croniter` dependency with strict validation.
+Cron parsing uses the repository-pinned `croniter` dependency with strict validation. IANA time-zone lookup uses the repository-pinned Python `tzdata` fallback so schedule interpretation does not depend on host image zone-data availability.
 
 ## Signals
 
