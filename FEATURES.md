@@ -64,7 +64,7 @@ A feature listed here is not automatically production-accepted.
 - Database backup tooling.
 - Isolated PostgreSQL restore validation in CI.
 - Migration-readiness/reconciliation tooling for preserved Uptime Kuma definitions.
-- Current-main rollback compatibility for the notification-outbox, scheduled-job, and job-signal idempotency migrations.
+- Immediate-predecessor rollback compatibility workflows cover the notification-outbox, scheduled-job, and job-signal idempotency migrations.
 - Target preflight and hardened production Compose validation.
 
 ## Implemented security/privacy controls
