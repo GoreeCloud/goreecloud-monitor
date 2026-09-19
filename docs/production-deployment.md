@@ -25,7 +25,9 @@ The repository file `compose.production.yml` is the source deployment candidate.
 - `migrate` is a one-shot database migration service attached only to `backend`.
 - `web` uses the immutable application image, read-only root filesystem, dropped capabilities, `no-new-privileges`, and bounded `/tmp` tmpfs. It joins only `backend` and the approved external gateway network.
 - `worker` uses the same application image and hardening. It joins `backend` and only the approved network needed to reach monitored destinations and GoreeCloud Notify.
-- `worker` uses exactly one explicit private IPv4 DNS resolver supplied through `MONITOR_DNS_SERVER`. No other Monitor service receives a DNS override. The resolver must be reachable from the existing worker networks and must provide the approved private answers for private GoreeCloud monitoring targets; a public resolver is not an accepted substitute.
+- `backend` uses an explicit private IPv4 subnet supplied through `MONITOR_BACKEND_SUBNET`, with its gateway fixed to `MONITOR_DNS_SERVER`; this makes the host-side resolver endpoint stable across network recreation.
+- `worker` uses exactly one explicit private IPv4 DNS resolver supplied through `MONITOR_DNS_SERVER` and an explicit backend address supplied through `MONITOR_WORKER_BACKEND_IP`. No other Monitor service receives a DNS override. The fixed worker address allows host firewall policy to grant DNS only to the Monitor worker rather than the full backend or proxy network.
+- The resolver must provide the approved private answers for private GoreeCloud monitoring targets; a public resolver is not an accepted substitute.
 - No service uses privileged mode, host networking, a Docker socket, or added Linux capabilities.
 - No Monitor or PostgreSQL port is published on the host. GoreeCloud Gateway is the intended private HTTPS ingress.
 
@@ -41,7 +43,7 @@ The deployment must not reuse retired Uptime Kuma network identity merely for co
 
 Production uses three purpose-specific files:
 
-- `.env` — Compose interpolation values such as image references, protected file paths, persistent database path, gateway network name, and the approved private worker DNS resolver address (`MONITOR_DNS_SERVER`).
+- `.env` — Compose interpolation values such as image references, protected file paths, persistent database path, gateway network name, fixed backend subnet (`MONITOR_BACKEND_SUBNET`), approved private worker DNS/backend-gateway address (`MONITOR_DNS_SERVER`), and fixed worker backend address (`MONITOR_WORKER_BACKEND_IP`).
 - `monitor.env` — Django, worker, platform integration, and GoreeCloud Notify producer configuration.
 - `database.env` — PostgreSQL database name, username, password, and port.
 
@@ -60,7 +62,7 @@ docker compose -f compose.production.yml config --format json \
   | python scripts/validate_production_compose.py
 ```
 
-The validator requires no published ports, no privileged/host-network/device/Docker-socket access, no added capabilities, read-only application root filesystems, `cap_drop: ALL`, `no-new-privileges`, an internal database network, the approved external gateway network, a persistent PostgreSQL bind mount, a digest-pinned PostgreSQL image, and exactly one private IPv4 DNS resolver on the worker only.
+The validator requires no published ports, no privileged/host-network/device/Docker-socket access, no added capabilities, read-only application root filesystems, `cap_drop: ALL`, `no-new-privileges`, an internal database network with explicit private IPv4 IPAM, the approved external gateway network, a persistent PostgreSQL bind mount, a digest-pinned PostgreSQL image, exactly one private IPv4 DNS resolver on the worker only, and a fixed worker backend address inside that subnet. The worker DNS resolver must equal the backend gateway.
 
 ## Target acceptance required before activation
 
