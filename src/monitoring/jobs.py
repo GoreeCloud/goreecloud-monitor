@@ -13,11 +13,20 @@ from django.utils import timezone
 from .models import JobEvent, Monitor
 
 
+class JobPhase:
+    AWAITING = "AWAITING"
+    STARTED = "STARTED"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    LATE = "LATE"
+
+
 @dataclass(frozen=True, slots=True)
 class JobEvaluation:
     success: bool
     observed_state: str
     message: str
+    phase: str
 
 
 def _last_scheduled_time(monitor: Monitor, now: datetime) -> datetime:
@@ -59,13 +68,29 @@ def evaluate_job_monitor(monitor: Monitor, now: datetime | None = None) -> JobEv
                 False,
                 Monitor.State.DOWN,
                 f"Scheduled job exceeded {source} of {runtime_limit}s after start",
+                JobPhase.LATE,
             )
-        return JobEvaluation(True, Monitor.State.UP, f"Scheduled job is running ({int(runtime)}s)")
+        return JobEvaluation(
+            True,
+            Monitor.State.UP,
+            f"Scheduled job is running ({int(runtime)}s)",
+            JobPhase.STARTED,
+        )
 
     if latest_terminal and latest_terminal.event_type == JobEvent.EventType.FAILURE:
         if latest_terminal.exit_code is None:
-            return JobEvaluation(False, Monitor.State.DOWN, "Scheduled job reported failure")
-        return JobEvaluation(False, Monitor.State.DOWN, f"Scheduled job exited with code {latest_terminal.exit_code}")
+            return JobEvaluation(
+                False,
+                Monitor.State.DOWN,
+                "Scheduled job reported failure",
+                JobPhase.FAILED,
+            )
+        return JobEvaluation(
+            False,
+            Monitor.State.DOWN,
+            f"Scheduled job exited with code {latest_terminal.exit_code}",
+            JobPhase.FAILED,
+        )
 
     latest_success = latest_terminal if latest_terminal and latest_terminal.event_type == JobEvent.EventType.SUCCESS else None
 
@@ -75,21 +100,56 @@ def evaluate_job_monitor(monitor: Monitor, now: datetime | None = None) -> JobEv
         # happened before the monitor existed. Its first enforceable window starts with the
         # first scheduled occurrence at or after creation.
         if last_due < monitor.created_at:
-            return JobEvaluation(True, Monitor.State.UNKNOWN, "Awaiting the first scheduled job window")
+            return JobEvaluation(
+                True,
+                Monitor.State.UNKNOWN,
+                "Awaiting the first scheduled job window",
+                JobPhase.AWAITING,
+            )
         deadline = last_due + timedelta(seconds=monitor.job_grace_seconds)
         if latest_success and latest_success.received_at >= last_due:
-            return JobEvaluation(True, Monitor.State.UP, "Scheduled job completed for the current cron window")
+            return JobEvaluation(
+                True,
+                Monitor.State.UP,
+                "Scheduled job completed for the current cron window",
+                JobPhase.COMPLETED,
+            )
         if now > deadline:
-            return JobEvaluation(False, Monitor.State.DOWN, "Scheduled job missed its cron schedule and grace period")
-        return JobEvaluation(True, Monitor.State.UNKNOWN, "Awaiting the current scheduled job completion")
+            return JobEvaluation(
+                False,
+                Monitor.State.DOWN,
+                "Scheduled job missed its cron schedule and grace period",
+                JobPhase.LATE,
+            )
+        return JobEvaluation(
+            True,
+            Monitor.State.UNKNOWN,
+            "Awaiting the current scheduled job completion",
+            JobPhase.AWAITING,
+        )
 
     anchor = latest_success.received_at if latest_success else monitor.created_at
     deadline = anchor + timedelta(seconds=monitor.interval_seconds + monitor.job_grace_seconds)
     if now > deadline:
-        return JobEvaluation(False, Monitor.State.DOWN, "Scheduled job missed its expected interval and grace period")
+        return JobEvaluation(
+            False,
+            Monitor.State.DOWN,
+            "Scheduled job missed its expected interval and grace period",
+            JobPhase.LATE,
+        )
     if latest_success:
-        return JobEvaluation(True, Monitor.State.UP, "Scheduled job completion is current")
-    return JobEvaluation(True, Monitor.State.UNKNOWN, "Awaiting the first scheduled job completion")
+        return JobEvaluation(
+            True,
+            Monitor.State.UP,
+            "Scheduled job completion is current",
+            JobPhase.COMPLETED,
+        )
+    return JobEvaluation(
+        True,
+        Monitor.State.UNKNOWN,
+        "Awaiting the first scheduled job completion",
+        JobPhase.AWAITING,
+    )
 
 
 def _matching_start(monitor: Monitor, run_id: str, received_at: datetime) -> JobEvent | None:
