@@ -102,6 +102,8 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+    dns:
+      - ${MONITOR_DNS_SERVER:?MONITOR_DNS_SERVER is required}
     sysctls:
       net.ipv4.ping_group_range: "999 999"
     networks:
