@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from monitoring.engine import CheckOutcome, _apply_outcome, check_dns, check_push, run_monitor
-from monitoring.jobs import evaluate_job_monitor, record_job_event
+from monitoring.jobs import JobPhase, evaluate_job_monitor, record_job_event
 from monitoring.models import CheckResult, Incident, JobEvent, Monitor, NotificationOutbox
 
 
@@ -89,6 +89,7 @@ class EngineStateTests(TestCase):
         outcome = evaluate_job_monitor(monitor, completed_at + timedelta(seconds=71))
         self.assertFalse(outcome.success)
         self.assertEqual(outcome.observed_state, Monitor.State.DOWN)
+        self.assertEqual(outcome.phase, JobPhase.LATE)
 
     def test_cron_scheduled_job_accepts_completion_in_current_window(self):
         monitor = Monitor.objects.create(
@@ -112,6 +113,7 @@ class EngineStateTests(TestCase):
         )
         self.assertTrue(outcome.success)
         self.assertEqual(outcome.observed_state, Monitor.State.UP)
+        self.assertEqual(outcome.phase, JobPhase.COMPLETED)
 
     def test_new_cron_monitor_does_not_inherit_pre_creation_missed_window(self):
         monitor = Monitor.objects.create(
@@ -133,6 +135,7 @@ class EngineStateTests(TestCase):
         )
         self.assertTrue(outcome.success)
         self.assertEqual(outcome.observed_state, Monitor.State.UNKNOWN)
+        self.assertEqual(outcome.phase, JobPhase.AWAITING)
         self.assertIn("first scheduled job window", outcome.message)
 
     def test_cron_scheduled_job_uses_exact_due_minute_as_current_window(self):
@@ -155,6 +158,7 @@ class EngineStateTests(TestCase):
         )
         self.assertTrue(outcome.success)
         self.assertEqual(outcome.observed_state, Monitor.State.UNKNOWN)
+        self.assertEqual(outcome.phase, JobPhase.AWAITING)
         self.assertIn("current scheduled job completion", outcome.message)
 
     def test_cron_scheduled_job_detects_missed_window(self):
@@ -177,6 +181,7 @@ class EngineStateTests(TestCase):
         )
         self.assertFalse(outcome.success)
         self.assertEqual(outcome.observed_state, Monitor.State.DOWN)
+        self.assertEqual(outcome.phase, JobPhase.LATE)
 
     def test_job_evaluation_is_not_confused_by_high_log_volume(self):
         monitor = Monitor.objects.create(
@@ -207,6 +212,7 @@ class EngineStateTests(TestCase):
         outcome = evaluate_job_monitor(monitor, completed_at + timedelta(seconds=30))
         self.assertTrue(outcome.success)
         self.assertEqual(outcome.observed_state, Monitor.State.UP)
+        self.assertEqual(outcome.phase, JobPhase.COMPLETED)
 
     def test_scheduled_job_detects_runtime_overrun(self):
         monitor = Monitor.objects.create(
@@ -224,6 +230,7 @@ class EngineStateTests(TestCase):
         )
         outcome = evaluate_job_monitor(monitor, started_at + timedelta(seconds=61))
         self.assertFalse(outcome.success)
+        self.assertEqual(outcome.phase, JobPhase.LATE)
         self.assertIn("maximum runtime", outcome.message)
 
     def test_started_job_without_explicit_max_runtime_uses_grace_limit(self):
@@ -244,7 +251,56 @@ class EngineStateTests(TestCase):
         outcome = evaluate_job_monitor(monitor, started_at + timedelta(seconds=31))
         self.assertFalse(outcome.success)
         self.assertEqual(outcome.observed_state, Monitor.State.DOWN)
+        self.assertEqual(outcome.phase, JobPhase.LATE)
         self.assertIn("grace runtime", outcome.message)
+
+    def test_scheduled_job_reports_started_phase_without_changing_up_mapping(self):
+        monitor = Monitor.objects.create(
+            name="started-phase-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_max_runtime_seconds=600,
+        )
+        started_at = timezone.now() - timedelta(seconds=30)
+        record_job_event(
+            monitor.id,
+            JobEvent.EventType.START,
+            run_id="active-run",
+            received_at=started_at,
+        )
+        outcome = evaluate_job_monitor(monitor, started_at + timedelta(seconds=30))
+        self.assertTrue(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.UP)
+        self.assertEqual(outcome.phase, JobPhase.STARTED)
+
+    def test_scheduled_job_reports_failed_phase_without_changing_down_mapping(self):
+        monitor = Monitor.objects.create(
+            name="failed-phase-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+        )
+        record_job_event(
+            monitor.id,
+            JobEvent.EventType.FAILURE,
+            run_id="failed-run",
+            exit_code=2,
+        )
+        outcome = evaluate_job_monitor(monitor)
+        self.assertFalse(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.DOWN)
+        self.assertEqual(outcome.phase, JobPhase.FAILED)
+
+    def test_scheduled_job_reports_awaiting_phase_before_first_simple_deadline(self):
+        monitor = Monitor.objects.create(
+            name="awaiting-phase-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_grace_seconds=60,
+        )
+        outcome = evaluate_job_monitor(monitor, monitor.created_at + timedelta(seconds=30))
+        self.assertTrue(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.UNKNOWN)
+        self.assertEqual(outcome.phase, JobPhase.AWAITING)
 
     async def test_job_monitor_failure_enters_existing_incident_pipeline(self):
         monitor = await sync_to_async(Monitor.objects.create)(
