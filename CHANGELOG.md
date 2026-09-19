@@ -15,6 +15,7 @@
 - Added exact-cron-boundary handling so the scheduled minute itself is the current window rather than briefly falling back to the preceding occurrence.
 - Added bounded JobEvent history and staff-only schedule/event diagnostics while keeping credential verifiers and detailed operational metadata out of non-staff surfaces.
 - Reused the existing failure/recovery threshold, incident, and durable GoreeCloud Notify outbox pipeline rather than creating a parallel alert subsystem.
+- Extended the existing bearer-authenticated read-only Manager API with bounded scheduled-job list/detail endpoints. Manager receives lifecycle/schedule/incident summaries and sanitized recent event type/time/exit/duration metadata only; credentials, verifiers, run IDs, event IDs, operator messages, and write operations remain outside the Manager contract.
 - Added migration `0004_scheduled_job_monitor` and updated immediate-predecessor rollback proof to preserve existing non-JOB monitors and durable notification state while explicitly removing candidate-only JOB rows before downgrade to `0003`.
 - Added migration `0005_job_event_idempotency`; the candidate rollback workflow verifies that JOB definitions and JobEvent rows survive downgrade to `0004` while candidate-only `event_id` replay identities are intentionally dropped.
 - Added migration `0006_job_oncalendar_schedule`; downgrade pauses OnCalendar monitors and preserves the former expression only as bounded recovery context before the immediate predecessor starts, preventing silent schedule reinterpretation.
