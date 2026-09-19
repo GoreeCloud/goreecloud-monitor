@@ -64,6 +64,8 @@ Pending notification-outbox rows are not deleted merely to satisfy retention; th
 
 Backups may retain monitored-state data for the approved recovery period and must be protected.
 
+Authorized staff may use the scheduled-job recovery surface and versioned retained-event export for operational evidence and incident investigation. That export can contain run identifiers and bounded operator-supplied event messages, so it must be protected as monitoring data. It excludes reusable credentials and credential verifiers and does not replace the authoritative PostgreSQL recovery path.
+
 ## Sharing and external services
 
 GoreeCloud Notify is the supported alert-delivery integration candidate. Alert payloads must remain minimized.
