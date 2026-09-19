@@ -39,7 +39,7 @@ class MaintenanceWindowAdmin(admin.ModelAdmin):
 
 @admin.register(JobEvent)
 class JobEventAdmin(admin.ModelAdmin):
-    list_display = ("monitor", "received_at", "event_type", "run_id", "exit_code", "duration_ms")
+    list_display = ("monitor", "received_at", "event_type", "event_id", "run_id", "exit_code", "duration_ms")
     list_filter = ("event_type",)
-    search_fields = ("monitor__name", "run_id", "message")
-    readonly_fields = ("monitor", "received_at", "event_type", "run_id", "exit_code", "duration_ms", "message")
+    search_fields = ("monitor__name", "event_id", "run_id", "message")
+    readonly_fields = ("monitor", "received_at", "event_type", "event_id", "run_id", "exit_code", "duration_ms", "message")
