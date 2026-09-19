@@ -1,7 +1,7 @@
 # GoreeCloud Monitor — Feature Roadmap
 
 **Status:** Active roadmap control  
-**As of:** 2026-09-08  
+**As of:** 2026-09-19  
 **Authoritative project record:** Project Specification — Monitor  
 **Canonical repository:** GoreeCloud/goreecloud-monitor
 **Drive control:** `GoreeCloud/Feature Roadmap/GoreeCloud Monitor/FEATURE-ROADMAP.docx`
@@ -17,6 +17,17 @@ This file is the repository-side feature roadmap control for GoreeCloud Monitor.
 | FR-001 | Reconcile and maintain every current planned or recommended GoreeCloud Monitor feature from the authoritative project record and verified repository evidence in this roadmap. | High | Ongoing control |
 | FR-002 | Move actionable feature obligations into GoreeCloud Tasks Management when required, preserving priority, dependency, and lifecycle disposition. | High | Ongoing control |
 | FR-003 | Do not mark features implemented, complete, cancelled, or superseded without authoritative evidence and synchronized repository/Drive roadmap updates. | High | Ongoing control |
+| FR-004 | Add first-class Scheduled Job / Dead-Man monitors so GoreeCloud Monitor owns cron jobs, backup/maintenance heartbeats, and missed-run detection formerly covered by Healthchecks. | High | Planned — not implemented |
+| FR-005 | Add simple period + grace scheduling plus cron/time-zone scheduling; evaluate systemd OnCalendar support for practical parity. | High | Planned — not implemented |
+| FR-006 | Add authenticated job-signal ingestion for start, success, failure/exit status, and bounded log/event payloads using rotatable per-check credentials. | High | Planned — not implemented |
+| FR-007 | Add run correlation/duration tracking, execution-overrun detection, Late/Started semantics, and missed-completion incidents. | High | Planned — not implemented |
+| FR-008 | Add scheduled-job event history, status flips, run durations, retention controls, and recovery views without becoming a general log platform. | High | Planned — not implemented |
+| FR-009 | Add tags/labels and collections/projects for job checks, with search/filter and GoreeCloud Identity/Policy-backed authorization where applicable. | Medium | Planned — not implemented |
+| FR-010 | Extend the versioned management API with scoped read-only/read-write job-check administration, signal metadata access, token rotation, and rate limiting. | High | Planned — not implemented |
+| FR-011 | Add policy-gated automatic provisioning by approved slug/name identifiers, with auditability, rate limits, and review controls. | Medium | Planned — not implemented |
+| FR-012 | Add private badge/JSON status summaries plus repeated-down reminders and periodic scheduled-job health reports delivered through GoreeCloud Notify. | Medium | Planned — not implemented |
+| FR-013 | Evaluate email-based start/success/failure signal ingestion with keyword rules only after SMTP/security/privacy acceptance. | Low | Proposed — security review required |
+| FR-014 | Preserve GoreeCloud Notify as the delivery/fan-out authority; do not duplicate Healthchecks' provider integration catalog inside Monitor. | High | Architectural requirement |
 
 ## Maintenance and synchronization
 
