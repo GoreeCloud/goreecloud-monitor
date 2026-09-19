@@ -101,6 +101,17 @@ class MonitorModelTests(TestCase):
         with self.assertRaises(ValidationError):
             bad_zone.full_clean(exclude=["heartbeat_token"])
 
+    def test_scheduled_job_rejects_non_crontab_field_count(self):
+        monitor = Monitor(
+            name="seconds-cron",
+            kind=Monitor.Kind.JOB,
+            job_schedule_mode=Monitor.JobScheduleMode.CRON,
+            job_cron_expression="0 0 3 * * *",
+            job_timezone="UTC",
+        )
+        with self.assertRaises(ValidationError):
+            monitor.full_clean(exclude=["heartbeat_token"])
+
     def test_disabled_monitor_is_paused(self):
         monitor = Monitor.objects.create(name="paused", kind=Monitor.Kind.PUSH, enabled=False)
         self.assertEqual(monitor.state, Monitor.State.PAUSED)
