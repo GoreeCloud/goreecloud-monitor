@@ -344,6 +344,8 @@ class ViewTests(TestCase):
         self.assertEqual(response.context["latest_terminal"].pk, terminal.pk)
         self.assertEqual(response.context["unmatched_start"].pk, start.pk)
         self.assertEqual(response.context["retention_days"], 90)
+        self.assertEqual(response.context["evaluation"].phase, "STARTED")
+        self.assertContains(response, "Started")
         self.assertContains(response, "active-run")
         self.assertNotContains(response, job.heartbeat_token)
 
@@ -378,6 +380,7 @@ class ViewTests(TestCase):
         self.assertEqual(payload["monitor"]["id"], job.pk)
         self.assertEqual(payload["events"][0]["id"], event.pk)
         self.assertEqual(payload["events"][0]["message"], "bounded diagnostic")
+        self.assertEqual(payload["evaluation"]["phase"], "FAILED")
         self.assertIn("attachment;", response["Content-Disposition"])
         rendered = response.content.decode("utf-8")
         self.assertNotIn(raw, rendered)
@@ -457,6 +460,46 @@ class ViewTests(TestCase):
         self.assertContains(response, reverse("monitoring:job-recovery", args=[job.pk]))
         self.assertContains(response, "Recovery &amp; export")
         self.assertNotContains(response, job.heartbeat_token)
+
+    def test_job_detail_presents_started_phase_without_changing_monitor_state(self):
+        job = Monitor.objects.create(
+            name="started-detail-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_max_runtime_seconds=600,
+            state=Monitor.State.UP,
+        )
+        JobEvent.objects.create(
+            monitor=job,
+            event_type=JobEvent.EventType.START,
+            run_id="active-detail-run",
+            received_at=timezone.now() - timedelta(seconds=30),
+        )
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("monitoring:monitor-detail", args=[job.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["job_evaluation"].phase, "STARTED")
+        self.assertContains(response, "Lifecycle: Started")
+        self.assertEqual(job.state, Monitor.State.UP)
+
+    def test_job_detail_presents_late_phase_for_runtime_overrun(self):
+        job = Monitor.objects.create(
+            name="late-detail-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_max_runtime_seconds=10,
+        )
+        JobEvent.objects.create(
+            monitor=job,
+            event_type=JobEvent.EventType.START,
+            run_id="late-run",
+            received_at=timezone.now() - timedelta(seconds=30),
+        )
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("monitoring:monitor-detail", args=[job.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["job_evaluation"].phase, "LATE")
+        self.assertContains(response, "Lifecycle: Late")
 
     def test_secure_push_endpoint_rejects_get_without_mutating(self):
         monitor = Monitor.objects.create(name="post-only", kind=Monitor.Kind.PUSH, interval_seconds=60)
