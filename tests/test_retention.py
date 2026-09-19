@@ -164,11 +164,15 @@ class WorkerRetentionIntegrationTests(TestCase):
                 return_value=fake_result,
             ) as prune,
             patch(
+                "monitoring.management.commands.runmonitor.close_old_connections",
+            ) as close_connections,
+            patch(
                 "monitoring.management.commands.runmonitor.run_batch",
                 new=AsyncMock(),
             ) as run_batch,
         ):
             call_command("runmonitor", once=True, stdout=StringIO())
 
+        close_connections.assert_called_once()
         prune.assert_called_once()
         run_batch.assert_awaited_once()
