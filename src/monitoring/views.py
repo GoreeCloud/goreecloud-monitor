@@ -358,6 +358,8 @@ def job_signal(request: HttpRequest) -> JsonResponse:
         or not -(2**31) <= exit_code < 2**31
     ):
         return JsonResponse({"detail": "exit_code must be a 32-bit integer"}, status=400)
+    if event_type == JobEvent.EventType.SUCCESS and exit_code not in {None, 0}:
+        return JsonResponse({"detail": "A success event cannot carry a non-zero exit_code"}, status=400)
 
     received_at = timezone.now()
     event = record_job_event(
