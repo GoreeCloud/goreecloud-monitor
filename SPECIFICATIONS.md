@@ -55,13 +55,13 @@ The current source implements the first scheduled-job/dead-man monitoring founda
 - authenticated start, success, failure/exit-status, and bounded log/event signals;
 - rotatable per-check signal credentials stored only as one-way verifiers;
 - run IDs/correlation, duration history, execution-overrun detection, missed-completion detection, and event history;
+- derived scheduled-job lifecycle phases (`Awaiting`, `Started`, `Completed`, `Failed`, `Late`) presented without replacing the underlying Monitor Up/Down/Unknown incident state;
 - mapping missed or failed jobs into the existing Monitor Down/incident/Notify transition pipeline;
 - staff-only scheduled-job recovery snapshots plus versioned, paginated JSON export of retained event evidence without credential material.
 
 The following scheduled-job scope remains planned or partial:
 
 - systemd OnCalendar compatibility when justified;
-- richer explicit Started/Late presentation beyond the existing Up/Down incident mapping;
 - tags/labels and collections/projects;
 - scoped management API support for job checks;
 - controlled optional auto-provisioning;
