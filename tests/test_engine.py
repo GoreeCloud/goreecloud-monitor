@@ -156,6 +156,36 @@ class EngineStateTests(TestCase):
         self.assertFalse(outcome.success)
         self.assertEqual(outcome.observed_state, Monitor.State.DOWN)
 
+    def test_job_evaluation_is_not_confused_by_high_log_volume(self):
+        monitor = Monitor.objects.create(
+            name="log-heavy-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_grace_seconds=60,
+        )
+        completed_at = timezone.now()
+        record_job_event(
+            monitor.id,
+            JobEvent.EventType.SUCCESS,
+            run_id="log-heavy-run",
+            received_at=completed_at,
+        )
+        JobEvent.objects.bulk_create(
+            [
+                JobEvent(
+                    monitor=monitor,
+                    event_type=JobEvent.EventType.LOG,
+                    run_id="log-heavy-run",
+                    received_at=completed_at + timedelta(milliseconds=index + 1),
+                    message=f"log line {index}",
+                )
+                for index in range(250)
+            ]
+        )
+        outcome = evaluate_job_monitor(monitor, completed_at + timedelta(seconds=30))
+        self.assertTrue(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.UP)
+
     def test_scheduled_job_detects_runtime_overrun(self):
         monitor = Monitor.objects.create(
             name="long-job",
