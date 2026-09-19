@@ -204,6 +204,26 @@ class EngineStateTests(TestCase):
         self.assertFalse(outcome.success)
         self.assertIn("maximum runtime", outcome.message)
 
+    def test_started_job_without_explicit_max_runtime_uses_grace_limit(self):
+        monitor = Monitor.objects.create(
+            name="grace-limited-running-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_grace_seconds=30,
+            job_max_runtime_seconds=0,
+        )
+        started_at = timezone.now() - timedelta(seconds=31)
+        record_job_event(
+            monitor.id,
+            JobEvent.EventType.START,
+            run_id="grace-run",
+            received_at=started_at,
+        )
+        outcome = evaluate_job_monitor(monitor, started_at + timedelta(seconds=31))
+        self.assertFalse(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.DOWN)
+        self.assertIn("grace runtime", outcome.message)
+
     async def test_job_monitor_failure_enters_existing_incident_pipeline(self):
         monitor = await sync_to_async(Monitor.objects.create)(
             name="failed-job",
