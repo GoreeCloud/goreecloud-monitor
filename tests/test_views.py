@@ -132,6 +132,30 @@ class ViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+    def test_job_signal_rejects_non_string_metadata(self):
+        monitor = Monitor.objects.create(name="typed-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        raw = monitor.issue_heartbeat_token()
+        response = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "success", "run_id": {"unexpected": "object"}},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(JobEvent.objects.filter(monitor=monitor).exists())
+
+    def test_job_start_rejects_exit_code(self):
+        monitor = Monitor.objects.create(name="start-exit-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        raw = monitor.issue_heartbeat_token()
+        response = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "start", "exit_code": 0},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(JobEvent.objects.filter(monitor=monitor).exists())
+
     def test_staff_job_detail_exposes_signal_contract_not_verifier(self):
         monitor = Monitor.objects.create(name="job-detail", kind=Monitor.Kind.JOB, interval_seconds=3600)
         self.client.force_login(self.staff)
