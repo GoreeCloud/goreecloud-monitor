@@ -32,11 +32,18 @@ The credential is generated or rotated from the staff-only Monitor interface. Mo
 The request body must be JSON and may contain only:
 
 - `event` — required. Supported values: `start`, `success`, `failure`/`fail`, or `log`.
+- `event_id` — optional UUID idempotency identifier. Reusing the same ID with the same signal returns the original event; materially different reuse is rejected.
 - `run_id` — optional correlation identifier, maximum 128 characters.
 - `exit_code` — optional signed 32-bit integer. A `success` event may omit it or send `0`; non-zero exit codes are rejected on `success` and should be reported with a `failure` event.
 - `message` — optional bounded diagnostic text, maximum 500 characters.
 
 A `start` event without a `run_id` receives a generated run identifier in the response. A later terminal event may provide that identifier. If a terminal event omits it, Monitor correlates the most recent unmatched start when practical.
+
+## Replay and rate limiting
+
+`MONITOR_JOB_SIGNAL_MAX_PER_MINUTE` controls the per-monitor ingestion budget and defaults to 5 signals per minute. The configured value is bounded to 1–600. When the budget is exceeded, Monitor returns HTTP 429 with `Retry-After` and does not persist the rejected signal.
+
+For network retry safety, clients should send a stable UUID `event_id` for each logical signal. If the exact same signal is retried with the same `event_id`, Monitor returns the previously persisted event and marks the response as replayed without creating another row or consuming another rate-limit slot. Reusing an `event_id` for different event type, exit status, message, or explicitly supplied run ID returns HTTP 409.
 
 ## State evaluation
 
@@ -76,7 +83,6 @@ The staff monitor-detail view exposes recent job-event history. Non-staff viewer
 
 The current foundation does not yet provide the complete planned Healthchecks-style feature set. Outstanding work includes:
 
-- signal rate limiting and stronger replay/idempotency controls;
 - systemd OnCalendar evaluation/support;
 - richer explicit Started/Late presentation;
 - dedicated job-event retention and recovery controls;
