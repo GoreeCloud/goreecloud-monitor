@@ -22,7 +22,7 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Failure and recovery thresholds with incident and recovery history
 - Authenticated least-privilege GoreeCloud Notify transition publishing candidate with raw-diagnostic minimization and a PostgreSQL-backed durable outbox
 - Notification-integration posture that keeps GoreeCloud Notify activation fail-closed until its producer contract and target acceptance are approved
-- Read-only Manager summary API with bearer authentication
+- Versioned read-only Manager APIs with bearer authentication for overall summary plus bounded scheduled-job list/detail visibility
 - SSRF-aware target validation with explicit private-network allowlists
 - Production browser/session hardening with CSP, Permissions Policy, same-origin resource/opener/referrer boundaries, no-index/no-store behavior, Secure/HttpOnly/SameSite cookies, HTTPS redirect, and HSTS target requirements
 - Minimized Wardveil security-event logging for authentication activity and privileged Monitor configuration actions
