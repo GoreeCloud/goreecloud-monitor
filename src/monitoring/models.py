@@ -126,9 +126,12 @@ class Monitor(models.Model):
             except (ZoneInfoNotFoundError, ValueError) as exc:
                 raise ValidationError({"job_timezone": "Use a valid IANA time-zone name such as UTC or America/Chicago."}) from exc
             if self.job_schedule_mode == self.JobScheduleMode.CRON:
-                if not self.job_cron_expression.strip():
+                cron_expression = self.job_cron_expression.strip()
+                if not cron_expression:
                     raise ValidationError({"job_cron_expression": "Cron-scheduled jobs require a cron expression."})
-                if not croniter.is_valid(self.job_cron_expression.strip(), strict=True):
+                if len(cron_expression.split()) != 5:
+                    raise ValidationError({"job_cron_expression": "Scheduled jobs use five-field crontab expressions."})
+                if not croniter.is_valid(cron_expression, strict=True):
                     raise ValidationError({"job_cron_expression": "Cron expression is invalid or cannot produce a real schedule."})
             elif self.job_cron_expression.strip():
                 raise ValidationError({"job_cron_expression": "Simple-interval jobs must leave the cron expression blank."})
