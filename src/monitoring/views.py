@@ -81,6 +81,14 @@ def _resolve_push_monitor(raw_token: str) -> Monitor | None:
     return _resolve_signal_monitor(raw_token, {Monitor.Kind.PUSH})
 
 
+def _notify_configured() -> bool:
+    return bool(
+        settings.MONITOR_NOTIFY_ENABLED
+        and settings.GOREECLOUD_NOTIFY_BASE_URL
+        and settings.GOREECLOUD_NOTIFY_TOKEN
+    )
+
+
 def _bearer_credential(request: HttpRequest) -> str:
     authorization = request.headers.get("Authorization", "")
     if not authorization.startswith("Bearer "):
@@ -260,8 +268,20 @@ class MaintenanceDeleteView(StaffRequiredMixin, DeleteView):
 
 @login_required
 def notifications_view(request: HttpRequest) -> HttpResponse:
-    ntfy_enabled = bool(settings.NTFY_BASE_URL and settings.NTFY_TOPIC and settings.NTFY_TOKEN)
-    return render(request, "monitoring/notifications.html", {"ntfy_enabled": ntfy_enabled, "notify_status": "Planned after GoreeCloud Notify production approval", "recent_transitions": Incident.objects.select_related("monitor")[:30]})
+    notify_enabled = _notify_configured()
+    return render(
+        request,
+        "monitoring/notifications.html",
+        {
+            "notify_enabled": notify_enabled,
+            "notify_status": (
+                "Runtime configuration present; production acceptance remains separate."
+                if notify_enabled
+                else "Disabled until an approved GoreeCloud Notify runtime and producer credential are configured."
+            ),
+            "recent_transitions": Incident.objects.select_related("monitor")[:30],
+        },
+    )
 
 
 @login_required
@@ -270,7 +290,7 @@ def settings_view(request: HttpRequest) -> HttpResponse:
         raise PermissionDenied
     return render(request, "monitoring/settings.html", {
         "manager_api_enabled": bool(settings.MANAGER_API_TOKEN),
-        "ntfy_enabled": bool(settings.NTFY_BASE_URL and settings.NTFY_TOPIC and settings.NTFY_TOKEN),
+        "notify_enabled": _notify_configured(),
         "allowed_networks": settings.MONITOR_ALLOWED_NETWORKS, "public_targets": settings.MONITOR_ALLOW_PUBLIC_TARGETS,
         "max_concurrency": settings.MONITOR_MAX_CONCURRENCY, "retention_days": settings.MONITOR_CHECK_RETENTION_DAYS,
         "job_event_retention_days": settings.MONITOR_JOB_EVENT_RETENTION_DAYS,
@@ -292,7 +312,7 @@ def security_view(request: HttpRequest) -> HttpResponse:
     ]
     return render(request, "monitoring/security.html", {
         "wardveil_identity": WARDVEIL_SECURITY_IDENTITY, "protected": all(enabled for _, enabled in controls), "controls": controls,
-        "manager_api_enabled": bool(settings.MANAGER_API_TOKEN), "ntfy_enabled": bool(settings.NTFY_BASE_URL and settings.NTFY_TOPIC and settings.NTFY_TOKEN),
+        "manager_api_enabled": bool(settings.MANAGER_API_TOKEN), "notify_enabled": _notify_configured(),
         "private_network_count": len(settings.MONITOR_ALLOWED_NETWORKS), "public_targets": settings.MONITOR_ALLOW_PUBLIC_TARGETS,
     })
 
