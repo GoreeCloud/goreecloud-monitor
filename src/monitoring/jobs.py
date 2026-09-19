@@ -43,11 +43,13 @@ def evaluate_job_monitor(monitor: Monitor, now: datetime | None = None) -> JobEv
 
     if latest_start and (latest_terminal is None or latest_start.received_at > latest_terminal.received_at):
         runtime = max(0.0, (now - latest_start.received_at).total_seconds())
-        if monitor.job_max_runtime_seconds and runtime > monitor.job_max_runtime_seconds:
+        runtime_limit = monitor.job_max_runtime_seconds or monitor.job_grace_seconds
+        if runtime > runtime_limit:
+            source = "maximum runtime" if monitor.job_max_runtime_seconds else "grace runtime"
             return JobEvaluation(
                 False,
                 Monitor.State.DOWN,
-                f"Scheduled job exceeded maximum runtime of {monitor.job_max_runtime_seconds}s",
+                f"Scheduled job exceeded {source} of {runtime_limit}s after start",
             )
         return JobEvaluation(True, Monitor.State.UP, f"Scheduled job is running ({int(runtime)}s)")
 
