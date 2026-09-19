@@ -245,6 +245,7 @@ jobs:
           echo "MONITOR_APP_ENV_FILE=$RUNNER_TEMP/monitor.env" >> "$GITHUB_ENV"
           echo "MONITOR_DATABASE_PATH=$RUNNER_TEMP/goreecloud-monitor-db" >> "$GITHUB_ENV"
           echo "CADDY_NETWORK=goreecloud-monitor-ci-proxy" >> "$GITHUB_ENV"
+          echo "MONITOR_DNS_SERVER=10.255.255.1" >> "$GITHUB_ENV"
       - name: Create disposable external proxy network
         run: docker network create goreecloud-monitor-ci-proxy
       - name: Validate resolved production Compose contract
@@ -281,6 +282,7 @@ jobs:
           test "$(docker inspect "$web_id" --format '{{.Config.User}}')" = "monitor"
           test "$(docker inspect "$worker_id" --format '{{.Config.User}}')" = "monitor"
           test "$(docker inspect "$worker_id" --format '{{index .HostConfig.Sysctls "net.ipv4.ping_group_range"}}')" = "999 999"
+          test "$(docker inspect "$worker_id" --format '{{join .HostConfig.Dns ","}}')" = "$MONITOR_DNS_SERVER"
           test -z "$(docker port "$web_id")"
           test -z "$(docker port "$worker_id")"
           test -z "$(docker port "$db_id")"
