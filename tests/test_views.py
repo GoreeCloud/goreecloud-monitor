@@ -109,6 +109,18 @@ class ViewTests(TestCase):
         self.assertEqual(event.event_type, JobEvent.EventType.FAILURE)
         self.assertEqual(event.exit_code, 23)
 
+    def test_job_success_rejects_nonzero_exit_code(self):
+        monitor = Monitor.objects.create(name="contradictory-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        raw = monitor.issue_heartbeat_token()
+        response = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "success", "run_id": "run-1", "exit_code": 1},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(JobEvent.objects.filter(monitor=monitor).exists())
+
     def test_job_signal_rejects_unbounded_or_unknown_payload_fields(self):
         monitor = Monitor.objects.create(name="bounded-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
         raw = monitor.issue_heartbeat_token()
