@@ -22,7 +22,15 @@ class JobEvaluation:
 def _last_scheduled_time(monitor: Monitor, now: datetime) -> datetime:
     zone = ZoneInfo(monitor.job_timezone)
     local_now = now.astimezone(zone)
-    return croniter(monitor.job_cron_expression.strip(), local_now).get_prev(datetime).astimezone(now.tzinfo)
+    expression = monitor.job_cron_expression.strip()
+    current_minute = local_now.replace(second=0, microsecond=0)
+    if current_minute <= local_now and croniter.match(
+        expression,
+        current_minute,
+        precision_in_seconds=1,
+    ):
+        return current_minute.astimezone(now.tzinfo)
+    return croniter(expression, local_now).get_prev(datetime).astimezone(now.tzinfo)
 
 
 def evaluate_job_monitor(monitor: Monitor, now: datetime | None = None) -> JobEvaluation:
