@@ -60,7 +60,6 @@ The current source implements the first scheduled-job/dead-man monitoring founda
 The following scheduled-job scope remains planned or partial:
 
 - systemd OnCalendar compatibility when justified;
-- signal-ingestion rate limiting and stronger replay/idempotency controls;
 - richer explicit Started/Late presentation beyond the existing Up/Down incident mapping;
 - dedicated job-event retention and recovery controls;
 - tags/labels and collections/projects;
