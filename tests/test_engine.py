@@ -135,6 +135,28 @@ class EngineStateTests(TestCase):
         self.assertEqual(outcome.observed_state, Monitor.State.UNKNOWN)
         self.assertIn("first scheduled job window", outcome.message)
 
+    def test_cron_scheduled_job_uses_exact_due_minute_as_current_window(self):
+        monitor = Monitor.objects.create(
+            name="cron-boundary",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.CRON,
+            job_cron_expression="*/5 * * * *",
+            job_timezone="UTC",
+            job_grace_seconds=60,
+        )
+        Monitor.objects.filter(pk=monitor.pk).update(
+            created_at=datetime(2026, 9, 19, 12, 0, 0, tzinfo=UTC)
+        )
+        monitor.refresh_from_db()
+        outcome = evaluate_job_monitor(
+            monitor,
+            datetime(2026, 9, 19, 12, 5, 0, tzinfo=UTC),
+        )
+        self.assertTrue(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.UNKNOWN)
+        self.assertIn("current scheduled job completion", outcome.message)
+
     def test_cron_scheduled_job_detects_missed_window(self):
         monitor = Monitor.objects.create(
             name="cron-missed",
