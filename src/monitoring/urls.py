@@ -21,6 +21,7 @@ urlpatterns = [
     path("security/", views.security_view, name="security"),
     path("settings/", views.settings_view, name="settings"),
     path("api/v1/heartbeat/", views.push_heartbeat, name="push-heartbeat"),
+    path("api/v1/jobs/signal/", views.job_signal, name="job-signal"),
     path("push/<str:token>/", views.push_heartbeat_legacy, name="push-heartbeat-legacy"),
     path("health/live/", views.health_live, name="health-live"),
     path("health/ready/", views.health_ready, name="health-ready"),
