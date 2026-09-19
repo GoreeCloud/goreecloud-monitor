@@ -1,9 +1,9 @@
 # GoreeCloud Monitor — Privacy Policy
 
-**Document Internal Version Number:** 2026.09.18.1  
-**Document External Version Number:** 1.0.0  
+**Document Internal Version Number:** 2026.09.19.1  
+**Document External Version Number:** 1.1.0  
 **Status:** Repository privacy policy for the current pre-production source  
-**As of:** September 18, 2026
+**As of:** September 19, 2026
 
 ## Scope
 
@@ -18,6 +18,7 @@ Depending on configuration, Monitor may process:
 - response status and bounded diagnostic results;
 - DNS/TLS/Ping/TCP/HTTP availability data;
 - heartbeat state and verifier metadata;
+- scheduled-job definitions, schedule/time-zone settings, one-way credential verifier metadata, lifecycle event times/types, run identifiers, exit codes, bounded messages, and calculated run durations;
 - incident and recovery history;
 - maintenance windows;
 - minimized notification transition metadata;
@@ -32,6 +33,7 @@ Monitoring data can reveal sensitive infrastructure relationships even when it d
 Monitor processes this data to:
 
 - execute authorized service checks;
+- evaluate authorized scheduled jobs for expected completion, reported failure, and runtime overruns;
 - determine health/state transitions;
 - open/update/recover incidents;
 - apply maintenance behavior;
@@ -56,7 +58,7 @@ Private or internal target details should not be exposed outside the approved op
 
 ## Retention
 
-Check-result, incident, audit, and delivered-notification metadata must use bounded retention where the application provides a control.
+Check-result, scheduled-job event, incident, audit, and delivered-notification metadata must use bounded retention where the application provides a control. Dedicated scheduled-job event retention is not yet implemented and remains a documented roadmap obligation.
 
 Pending notification-outbox rows are not deleted merely to satisfy retention; they remain operational state until delivered or otherwise explicitly reconciled.
 
@@ -80,7 +82,7 @@ A repository-local Privacy Shield adapter candidate exists, but central/runtime 
 
 Administrators must protect credentials, target inventories, backup data, incident evidence, and access to the private monitoring deployment.
 
-Do not use monitor labels or URLs as a place to store reusable secrets.
+Do not use monitor labels, target URLs, scheduled-job run identifiers, event messages, or other ordinary fields as a place to store reusable secrets.
 
 ## Changes
 
