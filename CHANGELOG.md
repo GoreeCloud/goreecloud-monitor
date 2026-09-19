@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased - Scheduled job / dead-man monitoring foundation
+
+- Added first-class `JOB` monitors for scheduled jobs, backups, maintenance tasks, and other periodic workloads without restoring Healthchecks as a runtime dependency.
+- Added simple interval + grace and strict five-field cron + explicit IANA time-zone scheduling, with deterministic Python `tzdata` fallback.
+- Added authenticated `POST /api/v1/jobs/signal/` ingestion for start, success, failure/exit-status, and bounded log events using one-way-stored rotatable bearer credentials.
+- Added run identifiers, start/completion correlation, duration capture, missed-schedule detection, and started-job completion deadlines. An explicit maximum runtime overrides the grace-based runtime limit.
+- Added exact-cron-boundary handling so the scheduled minute itself is the current window rather than briefly falling back to the preceding occurrence.
+- Added bounded JobEvent history and staff-only schedule/event diagnostics while keeping credential verifiers and detailed operational metadata out of non-staff surfaces.
+- Reused the existing failure/recovery threshold, incident, and durable GoreeCloud Notify outbox pipeline rather than creating a parallel alert subsystem.
+- Added migration `0004_scheduled_job_monitor` and updated immediate-predecessor rollback proof to preserve existing non-JOB monitors and durable notification state while explicitly removing candidate-only JOB rows before downgrade to `0003`.
+- Hardened target preflight to reject reusable plaintext JOB credentials, and hardened signal parsing against unknown fields, oversized payloads, invalid metadata types, contradictory success exit codes, and exit codes on non-terminal events.
+- Added regression coverage for simple and cron schedules, creation-time boundaries, exact cron minutes, high log-event volume, failure/incident integration, start-time overruns, bearer authentication, run correlation, credential secrecy, and preflight enforcement.
+- Full Healthchecks-style parity remains incomplete. Rate limiting/replay hardening, systemd OnCalendar evaluation, richer Started/Late presentation, dedicated event-retention/recovery controls, tags/projects, scoped management APIs, policy-gated auto-provisioning, status/reporting surfaces, and separately approved email ingestion remain roadmap work.
+- This source candidate does not establish live VPS activation, production authority, target recovery acceptance, or Stable status.
+
 ## Unreleased - Native low-privilege Ping / ICMP parity
 
 - Added `PING` as a first-class GoreeCloud Monitor kind and implemented first-party IPv4/IPv6 ICMP Echo using Linux unprivileged datagram ping sockets rather than raw sockets.
