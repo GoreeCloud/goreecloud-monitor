@@ -64,10 +64,13 @@ Legacy path-based heartbeat behavior remains restricted and should not be used u
 
 Scheduled job / dead-man monitors are intended for cron jobs, backups, maintenance tasks, synchronization jobs, and other periodic workloads.
 
-Choose either:
+Choose one schedule mode:
 
-- a simple expected interval plus grace period; or
-- a cron expression with an explicit IANA time zone.
+- a simple expected interval plus grace period;
+- a strict five-field cron expression with an explicit IANA time zone; or
+- a native systemd OnCalendar expression. OnCalendar supports multiple newline-separated expressions and may include its own time-zone suffix; otherwise Monitor uses the configured IANA job time zone.
+
+OnCalendar is evaluated inside Monitor. The worker does not call systemd or a shell. Fractional-second calendar expressions are not supported and fail validation.
 
 The optional maximum-runtime setting detects jobs that send a start signal but do not complete within the approved execution budget.
 
