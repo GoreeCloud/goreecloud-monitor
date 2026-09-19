@@ -5,7 +5,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from monitoring.models import CheckResult, Incident, Monitor, hash_heartbeat_token, heartbeat_token_is_digest
+from monitoring.models import CheckResult, Incident, JobEvent, Monitor, hash_heartbeat_token, heartbeat_token_is_digest
 
 
 class ViewTests(TestCase):
@@ -55,6 +55,79 @@ class ViewTests(TestCase):
         self.assertIsNotNone(monitor.last_heartbeat_at)
         self.assertNotContains(response, "private-job-name")
         self.assertEqual(set(response.json()), {"ok", "received_at"})
+
+
+    def test_job_signal_endpoint_requires_bearer_and_records_correlated_run(self):
+        monitor = Monitor.objects.create(
+            name="backup-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_grace_seconds=300,
+        )
+        raw = monitor.issue_heartbeat_token()
+        unauthorized = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "start"},
+            content_type="application/json",
+        )
+        self.assertEqual(unauthorized.status_code, 401)
+        self.assertEqual(unauthorized["WWW-Authenticate"], "Bearer")
+
+        started = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "start"},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(started.status_code, 200)
+        run_id = started.json()["run_id"]
+        self.assertTrue(run_id)
+
+        completed = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "success", "run_id": run_id, "message": "backup complete"},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(completed.status_code, 200)
+        success = JobEvent.objects.get(monitor=monitor, event_type=JobEvent.EventType.SUCCESS)
+        self.assertEqual(success.run_id, run_id)
+        self.assertIsNotNone(success.duration_ms)
+        self.assertGreaterEqual(success.duration_ms, 0)
+
+    def test_job_signal_endpoint_records_explicit_failure(self):
+        monitor = Monitor.objects.create(name="failed-backup", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        raw = monitor.issue_heartbeat_token()
+        response = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "fail", "run_id": "nightly-1", "exit_code": 23},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(response.status_code, 200)
+        event = JobEvent.objects.get(monitor=monitor)
+        self.assertEqual(event.event_type, JobEvent.EventType.FAILURE)
+        self.assertEqual(event.exit_code, 23)
+
+    def test_job_signal_rejects_unbounded_or_unknown_payload_fields(self):
+        monitor = Monitor.objects.create(name="bounded-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        raw = monitor.issue_heartbeat_token()
+        response = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "success", "unexpected": "value"},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_staff_job_detail_exposes_signal_contract_not_verifier(self):
+        monitor = Monitor.objects.create(name="job-detail", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("monitoring:monitor-detail", args=[monitor.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/api/v1/jobs/signal/")
+        self.assertContains(response, "Scheduled job signals")
+        self.assertNotContains(response, monitor.heartbeat_token)
 
     def test_secure_push_endpoint_rejects_get_without_mutating(self):
         monitor = Monitor.objects.create(name="post-only", kind=Monitor.Kind.PUSH, interval_seconds=60)
