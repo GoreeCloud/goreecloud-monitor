@@ -1,9 +1,9 @@
 # GoreeCloud Monitor — Repository Specifications
 
-**Document Internal Version Number:** 2026.09.18.1  
-**Document External Version Number:** 1.0.0  
+**Document Internal Version Number:** 2026.09.19.1  
+**Document External Version Number:** 1.1.0  
 **Status:** Current repository-coupled specification  
-**As of:** September 18, 2026  
+**As of:** September 19, 2026  
 **Repository:** `GoreeCloud/goreecloud-monitor`  
 **Central project record:** `GoreeCloud/Projects/Project Specification — Monitor.docx`
 
@@ -15,7 +15,7 @@ Where this file and live implementation differ, verified repository/runtime stat
 
 ## Product role
 
-GoreeCloud Monitor is the GoreeCloud-native availability, endpoint-health, heartbeat, TLS-certificate, incident, maintenance, and recovery-monitoring application.
+GoreeCloud Monitor is the GoreeCloud-native availability, endpoint-health, heartbeat, scheduled-job/dead-man, TLS-certificate, incident, maintenance, and recovery-monitoring application.
 
 Uptime Kuma and ntfy were permanently retired from `goreecloud-vps-01` on September 18, 2026. Their preserved artifacts are historical/recovery evidence only.
 
@@ -47,9 +47,29 @@ The current source must support representative monitoring for:
 - maintenance windows;
 - incident creation, update, recovery, and history.
 
+The current source has generic push/heartbeat monitoring, but it does **not yet** implement full Healthchecks-style scheduled-job monitoring. The following scheduled-job scope is planned and must remain represented as planned until verified in source and tests:
+
+- first-class Scheduled Job / Dead-Man monitor definitions;
+- simple period + grace schedules;
+- cron expressions with explicit time-zone behavior;
+- systemd OnCalendar compatibility when justified;
+- start, success, failure/exit-status, and bounded log/event signals;
+- rotatable per-check signal credentials and rate limiting;
+- run IDs/correlation and duration history;
+- execution-overrun and missed-completion detection;
+- explicit Started/Late/Down/Recovered job semantics mapped into the Monitor state/incident model;
+- bounded job-event history and retention;
+- tags/labels and collections/projects;
+- scoped management API support for job checks;
+- controlled optional auto-provisioning;
+- private status badges/JSON summaries, repeated-down reminders, and periodic job-health reports;
+- separate evaluation of email-based signal ingestion.
+
+Healthchecks is a benchmark reference for this scope, not an upstream application dependency or a source-code base. Monitor must remain an original GoreeCloud implementation.
+
 ## Notification contract
 
-GoreeCloud Notify is the only supported Monitor notification publisher candidate after ntfy retirement.
+GoreeCloud Notify is the only supported Monitor notification publisher candidate after ntfy retirement. Scheduled-job alerts, reminders, and reports must use the same delivery boundary rather than adding a Healthchecks-style notification-provider catalog to Monitor.
 
 The current source must:
 
