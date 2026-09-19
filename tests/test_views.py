@@ -388,6 +388,31 @@ class ViewTests(TestCase):
         self.assertNotIn(job.heartbeat_token, rendered)
         self.assertNotIn("heartbeat_token", rendered)
 
+    def test_oncalendar_job_detail_and_export_preserve_native_schedule(self):
+        job = Monitor.objects.create(
+            name="oncalendar-view-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.ONCALENDAR,
+            job_cron_expression="*-*-* 03:00:00",
+            job_timezone="America/Chicago",
+        )
+        self.client.force_login(self.staff)
+
+        detail = self.client.get(reverse("monitoring:monitor-detail", args=[job.pk]))
+        self.assertEqual(detail.status_code, 200)
+        self.assertContains(detail, "OnCalendar")
+        self.assertContains(detail, "*-*-* 03:00:00")
+
+        exported = self.client.get(reverse("monitoring:job-history-export", args=[job.pk]))
+        self.assertEqual(exported.status_code, 200)
+        payload = exported.json()
+        self.assertEqual(payload["monitor"]["schedule_mode"], "ONCAL")
+        self.assertEqual(payload["monitor"]["schedule_expression"], "*-*-* 03:00:00")
+        self.assertIsNone(payload["monitor"]["cron_expression"])
+        self.assertEqual(payload["monitor"]["oncalendar_expression"], "*-*-* 03:00:00")
+        self.assertEqual(payload["monitor"]["timezone"], "America/Chicago")
+
     def test_job_history_export_paginates_with_stable_before_id_cursor(self):
         job = Monitor.objects.create(
             name="paged-export-job",
