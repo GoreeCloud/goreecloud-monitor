@@ -42,7 +42,7 @@ A `start` event without a `run_id` receives a generated run identifier in the re
 
 - A newly created cron monitor does not inherit missed occurrences from before its creation time; its first enforceable window begins with the first schedule at or after creation.
 - A recent successful completion keeps the job healthy until the next deadline.
-- A reported failure evaluates as Down and enters the ordinary Monitor failure/incident pipeline.
+- A reported failure produces a failed Down observation and enters the ordinary Monitor failure-threshold/incident pipeline; the configured failure threshold controls when the monitor state transitions to Down.
 - A started job is considered running.
 - If `job_max_runtime_seconds` is non-zero and a started job exceeds that limit, Monitor evaluates it as Down.
 - If the required simple or cron completion does not arrive before the configured grace deadline, Monitor evaluates it as Down.
