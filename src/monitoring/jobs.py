@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -114,19 +115,32 @@ def _matching_start(monitor: Monitor, run_id: str, received_at: datetime) -> Job
     return starts.order_by("-received_at", "-id").first()
 
 
-@transaction.atomic
-def record_job_event(
-    monitor_id: int,
+class JobSignalRateLimited(Exception):
+    def __init__(self, retry_after_seconds: int):
+        super().__init__("Scheduled-job signal rate limit exceeded")
+        self.retry_after_seconds = retry_after_seconds
+
+
+class JobSignalReplayConflict(Exception):
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class JobSignalResult:
+    event: JobEvent
+    replayed: bool
+
+
+def _create_job_event_locked(
+    monitor: Monitor,
     event_type: str,
     *,
+    event_id: str = "",
     run_id: str = "",
     exit_code: int | None = None,
     message: str = "",
-    received_at: datetime | None = None,
+    received_at: datetime,
 ) -> JobEvent:
-    """Persist a typed scheduled-job signal and calculate duration for terminal events."""
-    received_at = received_at or timezone.now()
-    monitor = Monitor.objects.select_for_update().get(pk=monitor_id, kind=Monitor.Kind.JOB, enabled=True)
     normalized_run_id = run_id.strip()
     if event_type == JobEvent.EventType.START and not normalized_run_id:
         normalized_run_id = secrets.token_urlsafe(12)
@@ -143,16 +157,109 @@ def record_job_event(
         monitor=monitor,
         received_at=received_at,
         event_type=event_type,
+        event_id=event_id,
         run_id=normalized_run_id,
         exit_code=exit_code,
         duration_ms=duration_ms,
         message=message[:500],
     )
-    # Force the worker to evaluate the new event on its next polling pass instead of waiting
-    # for the ordinary scheduled-job evaluation interval.
     Monitor.objects.filter(pk=monitor.pk).update(
         last_heartbeat_at=received_at,
         last_checked_at=None,
         updated_at=received_at,
     )
     return event
+
+
+@transaction.atomic
+def record_job_signal(
+    monitor_id: int,
+    event_type: str,
+    *,
+    event_id: str = "",
+    run_id: str = "",
+    exit_code: int | None = None,
+    message: str = "",
+    received_at: datetime | None = None,
+    max_per_minute: int = 5,
+) -> JobSignalResult:
+    """Persist an external job signal with per-monitor replay and rate-limit guarantees."""
+    received_at = received_at or timezone.now()
+    monitor = Monitor.objects.select_for_update().get(
+        pk=monitor_id,
+        kind=Monitor.Kind.JOB,
+        enabled=True,
+    )
+
+    if event_id:
+        existing = JobEvent.objects.filter(monitor=monitor, event_id=event_id).first()
+        if existing is not None:
+            request_run_id = run_id.strip()
+            same_exit_code = existing.exit_code == exit_code or (
+                event_type == JobEvent.EventType.SUCCESS
+                and existing.exit_code in {None, 0}
+                and exit_code in {None, 0}
+            )
+            same_payload = (
+                existing.event_type == event_type
+                and same_exit_code
+                and existing.message == message[:500]
+                and (not request_run_id or existing.run_id == request_run_id)
+            )
+            if not same_payload:
+                raise JobSignalReplayConflict("event_id was already used for a different signal")
+            return JobSignalResult(existing, True)
+
+    window_start = received_at - timedelta(minutes=1)
+    recent_events = JobEvent.objects.filter(
+        monitor=monitor,
+        received_at__gte=window_start,
+        received_at__lte=received_at,
+    )
+    if recent_events.count() >= max_per_minute:
+        oldest = recent_events.order_by("received_at", "id").first()
+        retry_after = 60
+        if oldest is not None:
+            elapsed = max(0.0, (received_at - oldest.received_at).total_seconds())
+            retry_after = max(1, math.ceil(60 - elapsed))
+        raise JobSignalRateLimited(retry_after)
+
+    return JobSignalResult(
+        _create_job_event_locked(
+            monitor,
+            event_type,
+            event_id=event_id,
+            run_id=run_id,
+            exit_code=exit_code,
+            message=message,
+            received_at=received_at,
+        ),
+        False,
+    )
+
+
+@transaction.atomic
+def record_job_event(
+    monitor_id: int,
+    event_type: str,
+    *,
+    run_id: str = "",
+    exit_code: int | None = None,
+    message: str = "",
+    received_at: datetime | None = None,
+) -> JobEvent:
+    """Persist an internal typed scheduled-job event without external-ingestion throttling."""
+    received_at = received_at or timezone.now()
+    monitor = Monitor.objects.select_for_update().get(
+        pk=monitor_id,
+        kind=Monitor.Kind.JOB,
+        enabled=True,
+    )
+    return _create_job_event_locked(
+        monitor,
+        event_type,
+        run_id=run_id,
+        exit_code=exit_code,
+        message=message,
+        received_at=received_at,
+    )

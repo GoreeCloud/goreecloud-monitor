@@ -23,6 +23,8 @@ A feature listed here is not automatically production-accepted.
 - First-class Scheduled Job / Dead-Man monitors for periodic jobs and backup/maintenance heartbeats.
 - Simple interval + grace and strict cron + IANA time-zone job scheduling.
 - Authenticated scheduled-job start, success, failure/exit-status, and bounded log/event signals using one-way-stored rotatable bearer credentials.
+- Per-monitor scheduled-job signal rate limiting with HTTP 429/Retry-After responses.
+- Optional UUID event IDs for durable idempotent signal replay; mismatched reuse is rejected with conflict semantics.
 - Job run correlation, duration capture, maximum-runtime overrun detection, missed-schedule detection, and job-event history.
 - Configurable check intervals and failure/recovery thresholds.
 - Monitor pause/enable state.
@@ -62,7 +64,7 @@ A feature listed here is not automatically production-accepted.
 - Database backup tooling.
 - Isolated PostgreSQL restore validation in CI.
 - Migration-readiness/reconciliation tooling for preserved Uptime Kuma definitions.
-- Current-main rollback compatibility for the notification-outbox and scheduled-job migrations.
+- Immediate-predecessor rollback compatibility workflows cover the notification-outbox, scheduled-job, and job-signal idempotency migrations.
 - Target preflight and hardened production Compose validation.
 
 ## Implemented security/privacy controls

@@ -101,6 +101,7 @@ MONITOR_POLL_SECONDS = max(1, int(os.getenv("MONITOR_POLL_SECONDS", "1")))
 MONITOR_ALLOW_PUBLIC_TARGETS = env_bool("MONITOR_ALLOW_PUBLIC_TARGETS", True)
 MONITOR_ALLOWED_NETWORKS = env_list("MONITOR_ALLOWED_NETWORKS", "127.0.0.0/8,::1/128")
 MONITOR_ALLOW_LEGACY_PATH_HEARTBEATS = env_bool("MONITOR_ALLOW_LEGACY_PATH_HEARTBEATS", False)
+MONITOR_JOB_SIGNAL_MAX_PER_MINUTE = max(1, min(600, int(os.getenv("MONITOR_JOB_SIGNAL_MAX_PER_MINUTE", "5"))))
 MANAGER_API_TOKEN = os.getenv("MANAGER_API_TOKEN", "")
 # GoreeCloud Notify is the only supported Monitor notification publisher after ntfy retirement.
 # The integration remains disabled until an operator explicitly enables it with an accepted

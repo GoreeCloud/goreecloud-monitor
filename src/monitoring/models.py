@@ -185,6 +185,7 @@ class JobEvent(models.Model):
     monitor = models.ForeignKey(Monitor, on_delete=models.CASCADE, related_name="job_events")
     received_at = models.DateTimeField(default=timezone.now, db_index=True)
     event_type = models.CharField(max_length=16, choices=EventType.choices)
+    event_id = models.CharField(max_length=36, blank=True)
     run_id = models.CharField(max_length=128, blank=True)
     exit_code = models.IntegerField(null=True, blank=True)
     duration_ms = models.FloatField(null=True, blank=True)
@@ -193,6 +194,13 @@ class JobEvent(models.Model):
     class Meta:
         ordering = ["-received_at", "-id"]
         indexes = [models.Index(fields=["monitor", "-received_at"], name="jobevent_monitor_time_idx")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["monitor", "event_id"],
+                condition=~models.Q(event_id=""),
+                name="jobevent_mon_eventid_uniq",
+            )
+        ]
 
     def clean(self) -> None:
         if self.monitor_id and self.monitor.kind != Monitor.Kind.JOB:

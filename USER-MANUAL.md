@@ -71,7 +71,7 @@ Choose either:
 
 The optional maximum-runtime setting detects jobs that send a start signal but do not complete within the approved execution budget.
 
-Each scheduled-job monitor has a protected bearer credential. The reusable value is shown only when it is issued or rotated; Monitor stores only a one-way verifier.
+Each scheduled-job monitor has a protected bearer credential. The reusable value is shown only when it is issued or rotated; Monitor stores only a one-way verifier. Job runners may also send a stable UUID `event_id` for retry-safe ingestion; exact retries converge on the original stored event, while conflicting reuse is rejected. Signal ingestion is rate-limited per monitor and returns retry guidance when the configured budget is exceeded.
 
 Approved job runners send HTTPS POST requests to `/api/v1/jobs/signal/` with the bearer credential and an event of `start`, `success`, `failure`, or `log`. Use an optional `run_id` when explicit run correlation is useful.
 
