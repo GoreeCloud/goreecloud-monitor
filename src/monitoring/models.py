@@ -6,6 +6,7 @@ import secrets
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from croniter import croniter
+from oncalendar import OnCalendar, OnCalendarError
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -42,6 +43,7 @@ class Monitor(models.Model):
     class JobScheduleMode(models.TextChoices):
         SIMPLE = "SIMPLE", "Simple interval"
         CRON = "CRON", "Cron schedule"
+        ONCALENDAR = "ONCAL", "systemd OnCalendar"
 
     class State(models.TextChoices):
         UNKNOWN = "UNKNOWN", "Unknown"
@@ -75,6 +77,8 @@ class Monitor(models.Model):
     heartbeat_grace_seconds = models.PositiveIntegerField(default=60)
     last_heartbeat_at = models.DateTimeField(null=True, blank=True)
     job_schedule_mode = models.CharField(max_length=8, choices=JobScheduleMode.choices, default=JobScheduleMode.SIMPLE)
+    # Historical field name retained for rollback compatibility. For JOB monitors this
+    # stores the active schedule expression for CRON and ONCAL modes.
     job_cron_expression = models.CharField(max_length=120, blank=True)
     job_timezone = models.CharField(max_length=64, default="UTC")
     job_grace_seconds = models.PositiveIntegerField(default=60)
@@ -125,16 +129,29 @@ class Monitor(models.Model):
                 ZoneInfo(self.job_timezone)
             except (ZoneInfoNotFoundError, ValueError) as exc:
                 raise ValidationError({"job_timezone": "Use a valid IANA time-zone name such as UTC or America/Chicago."}) from exc
+            schedule_expression = self.job_cron_expression.strip()
             if self.job_schedule_mode == self.JobScheduleMode.CRON:
-                cron_expression = self.job_cron_expression.strip()
-                if not cron_expression:
+                if not schedule_expression:
                     raise ValidationError({"job_cron_expression": "Cron-scheduled jobs require a cron expression."})
-                if len(cron_expression.split()) != 5:
+                if len(schedule_expression.split()) != 5:
                     raise ValidationError({"job_cron_expression": "Scheduled jobs use five-field crontab expressions."})
-                if not croniter.is_valid(cron_expression, strict=True):
+                if not croniter.is_valid(schedule_expression, strict=True):
                     raise ValidationError({"job_cron_expression": "Cron expression is invalid or cannot produce a real schedule."})
-            elif self.job_cron_expression.strip():
-                raise ValidationError({"job_cron_expression": "Simple-interval jobs must leave the cron expression blank."})
+            elif self.job_schedule_mode == self.JobScheduleMode.ONCALENDAR:
+                if not schedule_expression:
+                    raise ValidationError({"job_cron_expression": "OnCalendar-scheduled jobs require a calendar expression."})
+                try:
+                    start = timezone.now().astimezone(ZoneInfo(self.job_timezone))
+                    next(OnCalendar(schedule_expression, start))
+                except (OnCalendarError, StopIteration) as exc:
+                    raise ValidationError({
+                        "job_cron_expression": (
+                            "OnCalendar expression is invalid or has no future occurrence. "
+                            "Fractional seconds are not supported."
+                        )
+                    }) from exc
+            elif schedule_expression:
+                raise ValidationError({"job_cron_expression": "Simple-interval jobs must leave the schedule expression blank."})
 
     def save(self, *args, **kwargs):
         if not self.heartbeat_token:
