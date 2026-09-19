@@ -33,9 +33,11 @@ Scheduled-job signals use `POST /api/v1/jobs/signal/` with `Authorization: Beare
 
 The signal endpoint accepts JSON only, limits the request body to 8 KiB, rejects unknown fields, limits `run_id` to 128 characters and message text to 500 characters, validates exit codes as signed 32-bit integers, and accepts only the supported event types. Credentials must never be placed in URLs or event messages.
 
-Signal rate limiting and stronger replay/idempotency controls remain required roadmap hardening before complete Healthchecks-style parity or production acceptance. Until those controls are implemented and target-validated, do not expose the signal endpoint outside the approved private Monitor ingress boundary.
+External job signals are rate-limited per monitor using the database as the serialization boundary. `MONITOR_JOB_SIGNAL_MAX_PER_MINUTE` defaults to 5 and is clamped to 1–600. Requests above the active limit receive HTTP 429 plus `Retry-After`. An optional UUID `event_id` provides durable idempotent replay: an exact retry returns the original persisted event without consuming another rate-limit slot, while reuse of the same ID for materially different signal content returns HTTP 409.
 
-A predecessor at database migration `0003_notification_outbox` does not understand JOB definitions or JobEvent rows. Controlled application rollback requires preserving any required job evidence, stopping affected senders, removing candidate-only JOB definitions, migrating back to `0003`, and then verifying the predecessor state. Use a pre-upgrade database backup when scheduled-job evidence must survive rollback.
+The private-ingress requirement remains in force until target-runtime validation is complete. Rate limiting and replay convergence reduce abuse/retry risk but do not authorize public exposure by themselves.
+
+Migration `0005_job_event_idempotency` adds the event ID field and uniqueness constraint. Its immediate predecessor, migration `0004_scheduled_job_monitor`, already understands JOB definitions and JobEvent rows. Controlled downgrade to `0004` preserves job/event rows but drops persisted `event_id` values and therefore removes replay identities; use a pre-upgrade backup when those identifiers must be recoverable.
 
 ## Outbound request and SSRF controls
 
