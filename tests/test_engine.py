@@ -183,6 +183,88 @@ class EngineStateTests(TestCase):
         self.assertEqual(outcome.observed_state, Monitor.State.DOWN)
         self.assertEqual(outcome.phase, JobPhase.LATE)
 
+    def test_oncalendar_job_waits_for_first_occurrence(self):
+        monitor = Monitor.objects.create(
+            name="oncalendar-awaiting",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.ONCALENDAR,
+            job_cron_expression="*-*-* 12:00:00",
+            job_timezone="UTC",
+            job_grace_seconds=120,
+        )
+        Monitor.objects.filter(pk=monitor.pk).update(
+            created_at=datetime(2026, 9, 19, 11, 0, 0, tzinfo=UTC)
+        )
+        monitor.refresh_from_db()
+        outcome = evaluate_job_monitor(
+            monitor,
+            datetime(2026, 9, 19, 11, 30, 0, tzinfo=UTC),
+        )
+        self.assertTrue(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.UNKNOWN)
+        self.assertEqual(outcome.phase, JobPhase.AWAITING)
+        self.assertIn("first OnCalendar occurrence", outcome.message)
+
+    def test_oncalendar_job_uses_occurrence_plus_grace_deadline(self):
+        monitor = Monitor.objects.create(
+            name="oncalendar-late",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.ONCALENDAR,
+            job_cron_expression="*-*-* 12:00:00",
+            job_timezone="UTC",
+            job_grace_seconds=120,
+        )
+        Monitor.objects.filter(pk=monitor.pk).update(
+            created_at=datetime(2026, 9, 19, 11, 0, 0, tzinfo=UTC)
+        )
+        monitor.refresh_from_db()
+        within_grace = evaluate_job_monitor(
+            monitor,
+            datetime(2026, 9, 19, 12, 1, 0, tzinfo=UTC),
+        )
+        self.assertTrue(within_grace.success)
+        self.assertEqual(within_grace.phase, JobPhase.AWAITING)
+
+        late = evaluate_job_monitor(
+            monitor,
+            datetime(2026, 9, 19, 12, 2, 1, tzinfo=UTC),
+        )
+        self.assertFalse(late.success)
+        self.assertEqual(late.observed_state, Monitor.State.DOWN)
+        self.assertEqual(late.phase, JobPhase.LATE)
+
+    def test_oncalendar_completion_advances_to_next_occurrence(self):
+        monitor = Monitor.objects.create(
+            name="oncalendar-completed",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.ONCALENDAR,
+            job_cron_expression="*-*-* 12:00:00\n*-*-* 18:00:00",
+            job_timezone="UTC",
+            job_grace_seconds=120,
+        )
+        Monitor.objects.filter(pk=monitor.pk).update(
+            created_at=datetime(2026, 9, 19, 11, 0, 0, tzinfo=UTC)
+        )
+        monitor.refresh_from_db()
+        completed_at = datetime(2026, 9, 19, 12, 0, 30, tzinfo=UTC)
+        record_job_event(
+            monitor.id,
+            JobEvent.EventType.SUCCESS,
+            run_id="noon-run",
+            received_at=completed_at,
+        )
+        outcome = evaluate_job_monitor(
+            monitor,
+            datetime(2026, 9, 19, 13, 0, 0, tzinfo=UTC),
+        )
+        self.assertTrue(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.UP)
+        self.assertEqual(outcome.phase, JobPhase.COMPLETED)
+        self.assertIn("next OnCalendar occurrence", outcome.message)
+
     def test_job_evaluation_is_not_confused_by_high_log_volume(self):
         monitor = Monitor.objects.create(
             name="log-heavy-job",
