@@ -5,6 +5,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src
 
+# Pull current Bookworm security updates into the immutable runtime image.
+# Stable-release security blockers require fixed HIGH/CRITICAL OS packages
+# rather than suppressing scanner findings from an older base-image snapshot.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 # Keep the application identity deterministic so the production worker can grant
 # only this group access to Linux unprivileged ICMP datagram sockets.
 RUN groupadd --system --gid 999 monitor \
