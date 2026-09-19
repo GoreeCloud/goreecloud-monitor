@@ -70,6 +70,12 @@ Monitor records bounded event metadata including:
 
 The staff monitor-detail view exposes recent job-event history. Non-staff viewers do not receive reusable credentials or administrative diagnostics.
 
+### Retention
+
+`MONITOR_JOB_EVENT_RETENTION_DAYS` controls ordinary job-event history retention and defaults to 90 days. The worker prunes history automatically at the cadence set by `MONITOR_HISTORY_PRUNE_INTERVAL_SECONDS`, which defaults to one hour. For correctness, the latest terminal event and any unmatched latest START are protected from ordinary pruning until newer state supersedes them. This preserves missed-run, failure, and overrun evaluation for infrequent or currently running jobs without keeping an unbounded general event archive.
+
+Because idempotency identities are stored on event rows, retry convergence for an old `event_id` is guaranteed only while that event remains retained. A pruned historical identifier may later be accepted again.
+
 ## Security boundaries
 
 - Do not place the bearer credential in the URL.
@@ -85,7 +91,7 @@ The current foundation does not yet provide the complete planned Healthchecks-st
 
 - systemd OnCalendar evaluation/support;
 - richer explicit Started/Late presentation;
-- dedicated job-event retention and recovery controls;
+- dedicated job-event recovery/export views beyond normal database backup/restore;
 - tags/labels and projects/collections;
 - scoped job-management APIs;
 - policy-gated automatic provisioning;

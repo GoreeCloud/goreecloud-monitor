@@ -58,7 +58,7 @@ Private or internal target details should not be exposed outside the approved op
 
 ## Retention
 
-Check-result, scheduled-job event, incident, audit, and delivered-notification metadata must use bounded retention where the application provides a control. Dedicated scheduled-job event retention is not yet implemented and remains a documented roadmap obligation.
+Check-result and scheduled-job event history use automatic bounded retention controls. `MONITOR_CHECK_RETENTION_DAYS` defaults to 30 days and `MONITOR_JOB_EVENT_RETENTION_DAYS` defaults to 90 days. To preserve correct dead-man evaluation, Monitor may retain the latest terminal scheduled-job event and an unmatched latest start event beyond the ordinary job-event history window until newer state supersedes them. This is a current-state preservation exception, not an unbounded general event archive.
 
 Pending notification-outbox rows are not deleted merely to satisfy retention; they remain operational state until delivered or otherwise explicitly reconciled.
 

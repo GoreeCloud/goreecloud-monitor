@@ -342,6 +342,19 @@ class ViewTests(TestCase):
         self.assertContains(response, "/api/v1/heartbeat/")
         self.assertContains(response, "Non-recoverable credential")
 
+    @override_settings(
+        MONITOR_CHECK_RETENTION_DAYS=30,
+        MONITOR_JOB_EVENT_RETENTION_DAYS=90,
+    )
+    def test_settings_reports_bounded_history_retention(self):
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("monitoring:settings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["retention_days"], 30)
+        self.assertEqual(response.context["job_event_retention_days"], 90)
+        self.assertContains(response, "Job event retention")
+        self.assertContains(response, "90 days")
+
     def test_settings_requires_staff(self):
         self.assertEqual(self.client.get(reverse("monitoring:settings")).status_code, 302)
         self.client.force_login(self.user)

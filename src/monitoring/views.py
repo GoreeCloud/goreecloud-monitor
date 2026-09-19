@@ -273,6 +273,7 @@ def settings_view(request: HttpRequest) -> HttpResponse:
         "ntfy_enabled": bool(settings.NTFY_BASE_URL and settings.NTFY_TOPIC and settings.NTFY_TOKEN),
         "allowed_networks": settings.MONITOR_ALLOWED_NETWORKS, "public_targets": settings.MONITOR_ALLOW_PUBLIC_TARGETS,
         "max_concurrency": settings.MONITOR_MAX_CONCURRENCY, "retention_days": settings.MONITOR_CHECK_RETENTION_DAYS,
+        "job_event_retention_days": settings.MONITOR_JOB_EVENT_RETENTION_DAYS,
         "glaze_version": GLAZE_UI_VERSION,
     })
 
