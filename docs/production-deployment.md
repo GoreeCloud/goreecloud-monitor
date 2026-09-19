@@ -25,6 +25,7 @@ The repository file `compose.production.yml` is the source deployment candidate.
 - `migrate` is a one-shot database migration service attached only to `backend`.
 - `web` uses the immutable application image, read-only root filesystem, dropped capabilities, `no-new-privileges`, and bounded `/tmp` tmpfs. It joins only `backend` and the approved external gateway network.
 - `worker` uses the same application image and hardening. It joins `backend` and only the approved network needed to reach monitored destinations and GoreeCloud Notify.
+- `worker` uses exactly one explicit private IPv4 DNS resolver supplied through `MONITOR_DNS_SERVER`. No other Monitor service receives a DNS override. The resolver must be reachable from the existing worker networks and must provide the approved private answers for private GoreeCloud monitoring targets; a public resolver is not an accepted substitute.
 - No service uses privileged mode, host networking, a Docker socket, or added Linux capabilities.
 - No Monitor or PostgreSQL port is published on the host. GoreeCloud Gateway is the intended private HTTPS ingress.
 
@@ -40,7 +41,7 @@ The deployment must not reuse retired Uptime Kuma network identity merely for co
 
 Production uses three purpose-specific files:
 
-- `.env` — Compose interpolation values such as image references, protected file paths, persistent database path, and gateway network name.
+- `.env` — Compose interpolation values such as image references, protected file paths, persistent database path, gateway network name, and the approved private worker DNS resolver address (`MONITOR_DNS_SERVER`).
 - `monitor.env` — Django, worker, platform integration, and GoreeCloud Notify producer configuration.
 - `database.env` — PostgreSQL database name, username, password, and port.
 
@@ -59,7 +60,7 @@ docker compose -f compose.production.yml config --format json \
   | python scripts/validate_production_compose.py
 ```
 
-The validator requires no published ports, no privileged/host-network/device/Docker-socket access, no added capabilities, read-only application root filesystems, `cap_drop: ALL`, `no-new-privileges`, an internal database network, the approved external gateway network, a persistent PostgreSQL bind mount, and a digest-pinned PostgreSQL image.
+The validator requires no published ports, no privileged/host-network/device/Docker-socket access, no added capabilities, read-only application root filesystems, `cap_drop: ALL`, `no-new-privileges`, an internal database network, the approved external gateway network, a persistent PostgreSQL bind mount, a digest-pinned PostgreSQL image, and exactly one private IPv4 DNS resolver on the worker only.
 
 ## Target acceptance required before activation
 
@@ -71,7 +72,7 @@ Before Monitor can become production monitoring authority, verify and record:
 4. zero host-published Monitor/database ports;
 5. the approved private Monitor hostname and private DNS record;
 6. Gateway configuration validation, trusted certificate, private access, and denial from unauthorized sources;
-7. NetBird policy for the web path and every worker monitoring destination;
+7. NetBird policy for the web path and every worker monitoring destination, plus proof that the exact worker topology resolves private GoreeCloud targets through the approved private resolver rather than public DNS;
 8. accepted GoreeCloud Notify deployment plus a dedicated least-privilege Monitor producer token;
 9. target `targetpreflight` output with no blocking findings;
 10. fresh PostgreSQL backup and successful isolated restoration against the exact candidate;
