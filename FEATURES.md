@@ -26,6 +26,7 @@ A feature listed here is not automatically production-accepted.
 - Per-monitor scheduled-job signal rate limiting with HTTP 429/Retry-After responses.
 - Optional UUID event IDs for durable idempotent signal replay; mismatched reuse is rejected with conflict semantics.
 - Job run correlation, duration capture, maximum-runtime overrun detection, missed-schedule detection, and job-event history.
+- Derived scheduled-job lifecycle presentation with Awaiting, Started, Completed, Failed, and Late phases while preserving the existing Monitor state/incident model.
 - Automatic bounded CheckResult and scheduled-job event-history pruning with current JOB evaluation state preserved.
 - Staff-only scheduled-job recovery snapshots and versioned paginated JSON exports of retained job-event evidence, with credentials excluded.
 - Configurable check intervals and failure/recovery thresholds.

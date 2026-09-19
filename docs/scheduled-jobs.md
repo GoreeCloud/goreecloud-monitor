@@ -47,6 +47,14 @@ For network retry safety, clients should send a stable UUID `event_id` for each 
 
 ## State evaluation
 
+The JOB evaluator also derives a presentation-only lifecycle phase from the same evidence used for ordinary Monitor state. These phases do not create a second incident state machine:
+
+- **Awaiting** — the first/current completion window is still open and no overdue condition exists. Underlying state is Unknown.
+- **Started** — a START has been received and the run remains inside its runtime budget. Underlying state is Up.
+- **Completed** — the latest required completion is current. Underlying state is Up.
+- **Failed** — the latest terminal event explicitly reported failure. Underlying observation is Down and ordinary failure thresholds apply.
+- **Late** — a required completion or started-run runtime deadline has been exceeded. Underlying observation is Down and ordinary failure thresholds apply.
+
 - A newly created cron monitor does not inherit missed occurrences from before its creation time; its first enforceable window begins with the first schedule at or after creation.
 - A recent successful completion keeps the job healthy until the next deadline.
 - A reported failure produces a failed Down observation and enters the ordinary Monitor failure-threshold/incident pipeline; the configured failure threshold controls when the monitor state transitions to Down.
@@ -80,7 +88,7 @@ Because idempotency identities are stored on event rows, retry convergence for a
 
 Authorized staff can open the scheduled-job recovery surface from a JOB monitor. It shows the current evaluator result, retained-event counts, the latest terminal event, any unmatched START that is still part of current state, retention posture, and the oldest retained event. The surface is diagnostic and does not expose the reusable bearer credential or its stored verifier.
 
-The same recovery surface provides a versioned `goreecloud-monitor-job-events-v1` JSON export of retained event evidence. Export pages are cursor-based using `before_id`, default to 1,000 events, and are capped at 5,000 events per request. Each page reports whether more data remains and provides the next cursor. The export includes schedule metadata, current evaluation, retention metadata, and retained event rows; it is supplemental recovery/incident evidence rather than an import format or PostgreSQL restore substitute.
+The same recovery surface provides a versioned `goreecloud-monitor-job-events-v1` JSON export of retained event evidence. Export pages are cursor-based using `before_id`, default to 1,000 events, and are capped at 5,000 events per request. Each page reports whether more data remains and provides the next cursor. The export includes schedule metadata, the current lifecycle phase and underlying evaluation state, retention metadata, and retained event rows; it is supplemental recovery/incident evidence rather than an import format or PostgreSQL restore substitute.
 
 ## Security boundaries
 
@@ -96,7 +104,6 @@ The same recovery surface provides a versioned `goreecloud-monitor-job-events-v1
 The current foundation does not yet provide the complete planned Healthchecks-style feature set. Outstanding work includes:
 
 - systemd OnCalendar evaluation/support;
-- richer explicit Started/Late presentation;
 - tags/labels and projects/collections;
 - scoped job-management APIs;
 - policy-gated automatic provisioning;

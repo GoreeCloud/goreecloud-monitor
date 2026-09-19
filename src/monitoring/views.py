@@ -21,7 +21,7 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from .audit import record_security_event
 from .forms import MaintenanceWindowForm, MonitorForm
-from .jobs import JobSignalRateLimited, JobSignalReplayConflict, evaluate_job_monitor, record_job_signal
+from .jobs import JobPhase, JobSignalRateLimited, JobSignalReplayConflict, evaluate_job_monitor, record_job_signal
 from .models import CheckResult, Incident, JobEvent, MaintenanceWindow, Monitor, hash_heartbeat_token, heartbeat_token_is_digest
 
 
@@ -154,6 +154,14 @@ class MonitorListView(LoginRequiredMixin, ListView):
         return context
 
 
+def _job_phase_tone(phase: str) -> str:
+    if phase == JobPhase.COMPLETED:
+        return "up"
+    if phase in {JobPhase.FAILED, JobPhase.LATE}:
+        return "down"
+    return "maintenance"
+
+
 def _parse_positive_int(value: str | None, *, default: int, maximum: int) -> int | None:
     if value in {None, ""}:
         return default
@@ -218,6 +226,7 @@ def job_recovery(request: HttpRequest, pk: int) -> HttpResponse:
         {
             "monitor": monitor,
             "retention_days": settings.MONITOR_JOB_EVENT_RETENTION_DAYS,
+            "job_phase_tone": _job_phase_tone(state["evaluation"].phase),
             **state,
         },
     )
@@ -290,6 +299,7 @@ def job_history_export(request: HttpRequest, pk: int) -> JsonResponse:
         "evaluation": {
             "success": state["evaluation"].success,
             "observed_state": state["evaluation"].observed_state,
+            "phase": state["evaluation"].phase,
             "message": state["evaluation"].message,
         },
         "page": {
@@ -316,7 +326,19 @@ def job_history_export(request: HttpRequest, pk: int) -> JsonResponse:
 @login_required
 def monitor_detail(request: HttpRequest, pk: int) -> HttpResponse:
     monitor = get_object_or_404(Monitor, pk=pk)
-    return render(request, "monitoring/monitor_detail.html", {"monitor": monitor, "checks": monitor.checks.all()[:50], "incidents": monitor.incidents.all()[:20], "job_events": monitor.job_events.all()[:50] if monitor.kind == Monitor.Kind.JOB else []})
+    job_evaluation = evaluate_job_monitor(monitor) if monitor.kind == Monitor.Kind.JOB else None
+    return render(
+        request,
+        "monitoring/monitor_detail.html",
+        {
+            "monitor": monitor,
+            "checks": monitor.checks.all()[:50],
+            "incidents": monitor.incidents.all()[:20],
+            "job_events": monitor.job_events.all()[:50] if monitor.kind == Monitor.Kind.JOB else [],
+            "job_evaluation": job_evaluation,
+            "job_phase_tone": _job_phase_tone(job_evaluation.phase) if job_evaluation else "",
+        },
+    )
 
 
 class MonitorCreateView(StaffRequiredMixin, CreateView):
