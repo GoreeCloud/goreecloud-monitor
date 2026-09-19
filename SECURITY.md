@@ -29,7 +29,7 @@ A rollback to a predecessor that understands the historical column as a reusable
 
 ## Scheduled-job signal credentials and input
 
-Scheduled-job signals use `POST /api/v1/jobs/signal/` with `Authorization: Bearer <credential>`. JOB monitors reuse the hardened one-way verifier model used by push heartbeats: a new/rotated raw credential is shown once, while only its SHA-256 verifier is persisted.
+Scheduled-job signals use `POST /api/v1/jobs/signal/` with `Authorization: Bearer <credential>`. JOB monitors reuse the hardened one-way verifier model used by push heartbeats: a new/rotated raw credential is shown once, while only its SHA-256 verifier is persisted. Target preflight fails closed if any enabled or disabled JOB definition stores a reusable plaintext value instead of the required verifier.
 
 The signal endpoint accepts JSON only, limits the request body to 8 KiB, rejects unknown fields, limits `run_id` to 128 characters and message text to 500 characters, validates exit codes as signed 32-bit integers, and accepts only the supported event types. Credentials must never be placed in URLs or event messages.
 
