@@ -107,12 +107,17 @@ services:
     sysctls:
       net.ipv4.ping_group_range: "999 999"
     networks:
-      - backend
-      - proxy
+      backend:
+        ipv4_address: ${MONITOR_WORKER_BACKEND_IP:?MONITOR_WORKER_BACKEND_IP is required}
+      proxy:
 
 networks:
   backend:
     internal: true
+    ipam:
+      config:
+        - subnet: ${MONITOR_BACKEND_SUBNET:?MONITOR_BACKEND_SUBNET is required}
+          gateway: ${MONITOR_DNS_SERVER:?MONITOR_DNS_SERVER is required}
   proxy:
     external: true
     name: ${CADDY_NETWORK:?CADDY_NETWORK is required}
