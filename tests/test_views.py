@@ -292,6 +292,172 @@ class ViewTests(TestCase):
         self.assertContains(response, "Scheduled job signals")
         self.assertNotContains(response, monitor.heartbeat_token)
 
+    def test_job_recovery_requires_staff_and_job_monitor(self):
+        job = Monitor.objects.create(
+            name="recovery-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+        )
+        push = Monitor.objects.create(
+            name="not-a-job",
+            kind=Monitor.Kind.PUSH,
+            interval_seconds=60,
+        )
+        self.client.force_login(self.user)
+        self.assertEqual(
+            self.client.get(reverse("monitoring:job-recovery", args=[job.pk])).status_code,
+            403,
+        )
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("monitoring:job-recovery", args=[job.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Scheduled job recovery")
+        self.assertContains(response, "Versioned export")
+        self.assertNotContains(response, job.heartbeat_token)
+        self.assertEqual(
+            self.client.get(reverse("monitoring:job-recovery", args=[push.pk])).status_code,
+            404,
+        )
+
+    @override_settings(MONITOR_JOB_EVENT_RETENTION_DAYS=90)
+    def test_job_recovery_shows_state_preserving_anchors(self):
+        job = Monitor.objects.create(
+            name="anchor-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_max_runtime_seconds=600,
+        )
+        terminal = JobEvent.objects.create(
+            monitor=job,
+            event_type=JobEvent.EventType.SUCCESS,
+            run_id="completed-run",
+        )
+        start = JobEvent.objects.create(
+            monitor=job,
+            event_type=JobEvent.EventType.START,
+            run_id="active-run",
+            received_at=terminal.received_at + timedelta(seconds=1),
+        )
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("monitoring:job-recovery", args=[job.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["latest_terminal"].pk, terminal.pk)
+        self.assertEqual(response.context["unmatched_start"].pk, start.pk)
+        self.assertEqual(response.context["retention_days"], 90)
+        self.assertContains(response, "active-run")
+        self.assertNotContains(response, job.heartbeat_token)
+
+    def test_job_history_export_is_staff_only_versioned_and_secret_free(self):
+        job = Monitor.objects.create(
+            name="export-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_grace_seconds=120,
+        )
+        raw = job.issue_heartbeat_token()
+        event = JobEvent.objects.create(
+            monitor=job,
+            event_type=JobEvent.EventType.FAILURE,
+            event_id=str(uuid4()),
+            run_id="run-42",
+            exit_code=7,
+            message="bounded diagnostic",
+        )
+
+        self.client.force_login(self.user)
+        self.assertEqual(
+            self.client.get(reverse("monitoring:job-history-export", args=[job.pk])).status_code,
+            403,
+        )
+
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("monitoring:job-history-export", args=[job.pk]))
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["schema"], "goreecloud-monitor-job-events-v1")
+        self.assertEqual(payload["monitor"]["id"], job.pk)
+        self.assertEqual(payload["events"][0]["id"], event.pk)
+        self.assertEqual(payload["events"][0]["message"], "bounded diagnostic")
+        self.assertIn("attachment;", response["Content-Disposition"])
+        rendered = response.content.decode("utf-8")
+        self.assertNotIn(raw, rendered)
+        job.refresh_from_db()
+        self.assertNotIn(job.heartbeat_token, rendered)
+        self.assertNotIn("heartbeat_token", rendered)
+
+    def test_job_history_export_paginates_with_stable_before_id_cursor(self):
+        job = Monitor.objects.create(
+            name="paged-export-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+        )
+        events = [
+            JobEvent.objects.create(
+                monitor=job,
+                event_type=JobEvent.EventType.LOG,
+                message=f"event-{index}",
+            )
+            for index in range(3)
+        ]
+        self.client.force_login(self.staff)
+
+        first = self.client.get(
+            reverse("monitoring:job-history-export", args=[job.pk]),
+            {"limit": "2"},
+        )
+        self.assertEqual(first.status_code, 200)
+        first_payload = first.json()
+        self.assertTrue(first_payload["page"]["has_more"])
+        self.assertEqual(first_payload["page"]["returned"], 2)
+        self.assertEqual(
+            [row["id"] for row in first_payload["events"]],
+            [events[2].pk, events[1].pk],
+        )
+
+        second = self.client.get(
+            reverse("monitoring:job-history-export", args=[job.pk]),
+            {
+                "limit": "2",
+                "before_id": str(first_payload["page"]["next_before_id"]),
+            },
+        )
+        self.assertEqual(second.status_code, 200)
+        second_payload = second.json()
+        self.assertFalse(second_payload["page"]["has_more"])
+        self.assertEqual(
+            [row["id"] for row in second_payload["events"]],
+            [events[0].pk],
+        )
+        self.assertFalse(
+            set(row["id"] for row in first_payload["events"])
+            & set(row["id"] for row in second_payload["events"])
+        )
+
+    def test_job_history_export_rejects_invalid_pagination(self):
+        job = Monitor.objects.create(
+            name="invalid-export-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+        )
+        self.client.force_login(self.staff)
+        endpoint = reverse("monitoring:job-history-export", args=[job.pk])
+        self.assertEqual(self.client.get(endpoint, {"limit": "0"}).status_code, 400)
+        self.assertEqual(self.client.get(endpoint, {"limit": "5001"}).status_code, 400)
+        self.assertEqual(self.client.get(endpoint, {"before_id": "nope"}).status_code, 400)
+
+    def test_staff_job_detail_links_recovery_without_exposing_verifier(self):
+        job = Monitor.objects.create(
+            name="linked-recovery-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+        )
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("monitoring:monitor-detail", args=[job.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("monitoring:job-recovery", args=[job.pk]))
+        self.assertContains(response, "Recovery &amp; export")
+        self.assertNotContains(response, job.heartbeat_token)
+
     def test_secure_push_endpoint_rejects_get_without_mutating(self):
         monitor = Monitor.objects.create(name="post-only", kind=Monitor.Kind.PUSH, interval_seconds=60)
         raw = monitor.issue_heartbeat_token()

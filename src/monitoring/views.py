@@ -21,7 +21,7 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from .audit import record_security_event
 from .forms import MaintenanceWindowForm, MonitorForm
-from .jobs import JobSignalRateLimited, JobSignalReplayConflict, record_job_signal
+from .jobs import JobSignalRateLimited, JobSignalReplayConflict, evaluate_job_monitor, record_job_signal
 from .models import CheckResult, Incident, JobEvent, MaintenanceWindow, Monitor, hash_heartbeat_token, heartbeat_token_is_digest
 
 
@@ -152,6 +152,165 @@ class MonitorListView(LoginRequiredMixin, ListView):
             "filter_query": urlencode({k: v for k, v in {"q": query, "state": state, "kind": kind}.items() if v}),
         })
         return context
+
+
+def _parse_positive_int(value: str | None, *, default: int, maximum: int) -> int | None:
+    if value in {None, ""}:
+        return default
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    if not 1 <= parsed <= maximum:
+        return None
+    return parsed
+
+
+def _job_recovery_state(monitor: Monitor) -> dict[str, object]:
+    events = monitor.job_events.all()
+    latest_terminal = (
+        events.filter(event_type__in=[JobEvent.EventType.SUCCESS, JobEvent.EventType.FAILURE])
+        .order_by("-received_at", "-id")
+        .first()
+    )
+    latest_start = (
+        events.filter(event_type=JobEvent.EventType.START)
+        .order_by("-received_at", "-id")
+        .first()
+    )
+    unmatched_start = None
+    if latest_start is not None and (
+        latest_terminal is None or latest_start.received_at > latest_terminal.received_at
+    ):
+        unmatched_start = latest_start
+
+    counts = {value: 0 for value, _ in JobEvent.EventType.choices}
+    for row in events.values("event_type").annotate(total=Count("id")):
+        counts[row["event_type"]] = row["total"]
+
+    return {
+        "latest_terminal": latest_terminal,
+        "latest_start": latest_start,
+        "unmatched_start": unmatched_start,
+        "oldest_event": events.order_by("received_at", "id").first(),
+        "newest_event": events.order_by("-received_at", "-id").first(),
+        "event_count": events.count(),
+        "event_counts": counts,
+        "evaluation": evaluate_job_monitor(monitor),
+    }
+
+
+@login_required
+def job_recovery(request: HttpRequest, pk: int) -> HttpResponse:
+    if not request.user.is_staff:
+        raise PermissionDenied
+    monitor = get_object_or_404(Monitor, pk=pk, kind=Monitor.Kind.JOB)
+    state = _job_recovery_state(monitor)
+    record_security_event(
+        "job.recovery.viewed",
+        user=request.user,
+        object_type="monitor",
+        object_id=monitor.pk,
+    )
+    return render(
+        request,
+        "monitoring/job_recovery.html",
+        {
+            "monitor": monitor,
+            "retention_days": settings.MONITOR_JOB_EVENT_RETENTION_DAYS,
+            **state,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def job_history_export(request: HttpRequest, pk: int) -> JsonResponse:
+    if not request.user.is_staff:
+        raise PermissionDenied
+    monitor = get_object_or_404(Monitor, pk=pk, kind=Monitor.Kind.JOB)
+
+    limit = _parse_positive_int(request.GET.get("limit"), default=1000, maximum=5000)
+    before_id = _parse_positive_int(
+        request.GET.get("before_id"),
+        default=2**63 - 1,
+        maximum=2**63 - 1,
+    )
+    if limit is None or before_id is None:
+        return JsonResponse({"detail": "Invalid pagination parameters"}, status=400)
+
+    queryset = monitor.job_events.filter(id__lt=before_id).order_by("-id")
+    rows = list(queryset[: limit + 1])
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+    next_before_id = rows[-1].id if has_more and rows else None
+
+    state = _job_recovery_state(monitor)
+    event_payload = [
+        {
+            "id": event.id,
+            "received_at": event.received_at.isoformat(),
+            "event_type": event.event_type,
+            "event_id": event.event_id or None,
+            "run_id": event.run_id or None,
+            "exit_code": event.exit_code,
+            "duration_ms": event.duration_ms,
+            "message": event.message,
+        }
+        for event in rows
+    ]
+    payload = {
+        "schema": "goreecloud-monitor-job-events-v1",
+        "generated_at": timezone.now().isoformat(),
+        "monitor": {
+            "id": monitor.id,
+            "name": monitor.name,
+            "state": monitor.state,
+            "schedule_mode": monitor.job_schedule_mode,
+            "interval_seconds": monitor.interval_seconds,
+            "cron_expression": monitor.job_cron_expression or None,
+            "timezone": monitor.job_timezone,
+            "grace_seconds": monitor.job_grace_seconds,
+            "max_runtime_seconds": monitor.job_max_runtime_seconds,
+        },
+        "retention": {
+            "ordinary_days": settings.MONITOR_JOB_EVENT_RETENTION_DAYS,
+            "retained_event_count": state["event_count"],
+            "oldest_received_at": (
+                state["oldest_event"].received_at.isoformat()
+                if state["oldest_event"] is not None
+                else None
+            ),
+            "newest_received_at": (
+                state["newest_event"].received_at.isoformat()
+                if state["newest_event"] is not None
+                else None
+            ),
+        },
+        "evaluation": {
+            "success": state["evaluation"].success,
+            "observed_state": state["evaluation"].observed_state,
+            "message": state["evaluation"].message,
+        },
+        "page": {
+            "limit": limit,
+            "returned": len(event_payload),
+            "has_more": has_more,
+            "next_before_id": next_before_id,
+        },
+        "events": event_payload,
+    }
+    record_security_event(
+        "job.history.exported",
+        user=request.user,
+        object_type="monitor",
+        object_id=monitor.pk,
+    )
+    response = JsonResponse(payload, json_dumps_params={"indent": 2})
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="goreecloud-monitor-job-{monitor.pk}-events.json"'
+    )
+    return response
 
 
 @login_required

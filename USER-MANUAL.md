@@ -77,7 +77,7 @@ Approved job runners send HTTPS POST requests to `/api/v1/jobs/signal/` with the
 
 Do not put credentials in URLs, job names, messages, screenshots, shell history, or ordinary logs.
 
-Recent job events and run durations are visible to authorized administrators on the monitor detail page. Ordinary job-event history is automatically pruned after the configured retention period, while the minimum latest event state required for safe dead-man evaluation may be kept longer until superseded. A missed schedule, reported failure, or configured runtime overrun can enter the ordinary Monitor incident flow.
+Recent job events and run durations are visible to authorized administrators on the monitor detail page. Ordinary job-event history is automatically pruned after the configured retention period, while the minimum latest event state required for safe dead-man evaluation may be kept longer until superseded. Staff can use **Recovery & Export** to inspect those state-preserving anchors and download versioned, paginated JSON evidence of retained events. The export excludes job credentials and is supplemental evidence rather than a database-restore format. A missed schedule, reported failure, or configured runtime overrun can enter the ordinary Monitor incident flow.
 
 This source capability is not yet production acceptance. Validate the actual scheduled job, signal delivery, missed-run behavior, failure/recovery behavior, credential rotation, and notification path on the approved target before relying on it operationally.
 

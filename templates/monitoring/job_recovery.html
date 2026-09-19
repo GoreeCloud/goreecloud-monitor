@@ -1,0 +1,72 @@
+{% extends "monitoring/base.html" %}
+{% block title %}{{ monitor.name }} recovery · GoreeCloud Monitor{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <div class="eyebrow">Scheduled job recovery</div>
+    <h1>{{ monitor.name }}</h1>
+    <p>Inspect the retained state Monitor uses for dead-man evaluation and export retained job-event evidence. This surface supplements PostgreSQL recovery; it is not a database-restore mechanism.</p>
+  </div>
+  <div class="actions">
+    <a class="button quiet" href="{% url 'monitoring:monitor-detail' monitor.pk %}">Back to monitor</a>
+    <a class="button" href="{% url 'monitoring:job-history-export' monitor.pk %}">Export retained events</a>
+  </div>
+</section>
+
+<section class="metric-grid">
+  <article class="metric panel"><span>Evaluation</span><strong>{{ evaluation.observed_state|title }}</strong></article>
+  <article class="metric panel"><span>Retained events</span><strong>{{ event_count }}</strong></article>
+  <article class="metric panel"><span>Ordinary retention</span><strong>{{ retention_days }} days</strong></article>
+  <article class="metric panel"><span>Oldest retained</span><strong class="small-value">{% if oldest_event %}{{ oldest_event.received_at|date:"M j Y H:i:s" }} UTC{% else %}None{% endif %}</strong></article>
+</section>
+
+<section class="panel section-panel">
+  <div class="section-heading"><h2>Current recovery anchors</h2><span class="pill maintenance">State-preserving</span></div>
+  <p class="muted">These rows are the minimum retained state used to keep failure, success, and in-progress execution evaluation correct even when ordinary history has expired.</p>
+  <div class="two-column">
+    <div class="callout">
+      <strong>Latest terminal event</strong>
+      {% if latest_terminal %}
+      <p>{{ latest_terminal.get_event_type_display }} · {{ latest_terminal.received_at|date:"M j Y H:i:s" }} UTC{% if latest_terminal.run_id %} · Run {{ latest_terminal.run_id }}{% endif %}{% if latest_terminal.exit_code != None %} · exit {{ latest_terminal.exit_code }}{% endif %}</p>
+      {% else %}
+      <p>No success or failure event is retained yet.</p>
+      {% endif %}
+    </div>
+    <div class="callout">
+      <strong>Unmatched current start</strong>
+      {% if unmatched_start %}
+      <p>{{ unmatched_start.received_at|date:"M j Y H:i:s" }} UTC{% if unmatched_start.run_id %} · Run {{ unmatched_start.run_id }}{% endif %}</p>
+      {% else %}
+      <p>No unmatched start event is currently retained.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="panel section-panel">
+  <div class="section-heading"><h2>Retained event composition</h2><span class="muted">Current database state</span></div>
+  <div class="metric-grid">
+    <article class="metric panel"><span>Starts</span><strong>{{ event_counts.START }}</strong></article>
+    <article class="metric panel"><span>Successes</span><strong>{{ event_counts.SUCCESS }}</strong></article>
+    <article class="metric panel"><span>Failures</span><strong>{{ event_counts.FAILURE }}</strong></article>
+    <article class="metric panel"><span>Logs</span><strong>{{ event_counts.LOG }}</strong></article>
+  </div>
+  <div class="callout">
+    <strong>Current evaluation</strong>
+    <p>{{ evaluation.message }}</p>
+  </div>
+</section>
+
+<section class="panel section-panel">
+  <div class="section-heading"><h2>Versioned export</h2><span class="pill info">JSON v1</span></div>
+  <p class="muted">The export contains retained scheduled-job event metadata and the current schedule/evaluation snapshot. It never contains the reusable job credential or its stored verifier. Large histories are paginated with a stable <code>before_id</code> cursor and a maximum page size of 5,000 events.</p>
+  <div class="actions">
+    <a class="button" href="{% url 'monitoring:job-history-export' monitor.pk %}?limit=1000">Download first 1,000 events</a>
+  </div>
+</section>
+
+<section class="panel section-panel">
+  <div class="section-heading"><h2>Recovery boundary</h2><span class="pill maintenance">Supplemental evidence</span></div>
+  <p class="muted">Use PostgreSQL backup and restore for authoritative recovery of Monitor runtime state. This recovery snapshot and event export are for inspection, incident evidence, and controlled portability of retained job-event metadata; they do not replace database recovery, credential reissuance, or live acceptance testing.</p>
+</section>
+{% endblock %}

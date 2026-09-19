@@ -76,6 +76,12 @@ The staff monitor-detail view exposes recent job-event history. Non-staff viewer
 
 Because idempotency identities are stored on event rows, retry convergence for an old `event_id` is guaranteed only while that event remains retained. A pruned historical identifier may later be accepted again.
 
+### Recovery and export
+
+Authorized staff can open the scheduled-job recovery surface from a JOB monitor. It shows the current evaluator result, retained-event counts, the latest terminal event, any unmatched START that is still part of current state, retention posture, and the oldest retained event. The surface is diagnostic and does not expose the reusable bearer credential or its stored verifier.
+
+The same recovery surface provides a versioned `goreecloud-monitor-job-events-v1` JSON export of retained event evidence. Export pages are cursor-based using `before_id`, default to 1,000 events, and are capped at 5,000 events per request. Each page reports whether more data remains and provides the next cursor. The export includes schedule metadata, current evaluation, retention metadata, and retained event rows; it is supplemental recovery/incident evidence rather than an import format or PostgreSQL restore substitute.
+
 ## Security boundaries
 
 - Do not place the bearer credential in the URL.
@@ -91,7 +97,6 @@ The current foundation does not yet provide the complete planned Healthchecks-st
 
 - systemd OnCalendar evaluation/support;
 - richer explicit Started/Late presentation;
-- dedicated job-event recovery/export views beyond normal database backup/restore;
 - tags/labels and projects/collections;
 - scoped job-management APIs;
 - policy-gated automatic provisioning;
