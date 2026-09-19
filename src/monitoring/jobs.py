@@ -140,5 +140,11 @@ def record_job_event(
         duration_ms=duration_ms,
         message=message[:500],
     )
-    Monitor.objects.filter(pk=monitor.pk).update(last_heartbeat_at=received_at, updated_at=received_at)
+    # Force the worker to evaluate the new event on its next polling pass instead of waiting
+    # for the ordinary scheduled-job evaluation interval.
+    Monitor.objects.filter(pk=monitor.pk).update(
+        last_heartbeat_at=received_at,
+        last_checked_at=None,
+        updated_at=received_at,
+    )
     return event
