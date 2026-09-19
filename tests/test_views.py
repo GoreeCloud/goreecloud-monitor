@@ -1,4 +1,5 @@
 from datetime import timedelta
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -155,6 +156,111 @@ class ViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertFalse(JobEvent.objects.filter(monitor=monitor).exists())
+
+    def test_job_signal_idempotent_replay_returns_existing_event(self):
+        monitor = Monitor.objects.create(name="idempotent-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        raw = monitor.issue_heartbeat_token()
+        event_id = str(uuid4())
+        payload = {"event": "start", "event_id": event_id, "message": "starting"}
+
+        first = self.client.post(
+            reverse("monitoring:job-signal"),
+            data=payload,
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        second = self.client.post(
+            reverse("monitoring:job-signal"),
+            data=payload,
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertFalse(first.json()["replayed"])
+        self.assertTrue(second.json()["replayed"])
+        self.assertEqual(first.json()["run_id"], second.json()["run_id"])
+        self.assertEqual(first.json()["event_id"], event_id)
+        self.assertEqual(JobEvent.objects.filter(monitor=monitor).count(), 1)
+
+    def test_job_signal_conflicting_idempotency_replay_is_rejected(self):
+        monitor = Monitor.objects.create(name="conflicting-replay-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        raw = monitor.issue_heartbeat_token()
+        event_id = str(uuid4())
+        first = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "success", "event_id": event_id, "message": "done"},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        conflict = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "failure", "event_id": event_id, "exit_code": 2, "message": "failed"},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(conflict.status_code, 409)
+        self.assertEqual(JobEvent.objects.filter(monitor=monitor).count(), 1)
+
+    def test_job_signal_rejects_invalid_event_id(self):
+        monitor = Monitor.objects.create(name="invalid-event-id-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        raw = monitor.issue_heartbeat_token()
+        response = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "success", "event_id": "not-a-uuid"},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(JobEvent.objects.filter(monitor=monitor).exists())
+
+    @override_settings(MONITOR_JOB_SIGNAL_MAX_PER_MINUTE=2)
+    def test_job_signal_rate_limit_returns_429_and_retry_after(self):
+        monitor = Monitor.objects.create(name="rate-limited-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        raw = monitor.issue_heartbeat_token()
+        for index in range(2):
+            response = self.client.post(
+                reverse("monitoring:job-signal"),
+                data={"event": "log", "event_id": str(uuid4()), "message": f"log {index}"},
+                content_type="application/json",
+                HTTP_AUTHORIZATION=f"Bearer {raw}",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        limited = self.client.post(
+            reverse("monitoring:job-signal"),
+            data={"event": "success", "event_id": str(uuid4())},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(limited.status_code, 429)
+        self.assertGreaterEqual(int(limited["Retry-After"]), 1)
+        self.assertEqual(JobEvent.objects.filter(monitor=monitor).count(), 2)
+
+    @override_settings(MONITOR_JOB_SIGNAL_MAX_PER_MINUTE=1)
+    def test_idempotent_replay_bypasses_rate_limit_without_new_event(self):
+        monitor = Monitor.objects.create(name="replay-at-limit-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        raw = monitor.issue_heartbeat_token()
+        event_id = str(uuid4())
+        payload = {"event": "success", "event_id": event_id}
+        first = self.client.post(
+            reverse("monitoring:job-signal"),
+            data=payload,
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        replay = self.client.post(
+            reverse("monitoring:job-signal"),
+            data=payload,
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {raw}",
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(replay.status_code, 200)
+        self.assertTrue(replay.json()["replayed"])
+        self.assertEqual(JobEvent.objects.filter(monitor=monitor).count(), 1)
 
     def test_staff_job_detail_exposes_signal_contract_not_verifier(self):
         monitor = Monitor.objects.create(name="job-detail", kind=Monitor.Kind.JOB, interval_seconds=3600)
