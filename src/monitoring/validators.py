@@ -110,7 +110,7 @@ def validate_target_syntax(kind: str, target: str, port: int | None = None) -> N
             raise ValidationError("Ping monitors do not use a TCP or UDP port")
     elif kind == "DNS":
         parse_dns_target(target)
-    elif kind == "PUSH":
+    elif kind in {"PUSH", "JOB"}:
         return
     else:
         raise ValidationError("Unsupported monitor type")

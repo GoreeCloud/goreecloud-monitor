@@ -71,6 +71,12 @@ class RuntimePreflightTests(TestCase):
         codes = {finding.code for finding in runtime_findings() if finding.severity == "error"}
         self.assertIn("legacy-heartbeat-verifier", codes)
 
+    def test_plaintext_scheduled_job_credential_is_blocking(self):
+        monitor = Monitor.objects.create(name="legacy-job", kind=Monitor.Kind.JOB, interval_seconds=3600)
+        Monitor.objects.filter(pk=monitor.pk).update(heartbeat_token="legacy-job-reusable-secret")
+        codes = {finding.code for finding in runtime_findings() if finding.severity == "error"}
+        self.assertIn("legacy-job-verifier", codes)
+
 class PreflightCommandTests(TestCase):
     def test_insecure_ci_configuration_fails_closed_without_secrets_in_report(self):
         out = StringIO()

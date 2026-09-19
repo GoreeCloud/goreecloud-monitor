@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hmac
+import json
 
 from django.conf import settings
 from django.contrib import messages
@@ -19,7 +20,8 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from .audit import record_security_event
 from .forms import MaintenanceWindowForm, MonitorForm
-from .models import CheckResult, Incident, MaintenanceWindow, Monitor, hash_heartbeat_token, heartbeat_token_is_digest
+from .jobs import record_job_event
+from .models import CheckResult, Incident, JobEvent, MaintenanceWindow, Monitor, hash_heartbeat_token, heartbeat_token_is_digest
 
 
 GLAZE_UI_VERSION = "1.0.0"
@@ -45,23 +47,37 @@ def _heartbeat_issue_response(request: HttpRequest, monitor: Monitor, raw_token:
     )
 
 
-def _resolve_push_monitor(raw_token: str) -> Monitor | None:
+def _job_credential_issue_response(request: HttpRequest, monitor: Monitor, raw_token: str) -> HttpResponse:
+    return render(
+        request,
+        "monitoring/job_token_issued.html",
+        {
+            "monitor": monitor,
+            "job_token": raw_token,
+            "job_endpoint": request.build_absolute_uri(reverse("monitoring:job-signal")),
+        },
+    )
+
+
+def _resolve_signal_monitor(raw_token: str, kinds: set[str]) -> Monitor | None:
     if not raw_token or len(raw_token) > 256:
         return None
     digest = hash_heartbeat_token(raw_token)
     monitor = (
-        Monitor.objects.filter(kind=Monitor.Kind.PUSH, enabled=True)
+        Monitor.objects.filter(kind__in=kinds, enabled=True)
         .filter(Q(heartbeat_token=digest) | Q(heartbeat_token=raw_token))
         .first()
     )
     if monitor is None:
         return None
     if not heartbeat_token_is_digest(monitor.heartbeat_token):
-        # Transitional compatibility: the first accepted legacy credential is immediately
-        # upgraded to a one-way verifier. Production preflight refuses any legacy rows.
         Monitor.objects.filter(pk=monitor.pk, heartbeat_token=raw_token).update(heartbeat_token=digest)
         monitor.heartbeat_token = digest
     return monitor
+
+
+def _resolve_push_monitor(raw_token: str) -> Monitor | None:
+    return _resolve_signal_monitor(raw_token, {Monitor.Kind.PUSH})
 
 
 def _bearer_credential(request: HttpRequest) -> str:
@@ -132,7 +148,7 @@ class MonitorListView(LoginRequiredMixin, ListView):
 @login_required
 def monitor_detail(request: HttpRequest, pk: int) -> HttpResponse:
     monitor = get_object_or_404(Monitor, pk=pk)
-    return render(request, "monitoring/monitor_detail.html", {"monitor": monitor, "checks": monitor.checks.all()[:50], "incidents": monitor.incidents.all()[:20]})
+    return render(request, "monitoring/monitor_detail.html", {"monitor": monitor, "checks": monitor.checks.all()[:50], "incidents": monitor.incidents.all()[:20], "job_events": monitor.job_events.all()[:50] if monitor.kind == Monitor.Kind.JOB else []})
 
 
 class MonitorCreateView(StaffRequiredMixin, CreateView):
@@ -148,6 +164,10 @@ class MonitorCreateView(StaffRequiredMixin, CreateView):
             raw_token = self.object.issue_heartbeat_token()
             record_security_event("heartbeat.credential.issued", user=self.request.user, object_type="monitor", object_id=self.object.pk)
             return _heartbeat_issue_response(self.request, self.object, raw_token)
+        if self.object.kind == Monitor.Kind.JOB:
+            raw_token = self.object.issue_heartbeat_token()
+            record_security_event("job.credential.issued", user=self.request.user, object_type="monitor", object_id=self.object.pk)
+            return _job_credential_issue_response(self.request, self.object, raw_token)
         messages.success(self.request, "Monitor created.")
         return response
 
@@ -280,8 +300,11 @@ def security_view(request: HttpRequest) -> HttpResponse:
 def rotate_heartbeat_token(request: HttpRequest, pk: int) -> HttpResponse:
     if not request.user.is_staff:
         raise PermissionDenied
-    monitor = get_object_or_404(Monitor, pk=pk, kind=Monitor.Kind.PUSH)
+    monitor = get_object_or_404(Monitor, pk=pk, kind__in=[Monitor.Kind.PUSH, Monitor.Kind.JOB])
     raw_token = monitor.issue_heartbeat_token()
+    if monitor.kind == Monitor.Kind.JOB:
+        record_security_event("job.credential.rotated", user=request.user, object_type="monitor", object_id=monitor.pk)
+        return _job_credential_issue_response(request, monitor, raw_token)
     record_security_event("heartbeat.credential.rotated", user=request.user, object_type="monitor", object_id=monitor.pk)
     return _heartbeat_issue_response(request, monitor, raw_token)
 
@@ -298,6 +321,69 @@ def push_heartbeat(request: HttpRequest) -> JsonResponse:
     received_at = timezone.now()
     Monitor.objects.filter(pk=monitor.pk).update(last_heartbeat_at=received_at, updated_at=received_at)
     return JsonResponse({"ok": True, "received_at": received_at.isoformat()})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def job_signal(request: HttpRequest) -> JsonResponse:
+    raw_token = _bearer_credential(request)
+    monitor = _resolve_signal_monitor(raw_token, {Monitor.Kind.JOB})
+    if monitor is None:
+        response = JsonResponse({"detail": "Unauthorized"}, status=401)
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response
+    if request.content_type != "application/json" or len(request.body) > 8192:
+        return JsonResponse({"detail": "Invalid job signal payload"}, status=400)
+    try:
+        payload = json.loads(request.body or b"{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"detail": "Invalid job signal payload"}, status=400)
+    if not isinstance(payload, dict) or not set(payload).issubset({"event", "run_id", "exit_code", "message"}):
+        return JsonResponse({"detail": "Invalid job signal payload"}, status=400)
+
+    event_name = str(payload.get("event", "")).strip().upper()
+    aliases = {"FAIL": JobEvent.EventType.FAILURE, "FAILED": JobEvent.EventType.FAILURE}
+    event_type = aliases.get(event_name, event_name)
+    if event_type not in {value for value, _ in JobEvent.EventType.choices}:
+        return JsonResponse({"detail": "Unsupported job event"}, status=400)
+
+    raw_run_id = payload.get("run_id", "")
+    raw_message = payload.get("message", "")
+    if not isinstance(raw_run_id, str) or not isinstance(raw_message, str):
+        return JsonResponse({"detail": "run_id and message must be strings"}, status=400)
+    run_id = raw_run_id.strip()
+    message = raw_message.strip()
+    exit_code = payload.get("exit_code")
+    if len(run_id) > 128 or len(message) > 500:
+        return JsonResponse({"detail": "Job signal field exceeds limit"}, status=400)
+    if exit_code is not None and (
+        isinstance(exit_code, bool)
+        or not isinstance(exit_code, int)
+        or not -(2**31) <= exit_code < 2**31
+    ):
+        return JsonResponse({"detail": "exit_code must be a 32-bit integer"}, status=400)
+    if event_type == JobEvent.EventType.SUCCESS and exit_code not in {None, 0}:
+        return JsonResponse({"detail": "A success event cannot carry a non-zero exit_code"}, status=400)
+    if event_type in {JobEvent.EventType.START, JobEvent.EventType.LOG} and exit_code is not None:
+        return JsonResponse({"detail": "exit_code is valid only for terminal job events"}, status=400)
+
+    received_at = timezone.now()
+    event = record_job_event(
+        monitor.pk,
+        event_type,
+        run_id=run_id,
+        exit_code=exit_code,
+        message=message,
+        received_at=received_at,
+    )
+    return JsonResponse(
+        {
+            "ok": True,
+            "event": event.event_type.lower(),
+            "received_at": received_at.isoformat(),
+            "run_id": event.run_id or None,
+        }
+    )
 
 
 @csrf_exempt

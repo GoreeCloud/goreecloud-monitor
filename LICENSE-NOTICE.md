@@ -7,3 +7,10 @@ Copyright (C) 2026 GoreeCloud.
 This is a prospective license change. Copies and releases of GoreeCloud Monitor that were already distributed under the MIT License retain the MIT permissions previously granted to those copies. This repository's current license does not revoke those prior grants.
 
 Uptime Kuma, separately licensed dependencies, platform components, compatibility inputs, and other third-party materials retain their applicable licenses. The GoreeCloud Monitor AGPL grant does not replace those terms.
+
+## Scheduled-job dependencies
+
+- `croniter` is a separately licensed dependency under the MIT License.
+- Python `tzdata` is a separately licensed dependency under the Apache License 2.0.
+
+These dependency licenses apply to their respective upstream packages and are not replaced by the GoreeCloud Monitor AGPL-3.0-only license.

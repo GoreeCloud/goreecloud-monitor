@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from asgiref.sync import sync_to_async
@@ -6,7 +6,8 @@ from django.test import TestCase
 from django.utils import timezone
 
 from monitoring.engine import CheckOutcome, _apply_outcome, check_dns, check_push, run_monitor
-from monitoring.models import CheckResult, Incident, Monitor, NotificationOutbox
+from monitoring.jobs import evaluate_job_monitor, record_job_event
+from monitoring.models import CheckResult, Incident, JobEvent, Monitor, NotificationOutbox
 
 
 class EngineStateTests(TestCase):
@@ -74,6 +75,198 @@ class EngineStateTests(TestCase):
         self.monitor.last_heartbeat_at = timezone.now()
         outcome = await check_push(self.monitor)
         self.assertTrue(outcome.success)
+
+
+    def test_simple_scheduled_job_detects_missed_completion_after_grace(self):
+        monitor = Monitor.objects.create(
+            name="simple-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_grace_seconds=10,
+        )
+        completed_at = monitor.created_at + timedelta(seconds=5)
+        record_job_event(monitor.id, JobEvent.EventType.SUCCESS, received_at=completed_at)
+        outcome = evaluate_job_monitor(monitor, completed_at + timedelta(seconds=71))
+        self.assertFalse(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.DOWN)
+
+    def test_cron_scheduled_job_accepts_completion_in_current_window(self):
+        monitor = Monitor.objects.create(
+            name="cron-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.CRON,
+            job_cron_expression="*/5 * * * *",
+            job_timezone="UTC",
+            job_grace_seconds=60,
+        )
+        Monitor.objects.filter(pk=monitor.pk).update(
+            created_at=datetime(2026, 9, 19, 12, 0, 0, tzinfo=UTC)
+        )
+        monitor.refresh_from_db()
+        completed_at = datetime(2026, 9, 19, 12, 5, 20, tzinfo=UTC)
+        record_job_event(monitor.id, JobEvent.EventType.SUCCESS, received_at=completed_at)
+        outcome = evaluate_job_monitor(
+            monitor,
+            datetime(2026, 9, 19, 12, 5, 30, tzinfo=UTC),
+        )
+        self.assertTrue(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.UP)
+
+    def test_new_cron_monitor_does_not_inherit_pre_creation_missed_window(self):
+        monitor = Monitor.objects.create(
+            name="cron-new",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.CRON,
+            job_cron_expression="*/5 * * * *",
+            job_timezone="UTC",
+            job_grace_seconds=60,
+        )
+        Monitor.objects.filter(pk=monitor.pk).update(
+            created_at=datetime(2026, 9, 19, 12, 3, 0, tzinfo=UTC)
+        )
+        monitor.refresh_from_db()
+        outcome = evaluate_job_monitor(
+            monitor,
+            datetime(2026, 9, 19, 12, 3, 30, tzinfo=UTC),
+        )
+        self.assertTrue(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.UNKNOWN)
+        self.assertIn("first scheduled job window", outcome.message)
+
+    def test_cron_scheduled_job_uses_exact_due_minute_as_current_window(self):
+        monitor = Monitor.objects.create(
+            name="cron-boundary",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.CRON,
+            job_cron_expression="*/5 * * * *",
+            job_timezone="UTC",
+            job_grace_seconds=60,
+        )
+        Monitor.objects.filter(pk=monitor.pk).update(
+            created_at=datetime(2026, 9, 19, 12, 0, 0, tzinfo=UTC)
+        )
+        monitor.refresh_from_db()
+        outcome = evaluate_job_monitor(
+            monitor,
+            datetime(2026, 9, 19, 12, 5, 0, tzinfo=UTC),
+        )
+        self.assertTrue(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.UNKNOWN)
+        self.assertIn("current scheduled job completion", outcome.message)
+
+    def test_cron_scheduled_job_detects_missed_window(self):
+        monitor = Monitor.objects.create(
+            name="cron-missed",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            job_schedule_mode=Monitor.JobScheduleMode.CRON,
+            job_cron_expression="*/5 * * * *",
+            job_timezone="UTC",
+            job_grace_seconds=60,
+        )
+        Monitor.objects.filter(pk=monitor.pk).update(
+            created_at=datetime(2026, 9, 19, 12, 0, 0, tzinfo=UTC)
+        )
+        monitor.refresh_from_db()
+        outcome = evaluate_job_monitor(
+            monitor,
+            datetime(2026, 9, 19, 12, 6, 5, tzinfo=UTC),
+        )
+        self.assertFalse(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.DOWN)
+
+    def test_job_evaluation_is_not_confused_by_high_log_volume(self):
+        monitor = Monitor.objects.create(
+            name="log-heavy-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_grace_seconds=60,
+        )
+        completed_at = timezone.now()
+        record_job_event(
+            monitor.id,
+            JobEvent.EventType.SUCCESS,
+            run_id="log-heavy-run",
+            received_at=completed_at,
+        )
+        JobEvent.objects.bulk_create(
+            [
+                JobEvent(
+                    monitor=monitor,
+                    event_type=JobEvent.EventType.LOG,
+                    run_id="log-heavy-run",
+                    received_at=completed_at + timedelta(milliseconds=index + 1),
+                    message=f"log line {index}",
+                )
+                for index in range(250)
+            ]
+        )
+        outcome = evaluate_job_monitor(monitor, completed_at + timedelta(seconds=30))
+        self.assertTrue(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.UP)
+
+    def test_scheduled_job_detects_runtime_overrun(self):
+        monitor = Monitor.objects.create(
+            name="long-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_max_runtime_seconds=60,
+        )
+        started_at = timezone.now() - timedelta(seconds=61)
+        record_job_event(
+            monitor.id,
+            JobEvent.EventType.START,
+            run_id="run-overrun",
+            received_at=started_at,
+        )
+        outcome = evaluate_job_monitor(monitor, started_at + timedelta(seconds=61))
+        self.assertFalse(outcome.success)
+        self.assertIn("maximum runtime", outcome.message)
+
+    def test_started_job_without_explicit_max_runtime_uses_grace_limit(self):
+        monitor = Monitor.objects.create(
+            name="grace-limited-running-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=3600,
+            job_grace_seconds=30,
+            job_max_runtime_seconds=0,
+        )
+        started_at = timezone.now() - timedelta(seconds=31)
+        record_job_event(
+            monitor.id,
+            JobEvent.EventType.START,
+            run_id="grace-run",
+            received_at=started_at,
+        )
+        outcome = evaluate_job_monitor(monitor, started_at + timedelta(seconds=31))
+        self.assertFalse(outcome.success)
+        self.assertEqual(outcome.observed_state, Monitor.State.DOWN)
+        self.assertIn("grace runtime", outcome.message)
+
+    async def test_job_monitor_failure_enters_existing_incident_pipeline(self):
+        monitor = await sync_to_async(Monitor.objects.create)(
+            name="failed-job",
+            kind=Monitor.Kind.JOB,
+            interval_seconds=60,
+            failure_threshold=1,
+        )
+        await sync_to_async(record_job_event)(
+            monitor.id,
+            JobEvent.EventType.FAILURE,
+            run_id="run-failed",
+            exit_code=2,
+        )
+        await run_monitor(monitor.id)
+        await sync_to_async(monitor.refresh_from_db)()
+        self.assertEqual(monitor.state, Monitor.State.DOWN)
+        self.assertTrue(
+            await sync_to_async(
+                Incident.objects.filter(monitor=monitor, ended_at__isnull=True).exists
+            )()
+        )
 
     async def test_dns_monitor_uses_validated_explicit_resolver(self):
         monitor = Monitor(

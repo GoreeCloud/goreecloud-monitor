@@ -1,6 +1,6 @@
 # GoreeCloud Monitor
 
-GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-health, heartbeat, TLS-certificate, incident, and recovery-monitoring application.
+GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-health, heartbeat, scheduled-job/dead-man, TLS-certificate, incident, and recovery-monitoring application.
 
 > **Current state:** advanced pre-production acceptance candidate. Uptime Kuma and ntfy were permanently retired from `goreecloud-vps-01` on September 18, 2026, but predecessor retirement does not automatically promote GoreeCloud Monitor to production authority. The native monitoring foundation, hardened production topology, PostgreSQL recovery tooling, imported paused monitor definitions, DNS and low-privilege Ping/ICMP support, migration/recovery evidence tooling, and GoreeCloud Notify producer candidate are implemented at source level. Production activation remains blocked on current target-host verification, reviewed monitor activation, live check acceptance, current Stable Glaze UI 1.5.1 adoption, platform-system acceptance, target security/recovery evidence, end-to-end GoreeCloud Notify delivery including durable-outbox restart/replay acceptance, independent outage alerting, rollback, and explicit production approval.
 
@@ -16,6 +16,8 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Native IPv4/IPv6 Ping/ICMP Echo checks using policy-validated unprivileged datagram ping sockets rather than raw-socket capabilities
 - DNS A, AAAA, and CNAME checks with optional destination-policy-validated explicit resolvers
 - Push/heartbeat monitors with minimized unauthenticated acknowledgements and staff-only credential rendering
+- Scheduled Job / Dead-Man monitors with simple interval + grace or strict cron + IANA time-zone schedules
+- Authenticated job start/success/failure/log signals, run correlation, duration history, missed-run detection, and maximum-runtime overrun detection
 - Unknown, Up, Down, Degraded, Paused, and Maintenance state handling
 - Failure and recovery thresholds with incident and recovery history
 - Authenticated least-privilege GoreeCloud Notify transition publishing candidate with raw-diagnostic minimization and a PostgreSQL-backed durable outbox
@@ -152,7 +154,7 @@ The current SSRF design validates all addresses returned during application pref
 
 The repository contains one Django web/API application and one asynchronous monitoring worker. PostgreSQL is the intended production database. Redis, Celery, Kafka, and other brokers are intentionally excluded from v0.1.
 
-See `docs/architecture.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/product-identity.md`, `docs/wardveil-security.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/dns-resolver-semantics.md`, `docs/icmp-ping.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
+See `docs/architecture.md`, `docs/scheduled-jobs.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/product-identity.md`, `docs/wardveil-security.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/dns-resolver-semantics.md`, `docs/icmp-ping.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
 
 ## License
 

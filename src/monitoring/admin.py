@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CheckResult, Incident, MaintenanceWindow, Monitor
+from .models import CheckResult, Incident, JobEvent, MaintenanceWindow, Monitor
 
 
 @admin.register(Monitor)
@@ -35,3 +35,11 @@ class IncidentAdmin(admin.ModelAdmin):
 class MaintenanceWindowAdmin(admin.ModelAdmin):
     list_display = ("name", "starts_at", "ends_at")
     filter_horizontal = ("monitors",)
+
+
+@admin.register(JobEvent)
+class JobEventAdmin(admin.ModelAdmin):
+    list_display = ("monitor", "received_at", "event_type", "run_id", "exit_code", "duration_ms")
+    list_filter = ("event_type",)
+    search_fields = ("monitor__name", "run_id", "message")
+    readonly_fields = ("monitor", "received_at", "event_type", "run_id", "exit_code", "duration_ms", "message")

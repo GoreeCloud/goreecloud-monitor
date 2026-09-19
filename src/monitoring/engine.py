@@ -18,6 +18,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .icmp import IcmpUnavailable, echo as icmp_echo
+from .jobs import evaluate_job_monitor
 from .models import CheckResult, Incident, MaintenanceWindow, Monitor, NotificationOutbox
 from .notifications import create_notify_idempotency_key, create_notify_payload
 from .outbox import drain_notification_outbox
@@ -176,12 +177,18 @@ async def check_push(monitor: Monitor) -> CheckOutcome:
     return CheckOutcome(True, Monitor.State.UP, None, "Heartbeat is current")
 
 
+async def check_job(monitor: Monitor) -> CheckOutcome:
+    evaluation = await sync_to_async(evaluate_job_monitor, thread_sensitive=True)(monitor)
+    return CheckOutcome(evaluation.success, evaluation.observed_state, None, evaluation.message)
+
+
 async def perform_check(monitor: Monitor) -> CheckOutcome:
     if monitor.kind in {Monitor.Kind.HTTP, Monitor.Kind.HTTPS}: return await check_http(monitor)
     if monitor.kind == Monitor.Kind.TCP: return await check_tcp(monitor)
     if monitor.kind == Monitor.Kind.PING: return await check_ping(monitor)
     if monitor.kind == Monitor.Kind.DNS: return await check_dns(monitor)
     if monitor.kind == Monitor.Kind.PUSH: return await check_push(monitor)
+    if monitor.kind == Monitor.Kind.JOB: return await check_job(monitor)
     return CheckOutcome(False, Monitor.State.DOWN, None, "Unsupported monitor type")
 
 

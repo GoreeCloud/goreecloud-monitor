@@ -1,9 +1,9 @@
 # GoreeCloud Monitor — User Manual
 
-**Document Internal Version Number:** 2026.09.18.1  
-**Document External Version Number:** 1.0.0  
+**Document Internal Version Number:** 2026.09.19.1  
+**Document External Version Number:** 1.1.0  
 **Status:** Repository user manual for the current pre-production source  
-**As of:** September 18, 2026  
+**As of:** September 19, 2026  
 **Central manual:** `GoreeCloud/User Manuals/User Manual — GoreeCloud Monitor.docx`
 
 ## Before using Monitor
@@ -44,7 +44,8 @@ Depending on staff permissions, you can create or edit monitors for supported ch
 - TCP;
 - DNS;
 - Ping/ICMP;
-- push/heartbeat.
+- push/heartbeat;
+- scheduled job / dead-man.
 
 Before enabling a monitor, verify the target is current and authorized. Do not reactivate preserved predecessor definitions blindly.
 
@@ -57,6 +58,28 @@ Treat heartbeat credentials as sensitive.
 Rotate a heartbeat credential when exposure is possible.
 
 Legacy path-based heartbeat behavior remains restricted and should not be used unless explicitly approved.
+
+
+## Scheduled job monitors
+
+Scheduled job / dead-man monitors are intended for cron jobs, backups, maintenance tasks, synchronization jobs, and other periodic workloads.
+
+Choose either:
+
+- a simple expected interval plus grace period; or
+- a cron expression with an explicit IANA time zone.
+
+The optional maximum-runtime setting detects jobs that send a start signal but do not complete within the approved execution budget.
+
+Each scheduled-job monitor has a protected bearer credential. The reusable value is shown only when it is issued or rotated; Monitor stores only a one-way verifier.
+
+Approved job runners send HTTPS POST requests to `/api/v1/jobs/signal/` with the bearer credential and an event of `start`, `success`, `failure`, or `log`. Use an optional `run_id` when explicit run correlation is useful.
+
+Do not put credentials in URLs, job names, messages, screenshots, shell history, or ordinary logs.
+
+Recent job events and run durations are visible to authorized administrators on the monitor detail page. A missed schedule, reported failure, or configured runtime overrun can enter the ordinary Monitor incident flow.
+
+This source capability is not yet production acceptance. Validate the actual scheduled job, signal delivery, missed-run behavior, failure/recovery behavior, credential rotation, and notification path on the approved target before relying on it operationally.
 
 ## Incidents
 
