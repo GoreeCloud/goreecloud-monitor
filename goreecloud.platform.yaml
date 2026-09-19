@@ -20,6 +20,9 @@ api:
     - name: heartbeat
       url: /api/v1/heartbeat/
       purpose: Authenticated push-heartbeat ingestion for supported monitors.
+    - name: job-signal
+      url: /api/v1/jobs/signal/
+      purpose: Authenticated scheduled-job start, success, failure, and bounded log/event ingestion.
     - name: manager-summary
       url: /api/v1/summary/
       purpose: Read-only bounded operational summary for approved Manager integration.
@@ -110,7 +113,7 @@ continuity:
     required: true
     requirements:
       - Perform an isolated restore against the exact candidate before production activation.
-      - Validate monitor definitions, incidents, maintenance state, and notification outbox state after restore.
+      - Validate monitor definitions, scheduled-job definitions and event history, incidents, maintenance state, and notification outbox state after restore.
   export:
     required: true
     requirements:
@@ -161,4 +164,4 @@ conformance:
     - GoreeCloud Identity integration and acceptance are not established.
     - GoreeCloud Policy integration and acceptance are not established.
     - GoreeCloud Observability integration and acceptance are not established.
-    - Live VPS readback, target backup/restore, reviewed monitor activation, representative protocol checks, accepted Notify delivery, independent outage alerting, rollback/recovery, and explicit production activation approval remain incomplete.
+    - Live VPS readback, target backup/restore, reviewed monitor activation, representative protocol and scheduled-job checks, accepted Notify delivery, independent outage alerting, rollback/recovery, and explicit production activation approval remain incomplete.
