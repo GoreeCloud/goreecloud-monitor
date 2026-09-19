@@ -14,7 +14,7 @@
 </section>
 
 <section class="metric-grid">
-  <article class="metric panel"><span>Evaluation</span><strong>{{ evaluation.observed_state|title }}</strong></article>
+  <article class="metric panel"><span>Lifecycle</span><strong><span class="pill {{ job_phase_tone }}">{{ evaluation.phase|title }}</span></strong></article>
   <article class="metric panel"><span>Retained events</span><strong>{{ event_count }}</strong></article>
   <article class="metric panel"><span>Ordinary retention</span><strong>{{ retention_days }} days</strong></article>
   <article class="metric panel"><span>Oldest retained</span><strong class="small-value">{% if oldest_event %}{{ oldest_event.received_at|date:"M j Y H:i:s" }} UTC{% else %}None{% endif %}</strong></article>
@@ -52,8 +52,8 @@
     <article class="metric panel"><span>Logs</span><strong>{{ event_counts.LOG }}</strong></article>
   </div>
   <div class="callout">
-    <strong>Current evaluation</strong>
-    <p>{{ evaluation.message }}</p>
+    <strong>{{ evaluation.phase|title }}</strong>
+    <p>{{ evaluation.message }} Underlying Monitor state remains {{ evaluation.observed_state|title }} for incident/notification behavior.</p>
   </div>
 </section>
 
