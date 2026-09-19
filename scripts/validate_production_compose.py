@@ -7,6 +7,7 @@ Caddy network, firewall, NetBird policy, host path, or backup target is correct.
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import sys
 from typing import Any
@@ -78,6 +79,19 @@ def main() -> None:
     worker_sysctls = services["worker"].get("sysctls") or {}
     if worker_sysctls.get("net.ipv4.ping_group_range") != "999 999":
         fail("worker ping_group_range must be restricted to the deterministic Monitor group 999")
+
+    for name in {"db", "migrate", "web"}:
+        if services[name].get("dns"):
+            fail(f"{name} receives a DNS override despite not executing monitor target checks")
+    worker_dns = services["worker"].get("dns") or []
+    if not isinstance(worker_dns, list) or len(worker_dns) != 1:
+        fail("worker must use exactly one explicit private DNS resolver")
+    try:
+        worker_dns_address = ipaddress.ip_address(str(worker_dns[0]))
+    except ValueError:
+        fail("worker DNS resolver is not an IP address")
+    if worker_dns_address.version != 4 or not worker_dns_address.is_private:
+        fail("worker DNS resolver must be a private IPv4 address")
 
     db = services["db"]
     db_image = str(db.get("image") or "")
