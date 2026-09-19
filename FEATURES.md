@@ -1,9 +1,9 @@
 # GoreeCloud Monitor — Current Features
 
-**Document Internal Version Number:** 2026.09.18.1  
-**Document External Version Number:** 1.0.0  
+**Document Internal Version Number:** 2026.09.19.1  
+**Document External Version Number:** 1.1.0  
 **Status:** Current implemented-source feature record  
-**As of:** September 18, 2026
+**As of:** September 19, 2026
 
 ## Purpose
 
@@ -20,6 +20,10 @@ A feature listed here is not automatically production-accepted.
 - DNS monitoring with resolver-specific source support.
 - Native low-privilege IPv4/IPv6 Ping/ICMP checks.
 - Push/heartbeat monitoring.
+- First-class Scheduled Job / Dead-Man monitors for periodic jobs and backup/maintenance heartbeats.
+- Simple interval + grace and strict cron + IANA time-zone job scheduling.
+- Authenticated scheduled-job start, success, failure/exit-status, and bounded log/event signals using one-way-stored rotatable bearer credentials.
+- Job run correlation, duration capture, maximum-runtime overrun detection, missed-schedule detection, and job-event history.
 - Configurable check intervals and failure/recovery thresholds.
 - Monitor pause/enable state.
 - Maintenance windows.
@@ -83,7 +87,7 @@ The following remain acceptance work:
 - target PostgreSQL backup/restore;
 - reviewed monitor activation;
 - final private Gateway/DNS/NetBird publication;
-- representative live protocol checks;
+- representative live protocol checks, including scheduled-job missed-run/failure/recovery and credential-rotation behavior;
 - accepted GoreeCloud Notify runtime credential/delivery;
 - durable outbox restart/replay under real target failure;
 - independent outage alerting;
