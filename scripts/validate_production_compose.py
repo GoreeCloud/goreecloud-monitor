@@ -7,7 +7,9 @@ Caddy network, firewall, NetBird policy, host path, or backup target is correct.
 """
 from __future__ import annotations
 
+import ipaddress
 import json
+import re
 import sys
 from typing import Any
 
@@ -79,6 +81,19 @@ def main() -> None:
     if worker_sysctls.get("net.ipv4.ping_group_range") != "999 999":
         fail("worker ping_group_range must be restricted to the deterministic Monitor group 999")
 
+    for name in {"db", "migrate", "web"}:
+        if services[name].get("dns"):
+            fail(f"{name} receives a DNS override despite not executing monitor target checks")
+    worker_dns = services["worker"].get("dns") or []
+    if not isinstance(worker_dns, list) or len(worker_dns) != 1:
+        fail("worker must use exactly one explicit private DNS resolver")
+    try:
+        worker_dns_address = ipaddress.ip_address(str(worker_dns[0]))
+    except ValueError:
+        fail("worker DNS resolver is not an IP address")
+    if worker_dns_address.version != 4 or not worker_dns_address.is_private:
+        fail("worker DNS resolver must be a private IPv4 address")
+
     db = services["db"]
     db_image = str(db.get("image") or "")
     if "@sha256:" not in db_image:
@@ -106,6 +121,42 @@ def main() -> None:
         fail("backend network is not internal")
     if proxy.get("external") is not True:
         fail("proxy network is not external")
+
+    backend_driver_opts = backend.get("driver_opts") or {}
+    backend_bridge_name = str(backend_driver_opts.get("com.docker.network.bridge.name") or "")
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,15}", backend_bridge_name):
+        fail("backend bridge name must be an explicit Linux interface-safe name of at most 15 characters")
+
+    backend_ipam = backend.get("ipam") or {}
+    backend_ipam_config = backend_ipam.get("config") or []
+    if len(backend_ipam_config) != 1:
+        fail("backend network must have exactly one explicit IPAM configuration")
+    backend_network_config = backend_ipam_config[0]
+    try:
+        backend_subnet = ipaddress.ip_network(str(backend_network_config.get("subnet")), strict=True)
+        backend_gateway = ipaddress.ip_address(str(backend_network_config.get("gateway")))
+    except ValueError:
+        fail("backend network IPAM contains an invalid subnet or gateway")
+    if backend_subnet.version != 4 or not backend_subnet.is_private:
+        fail("backend network subnet must be private IPv4")
+    if backend_gateway != worker_dns_address or backend_gateway not in backend_subnet:
+        fail("worker DNS resolver must equal the private backend network gateway")
+
+    worker_networks = services["worker"].get("networks") or {}
+    worker_backend = worker_networks.get("backend") if isinstance(worker_networks, dict) else None
+    if not isinstance(worker_backend, dict) or not worker_backend.get("ipv4_address"):
+        fail("worker must have an explicit backend IPv4 address")
+    try:
+        worker_backend_address = ipaddress.ip_address(str(worker_backend["ipv4_address"]))
+    except ValueError:
+        fail("worker backend IPv4 address is invalid")
+    if (
+        worker_backend_address.version != 4
+        or not worker_backend_address.is_private
+        or worker_backend_address not in backend_subnet
+        or worker_backend_address == backend_gateway
+    ):
+        fail("worker backend IPv4 address must be a private host address inside the backend subnet")
 
     print("production-compose validation passed")
 
