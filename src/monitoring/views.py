@@ -277,7 +277,17 @@ def job_history_export(request: HttpRequest, pk: int) -> JsonResponse:
             "state": monitor.state,
             "schedule_mode": monitor.job_schedule_mode,
             "interval_seconds": monitor.interval_seconds,
-            "cron_expression": monitor.job_cron_expression or None,
+            "schedule_expression": monitor.job_cron_expression or None,
+            "cron_expression": (
+                monitor.job_cron_expression
+                if monitor.job_schedule_mode == Monitor.JobScheduleMode.CRON
+                else None
+            ),
+            "oncalendar_expression": (
+                monitor.job_cron_expression
+                if monitor.job_schedule_mode == Monitor.JobScheduleMode.ONCALENDAR
+                else None
+            ),
             "timezone": monitor.job_timezone,
             "grace_seconds": monitor.job_grace_seconds,
             "max_runtime_seconds": monitor.job_max_runtime_seconds,

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from croniter import croniter
+from oncalendar import OnCalendar, OnCalendarError
 from django.db import transaction
 from django.utils import timezone
 
@@ -41,6 +42,14 @@ def _last_scheduled_time(monitor: Monitor, now: datetime) -> datetime:
     ):
         return current_minute.astimezone(now.tzinfo)
     return croniter(expression, local_now).get_prev(datetime).astimezone(now.tzinfo)
+
+
+def _next_oncalendar_time(monitor: Monitor, after: datetime) -> datetime:
+    zone = ZoneInfo(monitor.job_timezone)
+    start = after.astimezone(zone)
+    return next(
+        OnCalendar(monitor.job_cron_expression.strip(), start)
+    ).astimezone(after.tzinfo)
 
 
 def evaluate_job_monitor(monitor: Monitor, now: datetime | None = None) -> JobEvaluation:
@@ -125,6 +134,62 @@ def evaluate_job_monitor(monitor: Monitor, now: datetime | None = None) -> JobEv
             True,
             Monitor.State.UNKNOWN,
             "Awaiting the current scheduled job completion",
+            JobPhase.AWAITING,
+        )
+
+    if monitor.job_schedule_mode == Monitor.JobScheduleMode.ONCALENDAR:
+        anchor = latest_success.received_at if latest_success else monitor.created_at - timedelta(microseconds=1)
+        try:
+            next_due = _next_oncalendar_time(monitor, anchor)
+        except OnCalendarError:
+            return JobEvaluation(
+                False,
+                Monitor.State.DOWN,
+                "Scheduled job OnCalendar expression is invalid",
+                JobPhase.FAILED,
+            )
+        except StopIteration:
+            if latest_success:
+                return JobEvaluation(
+                    True,
+                    Monitor.State.UP,
+                    "Scheduled job completed the final OnCalendar occurrence",
+                    JobPhase.COMPLETED,
+                )
+            return JobEvaluation(
+                False,
+                Monitor.State.DOWN,
+                "Scheduled job OnCalendar expression has no future occurrence",
+                JobPhase.FAILED,
+            )
+
+        if now < next_due:
+            if latest_success:
+                return JobEvaluation(
+                    True,
+                    Monitor.State.UP,
+                    "Scheduled job completion is current until the next OnCalendar occurrence",
+                    JobPhase.COMPLETED,
+                )
+            return JobEvaluation(
+                True,
+                Monitor.State.UNKNOWN,
+                "Awaiting the first OnCalendar occurrence",
+                JobPhase.AWAITING,
+            )
+
+        deadline = next_due + timedelta(seconds=monitor.job_grace_seconds)
+        if now > deadline:
+            return JobEvaluation(
+                False,
+                Monitor.State.DOWN,
+                "Scheduled job missed its OnCalendar schedule and grace period",
+                JobPhase.LATE,
+            )
+        return JobEvaluation(
+            True,
+            Monitor.State.UNKNOWN,
+            "Awaiting the current OnCalendar job completion",
             JobPhase.AWAITING,
         )
 

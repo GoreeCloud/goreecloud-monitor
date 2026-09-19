@@ -16,7 +16,7 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Native IPv4/IPv6 Ping/ICMP Echo checks using policy-validated unprivileged datagram ping sockets rather than raw-socket capabilities
 - DNS A, AAAA, and CNAME checks with optional destination-policy-validated explicit resolvers
 - Push/heartbeat monitors with minimized unauthenticated acknowledgements and staff-only credential rendering
-- Scheduled Job / Dead-Man monitors with simple interval + grace or strict cron + IANA time-zone schedules
+- Scheduled Job / Dead-Man monitors with simple interval + grace, strict cron + IANA time-zone, or native systemd OnCalendar schedules
 - Authenticated job start/success/failure/log signals, run correlation, duration history, missed-run detection, and maximum-runtime overrun detection
 - Unknown, Up, Down, Degraded, Paused, and Maintenance state handling
 - Failure and recovery thresholds with incident and recovery history
@@ -36,7 +36,7 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Fail-closed historical/comparison assessment with coverage-drift detection
 - Fail-closed production target preflight including Wardveil-aligned transport, cookie, and browser-policy gates
 - Production Compose contract validation with zero host-published application/database ports and a worker-only narrow ping-socket group policy
-- Migration-aware immediate-predecessor PostgreSQL application rollback proof for the Ping model-state migration
+- Migration-aware immediate-predecessor PostgreSQL rollback proof, including fail-safe OnCalendar downgrade that pauses unsupported schedules before predecessor startup
 - Recovery and activation evidence requirements that preserve predecessor evidence without restoring Uptime Kuma to production
 
 ## Glaze UI 1.5.1

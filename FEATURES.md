@@ -21,7 +21,7 @@ A feature listed here is not automatically production-accepted.
 - Native low-privilege IPv4/IPv6 Ping/ICMP checks.
 - Push/heartbeat monitoring.
 - First-class Scheduled Job / Dead-Man monitors for periodic jobs and backup/maintenance heartbeats.
-- Simple interval + grace and strict cron + IANA time-zone job scheduling.
+- Simple interval + grace, strict cron + IANA time-zone, and native systemd OnCalendar job scheduling.
 - Authenticated scheduled-job start, success, failure/exit-status, and bounded log/event signals using one-way-stored rotatable bearer credentials.
 - Per-monitor scheduled-job signal rate limiting with HTTP 429/Retry-After responses.
 - Optional UUID event IDs for durable idempotent signal replay; mismatched reuse is rejected with conflict semantics.
@@ -67,7 +67,7 @@ A feature listed here is not automatically production-accepted.
 - Database backup tooling.
 - Isolated PostgreSQL restore validation in CI.
 - Migration-readiness/reconciliation tooling for preserved Uptime Kuma definitions.
-- Immediate-predecessor rollback compatibility workflows cover the notification-outbox, scheduled-job, and job-signal idempotency migrations.
+- Immediate-predecessor rollback compatibility workflows cover notification-outbox and scheduled-job migrations, including fail-safe downgrade that pauses OnCalendar definitions rather than reinterpreting them.
 - Target preflight and hardened production Compose validation.
 
 ## Implemented security/privacy controls

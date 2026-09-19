@@ -3,7 +3,7 @@
 ## Unreleased - Scheduled job / dead-man monitoring foundation
 
 - Added first-class `JOB` monitors for scheduled jobs, backups, maintenance tasks, and other periodic workloads without restoring Healthchecks as a runtime dependency.
-- Added simple interval + grace and strict five-field cron + explicit IANA time-zone scheduling, with deterministic Python `tzdata` fallback.
+- Added simple interval + grace, strict five-field cron + explicit IANA time-zone scheduling, and native systemd OnCalendar scheduling. OnCalendar uses a pinned in-process parser, supports multiple expressions and embedded time-zone suffixes, and never invokes systemd or a shell.
 - Added authenticated `POST /api/v1/jobs/signal/` ingestion for start, success, failure/exit-status, and bounded log events using one-way-stored rotatable bearer credentials.
 - Added configurable per-monitor signal rate limiting with HTTP 429 and `Retry-After`, defaulting to five signals per minute.
 - Added optional UUID `event_id` values for durable idempotent retry convergence; exact retries return the original event without a new row or rate-limit charge, while mismatched ID reuse returns HTTP 409.
@@ -17,9 +17,11 @@
 - Reused the existing failure/recovery threshold, incident, and durable GoreeCloud Notify outbox pipeline rather than creating a parallel alert subsystem.
 - Added migration `0004_scheduled_job_monitor` and updated immediate-predecessor rollback proof to preserve existing non-JOB monitors and durable notification state while explicitly removing candidate-only JOB rows before downgrade to `0003`.
 - Added migration `0005_job_event_idempotency`; the candidate rollback workflow verifies that JOB definitions and JobEvent rows survive downgrade to `0004` while candidate-only `event_id` replay identities are intentionally dropped.
+- Added migration `0006_job_oncalendar_schedule`; downgrade pauses OnCalendar monitors and preserves the former expression only as bounded recovery context before the immediate predecessor starts, preventing silent schedule reinterpretation.
+- Upgraded portable monitor-definition export to version 2 so JOB schedule mode/expression/time-zone/grace/runtime settings round-trip. Version-1 JOB imports now fail closed because that older format never contained those fields.
 - Hardened target preflight to reject reusable plaintext JOB credentials, and hardened signal parsing against unknown fields, oversized payloads, invalid metadata types, contradictory success exit codes, and exit codes on non-terminal events.
 - Added regression coverage for simple and cron schedules, creation-time boundaries, exact cron minutes, high log-event volume, failure/incident integration, start-time overruns, bearer authentication, run correlation, credential secrecy, and preflight enforcement.
-- Full Healthchecks-style parity remains incomplete. Systemd OnCalendar evaluation, tags/projects, scoped management APIs, policy-gated auto-provisioning, status/reporting surfaces, and separately approved email ingestion remain roadmap work.
+- Full Healthchecks-style parity remains incomplete. Tags/projects, scoped management APIs, policy-gated auto-provisioning, status/reporting surfaces, and separately approved email ingestion remain roadmap work.
 - This source candidate does not establish live VPS activation, production authority, target recovery acceptance, or Stable status.
 
 ## Unreleased - Native low-privilege Ping / ICMP parity

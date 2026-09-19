@@ -9,7 +9,12 @@ from django.db import transaction
 from django.utils import timezone
 
 from monitoring.models import MaintenanceWindow, Monitor
-from monitoring.management.commands.exportmonitors import EXPORT_SCHEMA, EXPORT_VERSION, MONITOR_FIELDS
+from monitoring.management.commands.exportmonitors import (
+    EXPORT_SCHEMA,
+    EXPORT_VERSION,
+    MONITOR_FIELDS,
+    V1_MONITOR_FIELDS,
+)
 
 
 class Command(BaseCommand):
@@ -28,14 +33,16 @@ class Command(BaseCommand):
 
         if document.get("schema") != EXPORT_SCHEMA:
             raise CommandError("Import document is not a GoreeCloud Monitor export")
-        if document.get("version") != EXPORT_VERSION:
-            raise CommandError(f"Unsupported export version: {document.get('version')!r}")
+        version = document.get("version")
+        if version not in {1, EXPORT_VERSION}:
+            raise CommandError(f"Unsupported export version: {version!r}")
         if not isinstance(document.get("monitors"), list) or not isinstance(document.get("maintenance_windows", []), list):
             raise CommandError("Import document has an invalid structure")
         if Monitor.objects.exists() or MaintenanceWindow.objects.exists():
             raise CommandError("Portable import requires an empty Monitor target")
 
-        allowed_fields = set(MONITOR_FIELDS)
+        import_fields = MONITOR_FIELDS if version == EXPORT_VERSION else V1_MONITOR_FIELDS
+        allowed_fields = set(import_fields)
         created = {}
         with transaction.atomic():
             for index, raw in enumerate(document["monitors"], start=1):
@@ -47,7 +54,12 @@ class Command(BaseCommand):
                 missing = allowed_fields - set(raw)
                 if missing:
                     raise CommandError(f"Monitor entry {index} is missing fields: {', '.join(sorted(missing))}")
-                monitor = Monitor(**{field: raw[field] for field in MONITOR_FIELDS})
+                if version == 1 and raw.get("kind") == Monitor.Kind.JOB:
+                    raise CommandError(
+                        f"Monitor entry {index} is a scheduled job from export version 1, "
+                        "which did not preserve job schedule fields; re-export it with version 2."
+                    )
+                monitor = Monitor(**{field: raw[field] for field in import_fields})
                 try:
                     monitor.full_clean()
                     monitor.save()

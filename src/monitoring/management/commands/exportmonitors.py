@@ -10,8 +10,8 @@ from monitoring.models import MaintenanceWindow, Monitor
 
 
 EXPORT_SCHEMA = "goreecloud-monitor"
-EXPORT_VERSION = 1
-MONITOR_FIELDS = (
+EXPORT_VERSION = 2
+V1_MONITOR_FIELDS = (
     "name",
     "kind",
     "target",
@@ -31,6 +31,14 @@ MONITOR_FIELDS = (
     "dns_record_type",
     "expected_dns_answer",
     "heartbeat_grace_seconds",
+)
+
+MONITOR_FIELDS = V1_MONITOR_FIELDS + (
+    "job_schedule_mode",
+    "job_cron_expression",
+    "job_timezone",
+    "job_grace_seconds",
+    "job_max_runtime_seconds",
 )
 
 

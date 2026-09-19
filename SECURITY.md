@@ -37,11 +37,15 @@ External job signals are rate-limited per monitor using the database as the seri
 
 The private-ingress requirement remains in force until target-runtime validation is complete. Rate limiting and replay convergence reduce abuse/retry risk but do not authorize public exposure by themselves.
 
+Cron and systemd OnCalendar schedule expressions are parsed in-process from bounded configuration fields. OnCalendar support uses the pinned Python parser and does not invoke `systemd-analyze`, a shell, D-Bus, or a host systemd service. Invalid or unsupported expressions fail validation; fractional-second OnCalendar syntax is not accepted.
+
 Scheduled-job event history is automatically pruned according to `MONITOR_JOB_EVENT_RETENTION_DAYS` (default 90 days). The latest terminal event and any unmatched latest START may be retained beyond that ordinary window because they are required to evaluate current job state safely. Idempotent replay is durable only while the event carrying a given `event_id` remains retained; callers must not treat event IDs as permanent global reservations after retention has expired.
 
 Scheduled-job recovery and event export surfaces are staff-only. The versioned JSON export is paginated with a maximum page size of 5,000 retained events and contains schedule metadata, current evaluation, and retained event metadata only; it never exports the reusable job credential or its stored verifier. Export access generates a minimized Wardveil security event using numeric object identifiers rather than event payloads or credentials.
 
 Migration `0005_job_event_idempotency` adds the event ID field and uniqueness constraint. Its immediate predecessor, migration `0004_scheduled_job_monitor`, already understands JOB definitions and JobEvent rows. Controlled downgrade to `0004` preserves job/event rows but drops persisted `event_id` values and therefore removes replay identities; use a pre-upgrade backup when those identifiers must be recoverable.
+
+Migration `0006_job_oncalendar_schedule` adds the OnCalendar schedule-mode choice without adding a new database column. Its reverse path fails safe: OnCalendar definitions are disabled and Paused, the predecessor-visible expression field is cleared, and the former expression is retained only in the bounded recovery message. The predecessor must never run an OnCalendar definition as if it were a Simple interval schedule.
 
 ## Outbound request and SSRF controls
 
