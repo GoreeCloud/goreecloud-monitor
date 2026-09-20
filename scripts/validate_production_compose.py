@@ -158,6 +158,18 @@ def main() -> None:
     ):
         fail("worker backend IPv4 address must be a private host address inside the backend subnet")
 
+    worker_proxy = worker_networks.get("proxy") if isinstance(worker_networks, dict) else None
+    if not isinstance(worker_proxy, dict) or not worker_proxy.get("ipv4_address"):
+        fail("worker must have an explicit proxy IPv4 address")
+    try:
+        worker_proxy_address = ipaddress.ip_address(str(worker_proxy["ipv4_address"]))
+    except ValueError:
+        fail("worker proxy IPv4 address is invalid")
+    if worker_proxy_address.version != 4 or not worker_proxy_address.is_private:
+        fail("worker proxy IPv4 address must be private IPv4")
+    if worker_proxy_address == worker_backend_address:
+        fail("worker proxy and backend IPv4 addresses must be distinct")
+
     print("production-compose validation passed")
 
 
