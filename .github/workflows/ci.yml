@@ -249,8 +249,9 @@ jobs:
           echo "MONITOR_BACKEND_SUBNET=10.255.240.0/24" >> "$GITHUB_ENV"
           echo "MONITOR_DNS_SERVER=10.255.240.1" >> "$GITHUB_ENV"
           echo "MONITOR_WORKER_BACKEND_IP=10.255.240.10" >> "$GITHUB_ENV"
+          echo "MONITOR_WORKER_PROXY_IP=10.255.241.10" >> "$GITHUB_ENV"
       - name: Create disposable external proxy network
-        run: docker network create goreecloud-monitor-ci-proxy
+        run: docker network create --subnet 10.255.241.0/24 goreecloud-monitor-ci-proxy
       - name: Validate resolved production Compose contract
         shell: bash
         run: |
@@ -288,6 +289,7 @@ jobs:
           test "$(docker inspect "$worker_id" --format '{{index .HostConfig.Dns 0}}')" = "$MONITOR_DNS_SERVER"
           test "$(docker network inspect goreecloud-monitor_backend --format '{{index .Options "com.docker.network.bridge.name"}}')" = "$MONITOR_BACKEND_BRIDGE_NAME"
           test "$(docker inspect "$worker_id" --format '{{(index .NetworkSettings.Networks "goreecloud-monitor_backend").IPAddress}}')" = "$MONITOR_WORKER_BACKEND_IP"
+          test "$(docker inspect "$worker_id" --format '{{(index .NetworkSettings.Networks "goreecloud-monitor-ci-proxy").IPAddress}}')" = "$MONITOR_WORKER_PROXY_IP"
           test -z "$(docker port "$web_id")"
           test -z "$(docker port "$worker_id")"
           test -z "$(docker port "$db_id")"
