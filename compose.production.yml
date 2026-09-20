@@ -110,6 +110,7 @@ services:
       backend:
         ipv4_address: ${MONITOR_WORKER_BACKEND_IP:?MONITOR_WORKER_BACKEND_IP is required}
       proxy:
+        ipv4_address: ${MONITOR_WORKER_PROXY_IP:?MONITOR_WORKER_PROXY_IP is required}
 
 networks:
   backend:
