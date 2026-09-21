@@ -613,7 +613,8 @@ class ViewTests(TestCase):
         self.client.force_login(self.staff)
         response = self.client.get(reverse("monitoring:settings"))
         self.assertTrue(response.context["notify_enabled"])
-        self.assertEqual(response.context["glaze_version"], "1.0.0")
+        self.assertEqual(response.context["glaze_version"], "1.5.1")
+        self.assertContains(response, "1.5.1")
 
     @override_settings(
         MONITOR_ALLOWED_NETWORKS=["10.20.30.0/24", "fd00:1234::/64"],
