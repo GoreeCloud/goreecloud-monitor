@@ -98,7 +98,7 @@ The development topology deliberately publishes only the loopback web port. Post
 
 ## Production candidate
 
-`compose.production.yml` is the source-controlled production deployment candidate. It requires traceable image identity, digest-pinned PostgreSQL, protected purpose-specific environment files, persistent database bind storage, an internal database network, the approved external Caddy network, a worker-only direct `notify.goreecloud.com` mapping to the approved Caddy proxy address so Notify publishing preserves the fixed worker identity, read-only application root filesystems, dropped Linux capabilities, `no-new-privileges`, and zero host-published Monitor/database ports.
+`compose.production.yml` is the source-controlled production deployment candidate. It requires traceable image identity, digest-pinned PostgreSQL, protected purpose-specific environment files, a separate worker-only environment file for GoreeCloud Notify producer settings and credential isolation, persistent database bind storage, an internal database network, the approved external Caddy network, a worker-only direct `notify.goreecloud.com` mapping to the approved Caddy proxy address so Notify publishing preserves the fixed worker identity, read-only application root filesystems, dropped Linux capabilities, `no-new-privileges`, and zero host-published Monitor/database ports.
 
 The worker remains non-root with all Linux capabilities dropped. Native Ping uses Linux unprivileged ICMP datagram sockets, with `net.ipv4.ping_group_range` restricted to the deterministic Monitor group inside the worker network namespace only; web and migration containers do not receive that permission.
 
