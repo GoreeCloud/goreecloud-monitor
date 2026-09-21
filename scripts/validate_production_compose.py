@@ -25,6 +25,13 @@ NOTIFY_PRODUCER_ENV_KEYS = {
     "MONITOR_NOTIFY_TIMEOUT_SECONDS",
     "MONITOR_NOTIFICATION_OUTBOX_RETENTION_DAYS",
 }
+WORKER_CADDY_HOSTS = {
+    "notify.goreecloud.com",
+    "adguard.goreecloud.com",
+    "health.goreecloud.com",
+    "dav.goreecloud.com",
+    "memos.goreecloud.com",
+}
 
 
 def fail(message: str) -> None:
@@ -154,17 +161,25 @@ def main() -> None:
 
     for name in {"db", "migrate", "web"}:
         if normalized_extra_hosts(services[name]):
-            fail(f"{name} receives an extra_hosts override despite not publishing to GoreeCloud Notify")
+            fail(f"{name} receives a worker-only Caddy host override")
 
     worker_extra_hosts = normalized_extra_hosts(services["worker"])
-    if set(worker_extra_hosts) != {"notify.goreecloud.com"}:
-        fail("worker must map exactly notify.goreecloud.com through extra_hosts")
+    if set(worker_extra_hosts) != WORKER_CADDY_HOSTS:
+        fail(
+            "worker Caddy host mappings must equal the reviewed set: "
+            + ", ".join(sorted(WORKER_CADDY_HOSTS))
+        )
+
+    gateway_values = set(worker_extra_hosts.values())
+    if len(gateway_values) != 1:
+        fail("all worker Caddy host mappings must use one shared gateway address")
+
     try:
-        notify_gateway_address = ipaddress.ip_address(worker_extra_hosts["notify.goreecloud.com"])
+        caddy_gateway_address = ipaddress.ip_address(next(iter(gateway_values)))
     except ValueError:
-        fail("worker Notify gateway mapping is not an IP address")
-    if notify_gateway_address.version != 4 or not notify_gateway_address.is_private:
-        fail("worker Notify gateway mapping must use a private IPv4 address")
+        fail("worker Caddy gateway mapping is not an IP address")
+    if caddy_gateway_address.version != 4 or not caddy_gateway_address.is_private:
+        fail("worker Caddy gateway mapping must use a private IPv4 address")
 
     db = services["db"]
     db_image = str(db.get("image") or "")
@@ -241,10 +256,10 @@ def main() -> None:
         fail("worker proxy IPv4 address must be private IPv4")
     if worker_proxy_address == worker_backend_address:
         fail("worker proxy and backend IPv4 addresses must be distinct")
-    if notify_gateway_address in {worker_dns_address, worker_backend_address, worker_proxy_address}:
-        fail("worker Notify gateway mapping must identify a distinct gateway endpoint")
-    if notify_gateway_address in backend_subnet:
-        fail("worker Notify gateway mapping must not route through the backend network")
+    if caddy_gateway_address in {worker_dns_address, worker_backend_address, worker_proxy_address}:
+        fail("worker Caddy gateway mapping must identify a distinct gateway endpoint")
+    if caddy_gateway_address in backend_subnet:
+        fail("worker Caddy gateway mapping must not route through the backend network")
 
     print("production-compose validation passed")
 
