@@ -25,7 +25,7 @@ from .jobs import JobPhase, JobSignalRateLimited, JobSignalReplayConflict, evalu
 from .models import CheckResult, Incident, JobEvent, MaintenanceWindow, Monitor, hash_heartbeat_token, heartbeat_token_is_digest
 
 
-GLAZE_UI_VERSION = "1.0.0"
+GLAZE_UI_VERSION = "1.5.1"
 WARDVEIL_SECURITY_IDENTITY = "Wardveil Security by GoreeCloud"
 
 
