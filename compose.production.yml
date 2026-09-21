@@ -88,6 +88,7 @@ services:
     env_file:
       - ${MONITOR_DB_ENV_FILE:?MONITOR_DB_ENV_FILE is required}
       - ${MONITOR_APP_ENV_FILE:?MONITOR_APP_ENV_FILE is required}
+      - ${MONITOR_WORKER_ENV_FILE:?MONITOR_WORKER_ENV_FILE is required}
     environment:
       DATABASE_ENGINE: postgres
       POSTGRES_HOST: db

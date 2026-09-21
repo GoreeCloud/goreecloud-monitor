@@ -29,9 +29,9 @@ Bounded retry controls:
 - `MONITOR_NOTIFY_TIMEOUT_SECONDS` — default 10 seconds, bounded to 1–30 seconds.
 - `MONITOR_NOTIFICATION_OUTBOX_RETENTION_DAYS` — default 30 days, bounded to 1–365; applies only to already-delivered outbox metadata, never pending delivery records.
 
-The token belongs only in protected runtime configuration. It must not be committed, rendered in UI, placed in notification content, written to evidence artifacts, or emitted in logs.
+All seven Notify producer settings belong in the protected worker-only environment file referenced by `MONITOR_WORKER_ENV_FILE`. Production Compose loads that file only into `worker`; the shared `monitor.env`, `web`, and `migrate` environments must not contain `MONITOR_NOTIFY_ENABLED`, `GOREECLOUD_NOTIFY_BASE_URL`, `GOREECLOUD_NOTIFY_TOKEN`, or the Notify retry/outbox controls. The bearer token must not be committed, rendered in UI, placed in notification content, written to evidence artifacts, emitted in logs, or exposed to non-worker services.
 
-Target preflight fails closed when GoreeCloud Notify is disabled, incompletely configured, or configured with a non-HTTPS or credential-bearing endpoint.
+Target preflight for Notify production acceptance runs in the worker, where the producer configuration is intentionally available. It fails closed when GoreeCloud Notify is disabled, incompletely configured, or configured with a non-HTTPS or credential-bearing endpoint.
 
 ## Worker routing identity
 
@@ -110,7 +110,7 @@ An unexpected Notify integration failure is observable but must not crash the mo
 Production activation remains blocked until applicable evidence exists for:
 
 - exact-revision Monitor and Notify target deployments;
-- a dedicated least-privilege Notify producer credential;
+- a dedicated least-privilege Notify producer credential stored only in the protected worker environment, with proof that web/migrate do not receive any Notify producer environment keys;
 - receiver-side source registration and authorization;
 - worker-only `notify.goreecloud.com` routing to the approved Caddy proxy address with Caddy observing the fixed Monitor worker proxy identity rather than a shared Docker gateway;
 - controlled first-write `201` delivery;

@@ -16,6 +16,15 @@ from typing import Any
 
 APP_SERVICES = {"migrate", "web", "worker"}
 EXPECTED_SERVICES = {"db", *APP_SERVICES}
+NOTIFY_PRODUCER_ENV_KEYS = {
+    "MONITOR_NOTIFY_ENABLED",
+    "GOREECLOUD_NOTIFY_BASE_URL",
+    "GOREECLOUD_NOTIFY_TOKEN",
+    "MONITOR_NOTIFY_MAX_ATTEMPTS",
+    "MONITOR_NOTIFY_RETRY_BACKOFF_SECONDS",
+    "MONITOR_NOTIFY_TIMEOUT_SECONDS",
+    "MONITOR_NOTIFICATION_OUTBOX_RETENTION_DAYS",
+}
 
 
 def fail(message: str) -> None:
@@ -27,6 +36,13 @@ def network_names(service: dict[str, Any]) -> set[str]:
     if isinstance(networks, list):
         return set(networks)
     return set(networks)
+
+
+def environment_keys(service: dict[str, Any]) -> set[str]:
+    raw = service.get("environment") or {}
+    if not isinstance(raw, dict):
+        fail("service environment must resolve to a mapping")
+    return {str(key) for key in raw}
 
 
 def normalized_extra_hosts(service: dict[str, Any]) -> dict[str, str]:
@@ -106,6 +122,22 @@ def main() -> None:
     worker_sysctls = services["worker"].get("sysctls") or {}
     if worker_sysctls.get("net.ipv4.ping_group_range") != "999 999":
         fail("worker ping_group_range must be restricted to the deterministic Monitor group 999")
+
+    for name in {"db", "migrate", "web"}:
+        leaked_notify_keys = NOTIFY_PRODUCER_ENV_KEYS & environment_keys(services[name])
+        if leaked_notify_keys:
+            fail(
+                f"{name} receives worker-only Notify producer environment keys: "
+                + ", ".join(sorted(leaked_notify_keys))
+            )
+
+    worker_environment_keys = environment_keys(services["worker"])
+    missing_notify_keys = NOTIFY_PRODUCER_ENV_KEYS - worker_environment_keys
+    if missing_notify_keys:
+        fail(
+            "worker is missing required Notify producer environment keys: "
+            + ", ".join(sorted(missing_notify_keys))
+        )
 
     for name in {"db", "migrate", "web"}:
         if services[name].get("dns"):
