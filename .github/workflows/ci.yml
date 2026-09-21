@@ -233,16 +233,20 @@ jobs:
           MONITOR_ALLOW_PUBLIC_TARGETS=true
           MONITOR_ALLOWED_NETWORKS=127.0.0.0/8,::1/128
           MANAGER_API_TOKEN=
+          EOF
+          cat > "$RUNNER_TEMP/worker.env" <<'EOF'
           MONITOR_NOTIFY_ENABLED=true
           GOREECLOUD_NOTIFY_BASE_URL=https://notify.example.invalid
           GOREECLOUD_NOTIFY_TOKEN=ci-producer-token
           MONITOR_NOTIFY_MAX_ATTEMPTS=1
           MONITOR_NOTIFY_RETRY_BACKOFF_SECONDS=0
           MONITOR_NOTIFY_TIMEOUT_SECONDS=2
+          MONITOR_NOTIFICATION_OUTBOX_RETENTION_DAYS=30
           EOF
           echo "GOREECLOUD_MONITOR_IMAGE=goreecloud-monitor:deployment-ci" >> "$GITHUB_ENV"
           echo "MONITOR_DB_ENV_FILE=$RUNNER_TEMP/database.env" >> "$GITHUB_ENV"
           echo "MONITOR_APP_ENV_FILE=$RUNNER_TEMP/monitor.env" >> "$GITHUB_ENV"
+          echo "MONITOR_WORKER_ENV_FILE=$RUNNER_TEMP/worker.env" >> "$GITHUB_ENV"
           echo "MONITOR_DATABASE_PATH=$RUNNER_TEMP/goreecloud-monitor-db" >> "$GITHUB_ENV"
           echo "CADDY_NETWORK=goreecloud-monitor-ci-proxy" >> "$GITHUB_ENV"
           echo "MONITOR_BACKEND_BRIDGE_NAME=gcm-ci-mon0" >> "$GITHUB_ENV"
@@ -294,13 +298,20 @@ jobs:
           test "$(docker exec "$worker_id" python -c "import socket; print(socket.gethostbyname('notify.goreecloud.com'))")" = "$MONITOR_NOTIFY_GATEWAY_IP"
           test -z "$(docker inspect "$web_id" --format '{{json .HostConfig.ExtraHosts}}' | grep -F 'notify.goreecloud.com' || true)"
           test -z "$(docker inspect "$db_id" --format '{{json .HostConfig.ExtraHosts}}' | grep -F 'notify.goreecloud.com' || true)"
+          migrate_id="$(docker compose -f compose.production.yml ps -a -q migrate)"
+          test -n "$migrate_id"
+          for key in MONITOR_NOTIFY_ENABLED GOREECLOUD_NOTIFY_BASE_URL GOREECLOUD_NOTIFY_TOKEN MONITOR_NOTIFY_MAX_ATTEMPTS MONITOR_NOTIFY_RETRY_BACKOFF_SECONDS MONITOR_NOTIFY_TIMEOUT_SECONDS MONITOR_NOTIFICATION_OUTBOX_RETENTION_DAYS; do
+            test -n "$(docker inspect "$worker_id" --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E "^${key}=")"
+            test -z "$(docker inspect "$web_id" --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E "^${key}=" || true)"
+            test -z "$(docker inspect "$migrate_id" --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E "^${key}=" || true)"
+          done
           test -z "$(docker port "$web_id")"
           test -z "$(docker port "$worker_id")"
           test -z "$(docker port "$db_id")"
       - name: Verify low-privilege ICMP runtime in worker
         run: docker compose -f compose.production.yml exec -T worker python manage.py checkicmpruntime --target 127.0.0.1 --timeout 3
-      - name: Run target preflight inside disposable production web container
-        run: docker compose -f compose.production.yml exec -T web python manage.py targetpreflight --json
+      - name: Run target preflight inside disposable production worker container
+        run: docker compose -f compose.production.yml exec -T worker python manage.py targetpreflight --json
       - name: Verify one-shot migration completed successfully
         shell: bash
         run: |
