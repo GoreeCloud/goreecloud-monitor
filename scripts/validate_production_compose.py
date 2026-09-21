@@ -29,6 +29,32 @@ def network_names(service: dict[str, Any]) -> set[str]:
     return set(networks)
 
 
+def normalized_extra_hosts(service: dict[str, Any]) -> dict[str, str]:
+    raw = service.get("extra_hosts") or []
+    if isinstance(raw, dict):
+        return {str(host): str(address) for host, address in raw.items()}
+    if not isinstance(raw, list):
+        fail("extra_hosts must resolve to a list or mapping")
+
+    entries: dict[str, str] = {}
+    for item in raw:
+        text = str(item)
+        if "=" in text:
+            host, address = text.split("=", 1)
+        elif ":" in text:
+            host, address = text.rsplit(":", 1)
+        else:
+            fail("extra_hosts contains an invalid entry")
+        host = host.strip()
+        address = address.strip()
+        if not host or not address:
+            fail("extra_hosts contains an empty host or address")
+        if host in entries:
+            fail(f"extra_hosts contains duplicate host {host}")
+        entries[host] = address
+    return entries
+
+
 def main() -> None:
     try:
         model = json.load(sys.stdin)
@@ -93,6 +119,20 @@ def main() -> None:
         fail("worker DNS resolver is not an IP address")
     if worker_dns_address.version != 4 or not worker_dns_address.is_private:
         fail("worker DNS resolver must be a private IPv4 address")
+
+    for name in {"db", "migrate", "web"}:
+        if normalized_extra_hosts(services[name]):
+            fail(f"{name} receives an extra_hosts override despite not publishing to GoreeCloud Notify")
+
+    worker_extra_hosts = normalized_extra_hosts(services["worker"])
+    if set(worker_extra_hosts) != {"notify.goreecloud.com"}:
+        fail("worker must map exactly notify.goreecloud.com through extra_hosts")
+    try:
+        notify_gateway_address = ipaddress.ip_address(worker_extra_hosts["notify.goreecloud.com"])
+    except ValueError:
+        fail("worker Notify gateway mapping is not an IP address")
+    if notify_gateway_address.version != 4 or not notify_gateway_address.is_private:
+        fail("worker Notify gateway mapping must use a private IPv4 address")
 
     db = services["db"]
     db_image = str(db.get("image") or "")
@@ -169,6 +209,10 @@ def main() -> None:
         fail("worker proxy IPv4 address must be private IPv4")
     if worker_proxy_address == worker_backend_address:
         fail("worker proxy and backend IPv4 addresses must be distinct")
+    if notify_gateway_address in {worker_dns_address, worker_backend_address, worker_proxy_address}:
+        fail("worker Notify gateway mapping must identify a distinct gateway endpoint")
+    if notify_gateway_address in backend_subnet:
+        fail("worker Notify gateway mapping must not route through the backend network")
 
     print("production-compose validation passed")
 
