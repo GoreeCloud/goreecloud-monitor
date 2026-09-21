@@ -35,11 +35,11 @@ Target preflight for Notify production acceptance runs in the worker, where the 
 
 ## Worker routing identity
 
-Production Compose maps only the Monitor worker's `notify.goreecloud.com` hostname to the approved Caddy proxy-network IPv4 supplied by `MONITOR_NOTIFY_GATEWAY_IP`. The application still uses the HTTPS base URL `https://notify.goreecloud.com`, so certificate and hostname verification remain unchanged.
+Production Compose maps only the Monitor worker's reviewed same-host private HTTPS names—`notify.goreecloud.com`, `adguard.goreecloud.com`, `health.goreecloud.com`, `dav.goreecloud.com`, and `memos.goreecloud.com`—to the approved Caddy proxy-network IPv4 supplied by `MONITOR_CADDY_GATEWAY_IP`. Notify still uses the HTTPS base URL `https://notify.goreecloud.com`, and monitor definitions keep their normal HTTPS hostnames, so certificate and hostname verification remain unchanged.
 
-This mapping prevents the worker from reaching the same-host Notify service through Docker's host-published HTTPS port. Same-host hairpin NAT can replace the worker's fixed proxy identity with the Docker bridge gateway before Caddy evaluates `remote_ip`; authorizing that shared gateway would weaken the least-privilege boundary. Routing directly to Caddy on the shared proxy network instead preserves the dedicated `MONITOR_WORKER_PROXY_IP` identity that Caddy is expected to authorize.
+These mappings prevent the worker from reaching same-host private services through Docker's host-published HTTPS port. Same-host hairpin NAT can replace the worker's fixed proxy identity with the Docker bridge gateway before Caddy evaluates `remote_ip`; authorizing that shared gateway would weaken the least-privilege boundary. Routing the reviewed names directly to Caddy on the shared proxy network instead preserves the dedicated `MONITOR_WORKER_PROXY_IP` identity that Caddy is expected to authorize. Unreviewed or absent services, including the currently unprovisioned Research route, are not added to this routing set.
 
-The mapping is deployment routing metadata, not a credential. It belongs in protected/controlled Compose interpolation state rather than the Notify token configuration. Target acceptance must verify the live Caddy proxy address, worker host resolution, Caddy-observed peer address, TLS verification, and rejection of unrelated proxy-network sources.
+The mappings are deployment routing metadata, not credentials. They belong in protected/controlled Compose interpolation state rather than the Notify token configuration. Target acceptance must verify the live Caddy proxy address, each reviewed worker host resolution, Caddy-observed peer address, TLS verification, path-scoped authorization, and rejection of unrelated proxy-network sources.
 
 ## Payload minimization
 
@@ -112,7 +112,7 @@ Production activation remains blocked until applicable evidence exists for:
 - exact-revision Monitor and Notify target deployments;
 - a dedicated least-privilege Notify producer credential stored only in the protected worker environment, with proof that web/migrate do not receive any Notify producer environment keys;
 - receiver-side source registration and authorization;
-- worker-only `notify.goreecloud.com` routing to the approved Caddy proxy address with Caddy observing the fixed Monitor worker proxy identity rather than a shared Docker gateway;
+- worker-only reviewed private HTTPS routing through the approved Caddy proxy address, including `notify.goreecloud.com`, with Caddy observing the fixed Monitor worker proxy identity rather than a shared Docker gateway;
 - controlled first-write `201` delivery;
 - controlled retry replay returning `200` with `Idempotency-Replayed: true` and no duplicate fanout;
 - controlled changed-payload/same-key `409` rejection;
