@@ -33,6 +33,14 @@ The token belongs only in protected runtime configuration. It must not be commit
 
 Target preflight fails closed when GoreeCloud Notify is disabled, incompletely configured, or configured with a non-HTTPS or credential-bearing endpoint.
 
+## Worker routing identity
+
+Production Compose maps only the Monitor worker's `notify.goreecloud.com` hostname to the approved Caddy proxy-network IPv4 supplied by `MONITOR_NOTIFY_GATEWAY_IP`. The application still uses the HTTPS base URL `https://notify.goreecloud.com`, so certificate and hostname verification remain unchanged.
+
+This mapping prevents the worker from reaching the same-host Notify service through Docker's host-published HTTPS port. Same-host hairpin NAT can replace the worker's fixed proxy identity with the Docker bridge gateway before Caddy evaluates `remote_ip`; authorizing that shared gateway would weaken the least-privilege boundary. Routing directly to Caddy on the shared proxy network instead preserves the dedicated `MONITOR_WORKER_PROXY_IP` identity that Caddy is expected to authorize.
+
+The mapping is deployment routing metadata, not a credential. It belongs in protected/controlled Compose interpolation state rather than the Notify token configuration. Target acceptance must verify the live Caddy proxy address, worker host resolution, Caddy-observed peer address, TLS verification, and rejection of unrelated proxy-network sources.
+
 ## Payload minimization
 
 The runtime sends only the bounded Monitor producer contract:
@@ -104,6 +112,7 @@ Production activation remains blocked until applicable evidence exists for:
 - exact-revision Monitor and Notify target deployments;
 - a dedicated least-privilege Notify producer credential;
 - receiver-side source registration and authorization;
+- worker-only `notify.goreecloud.com` routing to the approved Caddy proxy address with Caddy observing the fixed Monitor worker proxy identity rather than a shared Docker gateway;
 - controlled first-write `201` delivery;
 - controlled retry replay returning `200` with `Idempotency-Replayed: true` and no duplicate fanout;
 - controlled changed-payload/same-key `409` rejection;
