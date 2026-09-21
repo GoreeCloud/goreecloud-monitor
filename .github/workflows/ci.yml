@@ -250,6 +250,7 @@ jobs:
           echo "MONITOR_DNS_SERVER=10.255.240.1" >> "$GITHUB_ENV"
           echo "MONITOR_WORKER_BACKEND_IP=10.255.240.10" >> "$GITHUB_ENV"
           echo "MONITOR_WORKER_PROXY_IP=10.255.241.10" >> "$GITHUB_ENV"
+          echo "MONITOR_NOTIFY_GATEWAY_IP=10.255.241.2" >> "$GITHUB_ENV"
       - name: Create disposable external proxy network
         run: docker network create --subnet 10.255.241.0/24 goreecloud-monitor-ci-proxy
       - name: Validate resolved production Compose contract
@@ -290,6 +291,9 @@ jobs:
           test "$(docker network inspect goreecloud-monitor_backend --format '{{index .Options "com.docker.network.bridge.name"}}')" = "$MONITOR_BACKEND_BRIDGE_NAME"
           test "$(docker inspect "$worker_id" --format '{{(index .NetworkSettings.Networks "goreecloud-monitor_backend").IPAddress}}')" = "$MONITOR_WORKER_BACKEND_IP"
           test "$(docker inspect "$worker_id" --format '{{(index .NetworkSettings.Networks "goreecloud-monitor-ci-proxy").IPAddress}}')" = "$MONITOR_WORKER_PROXY_IP"
+          test "$(docker exec "$worker_id" python -c "import socket; print(socket.gethostbyname('notify.goreecloud.com'))")" = "$MONITOR_NOTIFY_GATEWAY_IP"
+          test -z "$(docker inspect "$web_id" --format '{{json .HostConfig.ExtraHosts}}' | grep -F 'notify.goreecloud.com' || true)"
+          test -z "$(docker inspect "$db_id" --format '{{json .HostConfig.ExtraHosts}}' | grep -F 'notify.goreecloud.com' || true)"
           test -z "$(docker port "$web_id")"
           test -z "$(docker port "$worker_id")"
           test -z "$(docker port "$db_id")"
