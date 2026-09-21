@@ -106,7 +106,11 @@ services:
     dns:
       - ${MONITOR_DNS_SERVER:?MONITOR_DNS_SERVER is required}
     extra_hosts:
-      - "notify.goreecloud.com=${MONITOR_NOTIFY_GATEWAY_IP:?MONITOR_NOTIFY_GATEWAY_IP is required}"
+      - "notify.goreecloud.com=${MONITOR_CADDY_GATEWAY_IP:?MONITOR_CADDY_GATEWAY_IP is required}"
+      - "adguard.goreecloud.com=${MONITOR_CADDY_GATEWAY_IP:?MONITOR_CADDY_GATEWAY_IP is required}"
+      - "health.goreecloud.com=${MONITOR_CADDY_GATEWAY_IP:?MONITOR_CADDY_GATEWAY_IP is required}"
+      - "dav.goreecloud.com=${MONITOR_CADDY_GATEWAY_IP:?MONITOR_CADDY_GATEWAY_IP is required}"
+      - "memos.goreecloud.com=${MONITOR_CADDY_GATEWAY_IP:?MONITOR_CADDY_GATEWAY_IP is required}"
     sysctls:
       net.ipv4.ping_group_range: "999 999"
     networks:
