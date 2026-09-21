@@ -254,7 +254,7 @@ jobs:
           echo "MONITOR_DNS_SERVER=10.255.240.1" >> "$GITHUB_ENV"
           echo "MONITOR_WORKER_BACKEND_IP=10.255.240.10" >> "$GITHUB_ENV"
           echo "MONITOR_WORKER_PROXY_IP=10.255.241.10" >> "$GITHUB_ENV"
-          echo "MONITOR_NOTIFY_GATEWAY_IP=10.255.241.2" >> "$GITHUB_ENV"
+          echo "MONITOR_CADDY_GATEWAY_IP=10.255.241.2" >> "$GITHUB_ENV"
       - name: Create disposable external proxy network
         run: docker network create --subnet 10.255.241.0/24 goreecloud-monitor-ci-proxy
       - name: Validate resolved production Compose contract
@@ -295,9 +295,11 @@ jobs:
           backend_network_name="$(docker inspect "$worker_id" | python -c 'import json,os,sys; d=json.load(sys.stdin)[0]; expected=os.environ["MONITOR_WORKER_BACKEND_IP"]; matches=[name for name,info in d["NetworkSettings"]["Networks"].items() if info.get("IPAddress")==expected]; assert len(matches)==1; print(matches[0])')"
           test "$(docker network inspect "$backend_network_name" --format '{{index .Options "com.docker.network.bridge.name"}}')" = "$MONITOR_BACKEND_BRIDGE_NAME"
           test "$(docker inspect "$worker_id" --format '{{(index .NetworkSettings.Networks "goreecloud-monitor-ci-proxy").IPAddress}}')" = "$MONITOR_WORKER_PROXY_IP"
-          test "$(docker exec "$worker_id" python -c "import socket; print(socket.gethostbyname('notify.goreecloud.com'))")" = "$MONITOR_NOTIFY_GATEWAY_IP"
-          test -z "$(docker inspect "$web_id" --format '{{json .HostConfig.ExtraHosts}}' | grep -F 'notify.goreecloud.com' || true)"
-          test -z "$(docker inspect "$db_id" --format '{{json .HostConfig.ExtraHosts}}' | grep -F 'notify.goreecloud.com' || true)"
+          for host in notify.goreecloud.com adguard.goreecloud.com health.goreecloud.com dav.goreecloud.com memos.goreecloud.com; do
+            test "$(docker exec "$worker_id" python -c "import socket; print(socket.gethostbyname('$host'))")" = "$MONITOR_CADDY_GATEWAY_IP"
+            test -z "$(docker inspect "$web_id" --format '{{json .HostConfig.ExtraHosts}}' | grep -F "$host" || true)"
+            test -z "$(docker inspect "$db_id" --format '{{json .HostConfig.ExtraHosts}}' | grep -F "$host" || true)"
+          done
           migrate_id="$(docker compose -f compose.production.yml ps -a -q migrate)"
           test -n "$migrate_id"
           for key in MONITOR_NOTIFY_ENABLED GOREECLOUD_NOTIFY_BASE_URL GOREECLOUD_NOTIFY_TOKEN MONITOR_NOTIFY_MAX_ATTEMPTS MONITOR_NOTIFY_RETRY_BACKOFF_SECONDS MONITOR_NOTIFY_TIMEOUT_SECONDS MONITOR_NOTIFICATION_OUTBOX_RETENTION_DAYS; do
