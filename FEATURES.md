@@ -1,15 +1,17 @@
-# GoreeCloud Monitor — Current Features
+# GoreeCloud Monitor — Current Features Overview
 
-**Document Internal Version Number:** 2026.09.19.1  
-**Document External Version Number:** 1.1.0  
-**Status:** Current implemented-source feature record  
-**As of:** September 19, 2026
+**Document Internal Version Number:** 2026.09.22.1  
+**Document External Version Number:** 1.2.0  
+**Status:** Supporting current-source feature overview  
+**As of:** September 22, 2026
 
-## Purpose
+## Purpose and authority
 
-This file records functionality present in the current GoreeCloud Monitor source. Planned or recommended work belongs in `FEATURE-ROADMAP.md`.
+This file provides a concise overview of functionality present in current GoreeCloud Monitor source.
 
-A feature listed here is not automatically production-accepted.
+The authoritative repository-native implemented-feature inventory is [`IMPLEMENTED-FEATURES.md`](IMPLEMENTED-FEATURES.md). Open, partial, planned, proposed, blocked, and acceptance-gated obligations are authoritative in [`PLANNED-FEATURES.md`](PLANNED-FEATURES.md). Meaningful change history is authoritative in [`CHANGELOGS.md`](CHANGELOGS.md).
+
+A feature listed here is not automatically production-accepted. Source implementation, CI, migration evidence, predecessor retirement, or documentation alone does not establish production authority or Stable status.
 
 ## Implemented monitoring features
 
@@ -43,7 +45,7 @@ A feature listed here is not automatically production-accepted.
 - Staff-gated privileged mutations and protected views.
 - System/Light/Dark appearance.
 - Responsive web presentation.
-- Glaze UI 1.5.1 source-adoption candidate.
+- Glaze UI 1.5.1 source-adoption/alignment candidate on current `main`.
 - Reduced Motion, Reduced Transparency, contrast, Forced Colors, large-text, and form-factor source handling.
 - Wardveil Security presentation and minimized security-posture surface.
 
@@ -81,24 +83,24 @@ A feature listed here is not automatically production-accepted.
 - Bounded response sizes.
 - Target network allowlist controls.
 - No privileged production container requirement.
-- Fixed HIGH/CRITICAL container image vulnerability gate.
+- Fixable HIGH/CRITICAL container image vulnerability gate.
 - Privacy Shield source adapter candidate.
 - Everkeep source acceptance-policy candidate.
 
 ## Not yet production-accepted
 
-The following remain acceptance work:
+The following remain acceptance work and are tracked authoritatively in `PLANNED-FEATURES.md`:
 
-- live VPS deployment/readback;
+- current live VPS/target-host deployment and readback acceptance;
 - target PostgreSQL backup/restore;
 - reviewed monitor activation;
-- final private Gateway/DNS/NetBird publication;
+- final private Gateway/DNS/NetBird publication acceptance;
 - representative live protocol checks, including scheduled-job missed-run/failure/recovery and credential-rotation behavior;
 - accepted GoreeCloud Notify runtime credential/delivery;
 - durable outbox restart/replay under real target failure;
 - independent outage alerting;
-- manual Glaze UI/accessibility/performance acceptance;
+- manual current-Stable Glaze UI accessibility/performance/application acceptance;
 - remaining platform-system acceptance;
 - live rollback/recovery;
-- explicit production approval.
+- explicit production approval and any later Stable qualification.
 
