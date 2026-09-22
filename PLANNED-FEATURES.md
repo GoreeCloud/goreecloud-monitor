@@ -4,24 +4,26 @@
 **Repository:** `GoreeCloud/monitor`  
 **Repository ID:** `1336209445`  
 **Lifecycle:** Advanced pre-production acceptance candidate; production activation remains gated  
-**Migration state:** Candidate under Standard — Repository Feature Tracking and Changelog Governance v1.0  
-**Evidence baseline:** `main` at `f59991c2ac577662ddc6f396027b4dc1d637689a` (PR #51, September 21, 2026)  
+**Migration state:** **Authoritative on `main` after PR #52 merged as `41d88d2a12ad705f7c30160b378738031fbed37d` and default-branch readback verified this record.**  
+**Repository authority baseline:** `main` at `41d88d2a12ad705f7c30160b378738031fbed37d` (PR #52, September 22, 2026). Latest source-bearing Monitor runtime remains `f59991c2ac577662ddc6f396027b4dc1d637689a` (PR #51).  
 
 ## Purpose
 
 This file is the repository-native inventory of GoreeCloud Monitor obligations that remain planned, partial, proposed, blocked, acceptance-gated, or otherwise incomplete. Partially implemented capabilities stay open until the defined implementation and acceptance scope is complete.
 
-The migration reconciles the retired repository `FEATURE-ROADMAP.md`, the Drive `GoreeCloud/Feature Roadmap/GoreeCloud Monitor/FEATURE-ROADMAP.docx`, the authoritative Project Specification — Monitor, current repository feature evidence, and current `main` state.
+This inventory was migrated from the retired repository `FEATURE-ROADMAP.md`, the Drive `GoreeCloud/Feature Roadmap/GoreeCloud Monitor/FEATURE-ROADMAP.docx`, the authoritative Project Specification — Monitor, current repository feature evidence, and verified `main` state.
 
 ## Migration reconciliation
 
+PR #52 established the repository-native feature/changelog records and retired `FEATURE-ROADMAP.md` plus the legacy singular root `CHANGELOG.md` from authoritative `main`. The pre-migration changelog remains preserved exactly under `docs/changelog-history/`, and the Drive changelog chronology is represented by the repository migration digest.
+
 The legacy roadmap uses the stale repository name `GoreeCloud/goreecloud-monitor`. Live GitHub repository identity controls current state: `GoreeCloud/monitor`, repository ID `1336209445`.
 
-The former requirement to synchronize repository and Drive roadmap copies is superseded by Standard — Repository Feature Tracking and Changelog Governance v1.0. Google Drive is migration-source-only and must not remain an active, mirrored, convenience, or backup feature-roadmap authority after verified retirement.
+The former requirement to synchronize repository and Drive roadmap copies is superseded by Standard — Repository Feature Tracking and Changelog Governance v1.0. Google Drive is migration-source-only pending its verified retirement and must not remain an active, mirrored, convenience, or backup feature-roadmap authority.
 
-Where a legacy roadmap marks source implementation complete but live acceptance remains open, this file preserves the open acceptance obligation instead of promoting the feature to fully complete. Where current repository evidence is newer than September 19 roadmap wording, verified repository state controls factual implementation status.
+Where the legacy roadmap marks source implementation complete but live acceptance remains open, this file preserves the open acceptance obligation instead of promoting the feature to fully complete. Where current repository evidence is newer than September 19 roadmap wording, verified repository state controls factual implementation status.
 
-The Project Specification currently contains historical/stale repository naming and a Glaze UI 1.5.0 requirement, while verified current repository `main` implements the subsequent 1.5.1 adoption/alignment work. That documentation conflict must be reconciled through the governed project-documentation workflow; it does not justify downgrading the verified current source state or inventing production acceptance.
+The Project Specification currently contains historical/stale repository naming and a Glaze UI 1.5.0 requirement, while verified current source-bearing repository state implements the subsequent 1.5.1 adoption/alignment work. That documentation conflict remains a governed reconciliation obligation; it does not justify downgrading verified current source state or inventing production acceptance.
 
 ## Open feature and acceptance obligations
 
@@ -46,7 +48,7 @@ The Project Specification currently contains historical/stale repository naming 
 | `PROD-ACCEPT-03` | Final private Gateway/DNS/NetBird publication and target security validation. | High / production gate | **Partial / acceptance open.** Project documentation records private publication evidence, but current production authority still requires complete governed target acceptance. |
 | `PROD-ACCEPT-04` | GoreeCloud Notify production credential/delivery plus durable-outbox restart/replay behavior under real target failure. | High / production gate | **Open.** |
 | `PROD-ACCEPT-05` | Independent outage alert path for notification-service failure where required. | High / resilience gate | **Open.** Detection and incident recording must not be conflated with independent delivery. |
-| `PROD-ACCEPT-06` | Current Stable Glaze UI application acceptance: rendered/browser responsiveness, accessibility, resilience, semantic state, materials/depth, motion, layout/density, interaction states, performance, rollback, and representative acceptance. | High / UI acceptance | **Partial.** Current `main` includes 1.5.1 source adoption/alignment; application-specific acceptance remains open. |
+| `PROD-ACCEPT-06` | Current Stable Glaze UI application acceptance: rendered/browser responsiveness, accessibility, resilience, semantic state, materials/depth, motion, layout/density, interaction states, performance, rollback, and representative acceptance. | High / UI acceptance | **Partial.** Current source-bearing `main` includes 1.5.1 source adoption/alignment; application-specific acceptance remains open. |
 | `PROD-ACCEPT-07` | Remaining platform-system acceptance, including producer-authority boundaries for Privacy Shield, Wardveil Security, Everkeep, Manager, Identity/Policy where applicable, and other governed platform systems. | High / platform gate | **Open / partial.** Source adapters or presentation do not establish producer-system acceptance. |
 | `PROD-ACCEPT-08` | Live rollback/recovery, explicit production approval, and any later Stable qualification. | High / final gate | **Open.** Monitor remains an advanced pre-production acceptance candidate. |
 | `DOC-RECON-01` | Reconcile stale Project Specification repository name (`GoreeCloud/goreecloud-monitor`) with live GitHub identity (`GoreeCloud/monitor`) and reconcile the historical Glaze UI 1.5.0 wording with verified current 1.5.1 source adoption without inventing acceptance. | Governance | **Open documentation reconciliation.** |

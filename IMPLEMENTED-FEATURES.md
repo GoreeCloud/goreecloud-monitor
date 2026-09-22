@@ -4,8 +4,8 @@
 **Repository:** `GoreeCloud/monitor`  
 **Repository ID:** `1336209445`  
 **Lifecycle:** Advanced pre-production acceptance candidate; production activation remains gated  
-**Migration state:** Candidate under Standard — Repository Feature Tracking and Changelog Governance v1.0  
-**Evidence baseline:** `main` at `f59991c2ac577662ddc6f396027b4dc1d637689a` (PR #51, September 21, 2026)  
+**Migration state:** **Authoritative on `main` after PR #52 merged as `41d88d2a12ad705f7c30160b378738031fbed37d` and default-branch readback verified this record.**  
+**Repository authority baseline:** `main` at `41d88d2a12ad705f7c30160b378738031fbed37d` (PR #52, September 22, 2026). Latest source-bearing Monitor runtime remains `f59991c2ac577662ddc6f396027b4dc1d637689a` (PR #51).  
 
 ## Authority and interpretation
 
@@ -14,6 +14,14 @@ This file records capabilities implemented in current GoreeCloud Monitor source.
 The former roadmap and Drive records used the stale repository name `GoreeCloud/goreecloud-monitor`. Live GitHub repository identity controls current state: the authoritative repository is `GoreeCloud/monitor`, repository ID `1336209445`.
 
 Capabilities that are implemented in source but still require live, representative, integration, security, recovery, accessibility, rollback, or production acceptance may appear here for the implemented portion and remain open in `PLANNED-FEATURES.md` for the acceptance obligation.
+
+## Current verified source baseline
+
+Repository `main` is `41d88d2a12ad705f7c30160b378738031fbed37d`, the documentation/governance-only merge of PR #52. The latest source-bearing Monitor runtime remains `f59991c2ac577662ddc6f396027b4dc1d637689a`, the merge of PR #51 aligning the Settings runtime Glaze UI version with the 1.5.1 adoption contract.
+
+PR #52 exact head `df5ca14db4411c94d4ee3403cd92870b9c41754d` passed CI #204 / run `35723882920` across SQLite source tests, PostgreSQL 17 tests and recovery proof, dependency vulnerability audit, container build/scan/production smoke, and disposable production topology. Rollback compatibility #159 / run `35723883048` also passed immediate-predecessor database compatibility.
+
+These validation results establish the repository-governance migration candidate only. They do not create new Monitor runtime implementation or production acceptance.
 
 ## Monitoring and evaluation
 
@@ -38,7 +46,7 @@ Capabilities that are implemented in source but still require live, representati
 - Staff-gated privileged mutation and protected diagnostic/configuration views.
 - System, Light, and Dark appearance.
 - Responsive presentation with source handling for Reduced Motion, Reduced Transparency, contrast, Forced Colors, large text, and form-factor behavior.
-- Glaze UI 1.5.1 source-adoption work through current main, including PR #51 runtime-version alignment.
+- Glaze UI 1.5.1 source-adoption work through current source-bearing `main`, including PR #51 runtime-version alignment.
 - Wardveil Security presentation and minimized staff-only security-posture surface.
 - Canonical Monitor product-identity assets and local web/favicon/manifest plus future Linux/AppImage and Android launcher identity inputs; these inputs do not claim standalone native clients are implemented.
 
