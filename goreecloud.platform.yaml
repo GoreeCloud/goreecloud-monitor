@@ -4,7 +4,7 @@ component:
   type: application
   id: goreecloud-monitor
   product_name: GoreeCloud Monitor
-  repository: GoreeCloud/goreecloud-monitor
+  repository: GoreeCloud/monitor
 
 lifecycle: release-candidate
 version: "0.1.0"
