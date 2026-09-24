@@ -17,11 +17,7 @@ Capabilities that are implemented in source but still require live, representati
 
 ## Current verified source baseline
 
-Repository `main` is `41d88d2a12ad705f7c30160b378738031fbed37d`, the documentation/governance-only merge of PR #52. The latest source-bearing Monitor runtime remains `f59991c2ac577662ddc6f396027b4dc1d637689a`, the merge of PR #51 aligning the Settings runtime Glaze UI version with the 1.5.1 adoption contract.
-
-PR #52 exact head `df5ca14db4411c94d4ee3403cd92870b9c41754d` passed CI #204 / run `35723882920` across SQLite source tests, PostgreSQL 17 tests and recovery proof, dependency vulnerability audit, container build/scan/production smoke, and disposable production topology. Rollback compatibility #159 / run `35723883048` also passed immediate-predecessor database compatibility.
-
-These validation results establish the repository-governance migration candidate only. They do not create new Monitor runtime implementation or production acceptance.
+Repository `main` entering this stabilization tranche is `b7bf959e04ddd06f3a30db2f81bc7cb6ab4c53b4`. The current candidate advances the Monitor web presentation contract from Glaze UI 1.5.1 to the current Official Stable Glaze UI 1.6.0 release while preserving Monitor's pre-production lifecycle and fail-closed authority boundaries.\n\nThe V1.6 source mapping is bound to immutable tag `v1.6.0`, accepted release source `a7180679ea851389e0f3004515f9a25f420e716d`, source qualification anchor `c7509c79256b04b0aa67cb9dd0737d7588e0ae4a`, GitHub release `392095913`, and release artifact SHA-256 `687268b5eb76917eccae9d935ffa1bead333d5dee50b6098e996a3f44cee50af`. Shared Glaze Stable/consumer eligibility does not establish Monitor application acceptance or production eligibility.
 
 ## Monitoring and evaluation
 
@@ -46,7 +42,7 @@ These validation results establish the repository-governance migration candidate
 - Staff-gated privileged mutation and protected diagnostic/configuration views.
 - System, Light, and Dark appearance.
 - Responsive presentation with source handling for Reduced Motion, Reduced Transparency, contrast, Forced Colors, large text, and form-factor behavior.
-- Glaze UI 1.5.1 source-adoption work through current source-bearing `main`, including PR #51 runtime-version alignment.
+- Glaze UI 1.6.0 source-adoption candidate with exact Stable release provenance, local presentation-only runtime mapping, semantic loading/stale/degraded/error presentation tokens, and fail-closed downstream acceptance.
 - Wardveil Security presentation and minimized staff-only security-posture surface.
 - Canonical Monitor product-identity assets and local web/favicon/manifest plus future Linux/AppImage and Android launcher identity inputs; these inputs do not claim standalone native clients are implemented.
 
@@ -95,7 +91,7 @@ Still not established by source state alone:
 - final private Gateway/DNS/NetBird publication acceptance;
 - accepted GoreeCloud Notify runtime credential/delivery and durable-outbox restart/replay under real target failure;
 - independent outage alerting;
-- full Glaze UI 1.5.1 rendered/accessibility/performance acceptance;
+- full Glaze UI 1.6.0 rendered/accessibility/semantic-state/recovery/performance acceptance;
 - remaining platform-system acceptance;
 - live rollback/recovery;
 - explicit production approval or Stable qualification.
