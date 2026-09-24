@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "application": "goreecloud-monitor",
+  "required_target_release": "1.6.0",
+  "current_source_mapping_release": "1.6.0",
+  "canonical_repository": "GoreeCloud/glaze-ui",
+  "release_tag": "v1.6.0",
+  "github_release_id": 392095913,
+  "accepted_release_source": "a7180679ea851389e0f3004515f9a25f420e716d",
+  "accepted_release_tree": "9ff0bf7a5f9d64f109d99bf4b76b81bd2a162268",
+  "source_qualification_anchor": "c7509c79256b04b0aa67cb9dd0737d7588e0ae4a",
+  "qualification_evidence_integration_commit": "354f5759385c28596fcfec26a3ad525e89fb1c35",
+  "publication_control_commit": "7e8b537b9d1a123bc3e92679774a4d9cc704e03b",
+  "release_artifact_sha256": "687268b5eb76917eccae9d935ffa1bead333d5dee50b6098e996a3f44cee50af",
+  "runtime_entrypoint": "js/glaze-v1.6.0.mjs",
+  "current_stable_declared": true,
+  "shared_consumer_eligible": true,
+  "adoption_status": "source-adoption-candidate",
+  "conformance_claim": false,
+  "production_eligible": false,
+  "supported_surfaces": [
+    "web"
+  ],
+  "source_implementation": {
+    "web": {
+      "status": "source-evidence-present-acceptance-required",
+      "evidence": [
+        "templates/monitoring/base.html",
+        "static/monitoring/css/glaze.1.6.0.css",
+        "static/monitoring/css/glaze.accessibility.css",
+        "static/monitoring/css/glaze.formfactors.css",
+        "static/monitoring/js/glaze.js"
+      ]
+    },
+    "authority_boundary": {
+      "status": "source-evidence-present",
+      "notes": "Glaze UI is presentation-only and does not manufacture authorization, permission, privacy, security, identity, policy, monitoring, recovery, deployment, provider precedence, or capability truth."
+    }
+  },
+  "v1_6_application_obligations": [
+    "semantic-state-distinction",
+    "loading-stale-degraded-recovery-presentation",
+    "accessibility-precedence-and-fallbacks",
+    "focus-and-keyboard-continuity",
+    "responsive-task-continuity",
+    "non-color-status-meaning",
+    "privacy-security-and-capability-truth-remains-provider-owned"
+  ],
+  "required_acceptance": [
+    "representative-browser-os-accessibility",
+    "large-text-reflow-and-contrast",
+    "responsive-task-continuity",
+    "semantic-state-and-recovery-review",
+    "application-performance-budget",
+    "visual-excellence-review",
+    "rollback-validation",
+    "governed-consumer-registry-acceptance",
+    "exact-revision-production-approval"
+  ],
+  "blockers": [
+    "Representative browser/OS accessibility and visual acceptance for the exact Monitor V1.6 candidate is not yet recorded.",
+    "Large Text, responsive task continuity, semantic state/recovery, and application-specific performance evidence remain incomplete.",
+    "Known-good Monitor rollback and governed Glaze consumer-registry acceptance remain incomplete.",
+    "Exact-revision production approval is not present."
+  ]
+}

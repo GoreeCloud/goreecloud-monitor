@@ -23,7 +23,7 @@ The former requirement to synchronize repository and Drive roadmap copies is sup
 
 Where the legacy roadmap marks source implementation complete but live acceptance remains open, this file preserves the open acceptance obligation instead of promoting the feature to fully complete. Where current repository evidence is newer than September 19 roadmap wording, verified repository state controls factual implementation status.
 
-The Project Specification currently contains historical/stale repository naming and a Glaze UI 1.5.0 requirement, while verified current source-bearing repository state implements the subsequent 1.5.1 adoption/alignment work. That documentation conflict remains a governed reconciliation obligation; it does not justify downgrading verified current source state or inventing production acceptance.
+The Project Specification contains historical/stale repository naming and older Glaze UI wording. Verified repository state now carries a bounded Glaze UI 1.6.0 source-adoption candidate over the immutable current Stable release. That source migration does not establish application acceptance or production authority.
 
 ## Open feature and acceptance obligations
 
@@ -48,10 +48,10 @@ The Project Specification currently contains historical/stale repository naming 
 | `PROD-ACCEPT-03` | Final private Gateway/DNS/NetBird publication and target security validation. | High / production gate | **Partial / acceptance open.** Project documentation records private publication evidence, but current production authority still requires complete governed target acceptance. |
 | `PROD-ACCEPT-04` | GoreeCloud Notify production credential/delivery plus durable-outbox restart/replay behavior under real target failure. | High / production gate | **Open.** |
 | `PROD-ACCEPT-05` | Independent outage alert path for notification-service failure where required. | High / resilience gate | **Open.** Detection and incident recording must not be conflated with independent delivery. |
-| `PROD-ACCEPT-06` | Current Stable Glaze UI application acceptance: rendered/browser responsiveness, accessibility, resilience, semantic state, materials/depth, motion, layout/density, interaction states, performance, rollback, and representative acceptance. | High / UI acceptance | **Partial.** Current source-bearing `main` includes 1.5.1 source adoption/alignment; application-specific acceptance remains open. |
+| `PROD-ACCEPT-06` | Current Stable Glaze UI application acceptance: rendered/browser responsiveness, accessibility, resilience, semantic state, materials/depth, motion, layout/density, interaction states, performance, rollback, and representative acceptance. | High / UI acceptance | **Partial.** Current source includes a Glaze UI 1.6.0 source-adoption candidate; application-specific rendered/browser accessibility, semantic-state/recovery, performance, rollback, consumer-registry, and production acceptance remain open. |
 | `PROD-ACCEPT-07` | Remaining platform-system acceptance, including producer-authority boundaries for Privacy Shield, Wardveil Security, Everkeep, Manager, Identity/Policy where applicable, and other governed platform systems. | High / platform gate | **Open / partial.** Source adapters or presentation do not establish producer-system acceptance. |
 | `PROD-ACCEPT-08` | Live rollback/recovery, explicit production approval, and any later Stable qualification. | High / final gate | **Open.** Monitor remains an advanced pre-production acceptance candidate. |
-| `DOC-RECON-01` | Reconcile stale Project Specification repository name (`GoreeCloud/goreecloud-monitor`) with live GitHub identity (`GoreeCloud/monitor`) and reconcile the historical Glaze UI 1.5.0 wording with verified current 1.5.1 source adoption without inventing acceptance. | Governance | **Open documentation reconciliation.** |
+| `DOC-RECON-01` | Reconcile stale Project Specification repository name (`GoreeCloud/goreecloud-monitor`) and historical Glaze UI wording with live GitHub identity (`GoreeCloud/monitor`) and verified current 1.6.0 source adoption without inventing acceptance. | Governance | **Partially reconciled in repository machine/source records; Project documentation reconciliation remains open.** |
 
 ## Product-boundary obligations
 

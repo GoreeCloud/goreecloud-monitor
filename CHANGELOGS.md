@@ -28,6 +28,18 @@ The exact repository changelog preserves detailed Unreleased source history, inc
 
 The Drive digest preserves the distinct migration chronology, source-validation phases, target-host/recovery exercises, historical Uptime Kuma evidence, production-dependency retirement, licensing decision, and post-retirement stabilization events without treating stale historical authority claims as current state.
 
+## September 24, 2026 — Glaze UI 1.6.0 source-adoption stabilization candidate
+
+**Change type:** Presentation-system stabilization; Platform Contract reconciliation; regression hardening.
+
+- Moved the active Monitor web presentation target from Glaze UI 1.5.1 to current Official Stable Glaze UI 1.6.0.
+- Bound Monitor's adoption ledger to immutable tag `v1.6.0`, accepted release source `a7180679ea851389e0f3004515f9a25f420e716d`, qualification source `c7509c79256b04b0aa67cb9dd0737d7588e0ae4a`, GitHub release `392095913`, and artifact SHA-256 `687268b5eb76917eccae9d935ffa1bead333d5dee50b6098e996a3f44cee50af`.
+- Added a local V1.6 presentation mapping while preserving Reduced Motion, Reduced Transparency, contrast, Forced Colors, large-text, touch-target, responsive, local-only, and presentation-only authority behavior.
+- Updated Monitor's machine-readable Platform Contract and regression tests to 1.6.0 and corrected its live GitHub repository identity to `GoreeCloud/monitor`.
+- Kept Monitor `stable_eligible: false`; representative browser/OS accessibility, semantic-state/recovery, performance, visual, rollback, consumer-registry, target deployment, production, and Stable gates remain open.
+
+---
+
 ## September 22, 2026 — PR #52 established repository-native feature and changelog authority
 
 **Change type:** Governance; documentation architecture; source-of-truth migration.
@@ -58,7 +70,7 @@ Validation and promotion:
 
 Current repository source records GoreeCloud Monitor as an **advanced pre-production acceptance candidate**. Uptime Kuma and ntfy were retired from `goreecloud-vps-01` on September 18, 2026, but predecessor retirement does not automatically establish Monitor production authority.
 
-Current source includes later Glaze UI 1.5.1 adoption/alignment work, scheduled-job/dead-man monitoring, low-privilege Ping/ICMP, hardened production topology, recovery/migration tooling, Notify producer/outbox foundations, privacy/security controls, and read-only Manager integrations described in `IMPLEMENTED-FEATURES.md`.
+Current source includes the Glaze UI 1.6.0 source-adoption stabilization candidate, scheduled-job/dead-man monitoring, low-privilege Ping/ICMP, hardened production topology, recovery/migration tooling, Notify producer/outbox foundations, privacy/security controls, and read-only Manager integrations described in `IMPLEMENTED-FEATURES.md`.
 
 Open production and Stable gates are recorded in `PLANNED-FEATURES.md` and must not be inferred from source, CI, historical deployment evidence, predecessor retirement, or documentation alone.
 

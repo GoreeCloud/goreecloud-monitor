@@ -4,7 +4,7 @@ component:
   type: application
   id: goreecloud-monitor
   product_name: GoreeCloud Monitor
-  repository: GoreeCloud/goreecloud-monitor
+  repository: GoreeCloud/monitor
 
 lifecycle: release-candidate
 version: "0.1.0"
@@ -64,15 +64,15 @@ platform_systems:
       - docs/recovery.md
     notes: Everkeep source adoption and acceptance-policy evidence exist, but target-native PostgreSQL restore/recovery and exact-revision acceptance remain incomplete.
   glaze_ui:
-    result: applicable-migration-required
-    version: "1.5.1"
+    result: applicable-blocked
+    version: "1.6.0"
     evidence:
-      - docs/glaze-ui-v1.5.1-adoption.json
+      - docs/glaze-ui-v1.6.0-adoption.json
       - docs/glaze-ui-conformance.md
       - templates/monitoring/base.html
-      - static/monitoring/css/glaze.1.5.1.css
+      - static/monitoring/css/glaze.1.6.0.css
       - static/monitoring/js/glaze.js
-    notes: The active web shell implements a Glaze UI 1.5.1 source-adoption candidate. Representative browser/OS accessibility, large-text/reflow, performance, visual review, rollback, consumer-registry, and production acceptance remain outstanding.
+    notes: The active web shell implements a Glaze UI 1.6.0 source-adoption candidate. Representative browser/OS accessibility, semantic-state/recovery, large-text/reflow, performance, visual review, rollback, consumer-registry, and production acceptance remain outstanding.
   mesh:
     result: applicable-blocked
     version: null
@@ -133,10 +133,10 @@ external_dependencies:
 
 compatibility:
   platform_contract: "0.4"
-  glaze_ui_required: "1.5.1"
+  glaze_ui_required: "1.6.0"
   requires:
     - goreecloud-platform-contract==0.4
-    - glaze-ui==1.5.1
+    - glaze-ui==1.6.0
   provides:
     - goreecloud-monitor-api-v1
     - goreecloud-monitor-notify-producer-v1
@@ -150,12 +150,12 @@ conformance:
   validated_at: null
   evidence:
     - docs/platform-conformance.json
-    - docs/glaze-ui-v1.5.1-adoption.json
+    - docs/glaze-ui-v1.6.0-adoption.json
     - docs/wardveil.adoption.json
     - docs/privacy-shield.adapter.json
     - docs/everkeep.acceptance.json
   blockers:
-    - Glaze UI 1.5.1 application-specific accessibility, performance, rollback, consumer-registry, and production acceptance remain incomplete.
+    - Glaze UI 1.6.0 application-specific accessibility, semantic-state/recovery, performance, rollback, consumer-registry, and production acceptance remain incomplete.
     - GoreeCloud Manager integration and acceptance are not established.
     - Privacy Shield runtime and central adapter acceptance are not established.
     - Wardveil Security target-runtime acceptance is not established.

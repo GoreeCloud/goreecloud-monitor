@@ -41,8 +41,8 @@
     const largeText = window.matchMedia("(min-resolution: 0.001dpcm)").matches
       && parseFloat(getComputedStyle(root).fontSize || "16") >= 20;
 
-    root.dataset.glazeUi = "1.5.1";
-    root.dataset.glazeUiTarget = "1.5.1";
+    root.dataset.glazeUi = "1.6.0";
+    root.dataset.glazeUiTarget = "1.6.0";
     root.dataset.glazeUiStatus = "source-adoption-candidate";
     root.dataset.glazeAuthority = "presentation-only";
     root.dataset.glazePaneMode = width < 600 ? "single" : width < 1024 ? "stacked" : "split";
