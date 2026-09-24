@@ -5,21 +5,21 @@
   "platform_systems": {
     "glaze_ui": {
       "identity": "Glaze UI",
-      "required_version": "1.5",
-      "required_release": "1.5.1",
-      "canonical_repository": "GoreeCloud/goreecloud-glaze-ui",
-      "canonical_revision": "5b59d0e36950d737dba35b58ae58058684e0831b",
-      "source_status": "v1.5.1-source-adoption-candidate-acceptance-required",
+      "required_version": "1.6",
+      "required_release": "1.6.0",
+      "canonical_repository": "GoreeCloud/glaze-ui",
+      "canonical_revision": "a7180679ea851389e0f3004515f9a25f420e716d",
+      "source_status": "v1.6.0-source-adoption-candidate-acceptance-required",
       "evidence": [
         "templates/monitoring/base.html",
         "static/monitoring/css/glaze.css",
         "static/monitoring/css/glaze.accessibility.css",
         "static/monitoring/css/glaze.formfactors.css",
-        "static/monitoring/css/glaze.1.5.1.css",
+        "static/monitoring/css/glaze.1.6.0.css",
         "static/monitoring/js/glaze.js",
-        "docs/glaze-ui-v1.5.1-adoption.json"
+        "docs/glaze-ui-v1.6.0-adoption.json"
       ],
-      "blocker": "Glaze UI 1.5.1 source adoption is present, but representative browser/OS accessibility, large-text/reflow, responsive task continuity, application performance, visual review, rollback, governed consumer-registry, and production acceptance remain required."
+      "blocker": "Glaze UI 1.6.0 source adoption is present, but representative browser/OS accessibility, semantic-state/recovery, large-text/reflow, responsive task continuity, application performance, visual review, rollback, governed consumer-registry, and production acceptance remain required."
     },
     "wardveil_security": {
       "identity": "Wardveil Security by GoreeCloud",
@@ -99,7 +99,7 @@
     }
   },
   "production_blockers": [
-    "Glaze UI 1.5.1 browser/OS accessibility, responsive task-continuity, application-performance, visual-review, rollback, consumer-registry, and production acceptance",
+    "Glaze UI 1.6.0 browser/OS accessibility, semantic-state/recovery, responsive task-continuity, application-performance, visual-review, rollback, consumer-registry, and production acceptance",
     "GoreeCloud Manager integration and acceptance",
     "Privacy Shield runtime and central adapter acceptance",
     "Wardveil Security target-runtime acceptance",
