@@ -144,7 +144,7 @@
     "18_central_consumer_registry"
   ],
   "acceptance_boundary": "Historical repository-local source experiment only. The referenced 2.1.0 Stable release/tag/revision is not current authoritative Glaze UI Stable state. Current required consumer target is 1.5.1; this record must not be used to claim current conformance or production eligibility.",
-  "superseded_by": "docs/glaze-ui-v1.5.1-adoption.json",
+  "superseded_by": "docs/glaze-ui-v1.6.0-adoption.json",
   "historical_claim": {
     "target_release": "2.1.0",
     "canonical_release_tag": "v2.1.0",
