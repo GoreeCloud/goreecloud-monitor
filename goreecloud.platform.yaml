@@ -64,7 +64,7 @@ platform_systems:
       - docs/recovery.md
     notes: Everkeep source adoption and acceptance-policy evidence exist, but target-native PostgreSQL restore/recovery and exact-revision acceptance remain incomplete.
   glaze_ui:
-    result: applicable-migration-required
+    result: applicable-blocked
     version: "1.6.0"
     evidence:
       - docs/glaze-ui-v1.6.0-adoption.json
@@ -72,7 +72,7 @@ platform_systems:
       - templates/monitoring/base.html
       - static/monitoring/css/glaze.1.6.0.css
       - static/monitoring/js/glaze.js
-    notes: The active web shell implements a Glaze UI 1.6.0 source-adoption candidate. Representative browser/OS accessibility, large-text/reflow, performance, visual review, rollback, consumer-registry, and production acceptance remain outstanding.
+    notes: The active web shell implements a Glaze UI 1.6.0 source-adoption candidate. Representative browser/OS accessibility, semantic-state/recovery, large-text/reflow, performance, visual review, rollback, consumer-registry, and production acceptance remain outstanding.
   mesh:
     result: applicable-blocked
     version: null
