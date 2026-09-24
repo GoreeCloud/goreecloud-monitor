@@ -26,7 +26,7 @@ class HistoricalGlazeUi21RecordTests(SimpleTestCase):
         )
         self.assertEqual(
             self.ledger["superseded_by"],
-            "docs/glaze-ui-v1.5.1-adoption.json",
+            "docs/glaze-ui-v1.6.0-adoption.json",
         )
         self.assertFalse(self.ledger["conformance_claim"])
         self.assertFalse(self.ledger["stable_eligible"])
@@ -35,5 +35,5 @@ class HistoricalGlazeUi21RecordTests(SimpleTestCase):
         self.assertNotIn("glaze.2.1.css", self.shell)
         self.assertNotIn('data-glaze-ui="2.1.0"', self.shell)
         self.assertNotIn('data-glaze-ui-target="2.1.0"', self.shell)
-        self.assertIn("glaze.1.5.1.css", self.shell)
-        self.assertIn('data-glaze-ui="1.5.1"', self.shell)
+        self.assertIn("glaze.1.6.0.css", self.shell)
+        self.assertIn('data-glaze-ui="1.6.0"', self.shell)
