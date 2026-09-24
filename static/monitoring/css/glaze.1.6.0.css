@@ -162,11 +162,6 @@ summary,
   --glaze-state-error: var(--glaze-danger, #b42318);
 }
 
-[data-glaze-state="loading"],
-[data-glaze-state="updating"],
-[data-glaze-state="syncing"] {
-  aria-busy: true;
-}
 
 .glaze-state-label {
   font-weight: 650;
