@@ -17,7 +17,9 @@ Capabilities that are implemented in source but still require live, representati
 
 ## Current verified source baseline
 
-Repository `main` entering this stabilization tranche is `b7bf959e04ddd06f3a30db2f81bc7cb6ab4c53b4`. The current candidate advances the Monitor web presentation contract from Glaze UI 1.5.1 to the current Official Stable Glaze UI 1.6.0 release while preserving Monitor's pre-production lifecycle and fail-closed authority boundaries.\n\nThe V1.6 source mapping is bound to immutable tag `v1.6.0`, accepted release source `a7180679ea851389e0f3004515f9a25f420e716d`, source qualification anchor `c7509c79256b04b0aa67cb9dd0737d7588e0ae4a`, GitHub release `392095913`, and release artifact SHA-256 `687268b5eb76917eccae9d935ffa1bead333d5dee50b6098e996a3f44cee50af`. Shared Glaze Stable/consumer eligibility does not establish Monitor application acceptance or production eligibility.
+Repository `main` entering this stabilization tranche is `b7bf959e04ddd06f3a30db2f81bc7cb6ab4c53b4`. The current candidate advances the Monitor web presentation contract from Glaze UI 1.5.1 to the current Official Stable Glaze UI 1.6.0 release while preserving Monitor's pre-production lifecycle and fail-closed authority boundaries.
+
+The V1.6 source mapping is bound to immutable tag `v1.6.0`, accepted release source `a7180679ea851389e0f3004515f9a25f420e716d`, source qualification anchor `c7509c79256b04b0aa67cb9dd0737d7588e0ae4a`, GitHub release `392095913`, and release artifact SHA-256 `687268b5eb76917eccae9d935ffa1bead333d5dee50b6098e996a3f44cee50af`. Shared Glaze Stable/consumer eligibility does not establish Monitor application acceptance or production eligibility.
 
 ## Monitoring and evaluation
 
