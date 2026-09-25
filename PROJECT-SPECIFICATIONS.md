@@ -7,6 +7,9 @@
 **Version:** `0.1.0`  
 **Migration baseline:** `46897de12f514a43da3a668e3e9c952e63e9dea6`  
 **License:** `AGPL-3.0-only` for current GoreeCloud-owned source; previously distributed MIT-licensed copies retain their prior grant  
+**Owner:** GoreeCloud  
+**Intended users:** GoreeCloud owner/administrators and approved least-privilege operational consumers  
+**Deployment model:** Private Docker and Docker Compose service with separate web, worker, migration, and PostgreSQL roles  
 **Supported platforms:** Web and server runtime  
 **Canonical authority:** This file becomes the authoritative project specification once accepted on the default branch.
 
