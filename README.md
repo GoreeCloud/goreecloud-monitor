@@ -156,6 +156,15 @@ The repository contains one Django web/API application and one asynchronous moni
 
 See `docs/architecture.md`, `docs/scheduled-jobs.md`, `docs/deployment.md`, `docs/production-deployment.md`, `docs/glaze-ui-conformance.md`, `docs/product-identity.md`, `docs/wardveil-security.md`, `docs/live-acceptance-evidence.md`, `docs/uptime-kuma-runtime-evidence.md`, `docs/uptime-kuma-migration.md`, `docs/uptime-kuma-baseline.md`, `docs/dns-resolver-semantics.md`, `docs/icmp-ping.md`, `docs/icmp-reachability.md`, `docs/cutover-and-rollback.md`, `docs/backup.md`, `docs/recovery.md`, and `SECURITY.md`.
 
+## Project governance
+
+The authoritative project requirements and significant project history are repository-local:
+
+- [PROJECT-SPECIFICATIONS.md](PROJECT-SPECIFICATIONS.md)
+- [PROJECT-RECORD.md](PROJECT-RECORD.md)
+
+Current feature state is governed by [IMPLEMENTED-FEATURES.md](IMPLEMENTED-FEATURES.md) and [PLANNED-FEATURES.md](PLANNED-FEATURES.md); repository chronology is governed by [CHANGELOGS.md](CHANGELOGS.md). Historical Google Drive project specifications are migration sources only until the project-record migration is accepted and the standard deletion gate is satisfied.
+
 ## License
 
 Current GoreeCloud Monitor source is licensed under the GNU Affero General Public License, version 3 only (`AGPL-3.0-only`). See `LICENSE` and `LICENSE-NOTICE.md`. Copies and releases previously distributed under the MIT License retain the permissions already granted to those copies.
