@@ -191,6 +191,8 @@ The connected GitHub application does not expose branch-protection/ruleset mutat
 
 ## September 25, 2026 — Project specifications/project record migration candidate
 
+**Migration pull request:** PR #57 — `docs/project-governance-migration-20260925` → `main`  
+
 This migration:
 - creates root `PROJECT-SPECIFICATIONS.md`;
 - creates root `PROJECT-RECORD.md`;
