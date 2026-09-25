@@ -43,7 +43,7 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 
 GoreeCloud Monitor must adopt the current official Stable Glaze UI **1.6.0** contract from the canonical GoreeCloud Glaze UI repository. Earlier Monitor Glaze UI 1.0 validation remains historical migration evidence only and does not establish current conformance or production eligibility.
 
-Current production acceptance requires fresh repository-local 1.5.1 mapping plus representative rendered/browser, responsive, accessibility, resilience, semantic-state, material/depth, motion, layout/density, interaction-state, performance, rollback, and target-environment evidence. Until those gates are accepted, Monitor remains production-blocked on the current design-system requirement.
+Current production acceptance requires the repository-local 1.6.0 source mapping plus representative rendered/browser, responsive, accessibility, resilience, semantic-state, material/depth, motion, layout/density, interaction-state, performance, rollback, and target-environment evidence. Until those gates are accepted, Monitor remains production-blocked on the current design-system requirement.
 
 
 ## Product identity
