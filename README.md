@@ -2,11 +2,11 @@
 
 GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-health, heartbeat, scheduled-job/dead-man, TLS-certificate, incident, and recovery-monitoring application.
 
-> **Current state:** advanced pre-production acceptance candidate. Uptime Kuma and ntfy were permanently retired from `goreecloud-vps-01` on September 18, 2026, but predecessor retirement does not automatically promote GoreeCloud Monitor to production authority. The native monitoring foundation, hardened production topology, PostgreSQL recovery tooling, imported paused monitor definitions, DNS and low-privilege Ping/ICMP support, migration/recovery evidence tooling, and GoreeCloud Notify producer candidate are implemented at source level. Production activation remains blocked on current target-host verification, reviewed monitor activation, live check acceptance, current Stable Glaze UI 1.5.1 adoption, platform-system acceptance, target security/recovery evidence, end-to-end GoreeCloud Notify delivery including durable-outbox restart/replay acceptance, independent outage alerting, rollback, and explicit production approval.
+> **Current state:** advanced pre-production acceptance candidate. Uptime Kuma and ntfy were permanently retired from `goreecloud-vps-01` on September 18, 2026, but predecessor retirement does not automatically promote GoreeCloud Monitor to production authority. The native monitoring foundation, hardened production topology, PostgreSQL recovery tooling, imported paused monitor definitions, DNS and low-privilege Ping/ICMP support, migration/recovery evidence tooling, and GoreeCloud Notify producer candidate are implemented at source level. Production activation remains blocked on current target-host verification, reviewed monitor activation, live check acceptance, current Stable Glaze UI 1.6.0 adoption, platform-system acceptance, target security/recovery evidence, end-to-end GoreeCloud Notify delivery including durable-outbox restart/replay acceptance, independent outage alerting, rollback, and explicit production approval.
 
 ## What v0.1 includes
 
-- Authenticated operational shell with System, Light, and Dark appearance; current Stable Glaze UI 1.5.1 adoption remains required
+- Authenticated operational shell with System, Light, and Dark appearance; current Stable Glaze UI 1.6.0 adoption remains required
 - Wardveil Security by GoreeCloud protection identity with a staff-only, secret-free security-posture surface
 - Unique canonical GoreeCloud Monitor application icon with a complete local web/favicon family and shared Linux/AppImage and Android launcher identity inputs
 - Responsive Overview, Monitors, Incidents, Maintenance, Notifications, Security, Settings, authentication, and monitor-detail surfaces
@@ -39,9 +39,9 @@ GoreeCloud Monitor is the native GoreeCloud service-availability, endpoint-healt
 - Migration-aware immediate-predecessor PostgreSQL rollback proof, including fail-safe OnCalendar downgrade that pauses unsupported schedules before predecessor startup
 - Recovery and activation evidence requirements that preserve predecessor evidence without restoring Uptime Kuma to production
 
-## Glaze UI 1.5.1
+## Glaze UI 1.6.0
 
-GoreeCloud Monitor must adopt the current official Stable Glaze UI **1.5.1** contract from the canonical GoreeCloud Glaze UI repository. Earlier Monitor Glaze UI 1.0 validation remains historical migration evidence only and does not establish current conformance or production eligibility.
+GoreeCloud Monitor must adopt the current official Stable Glaze UI **1.6.0** contract from the canonical GoreeCloud Glaze UI repository. Earlier Monitor Glaze UI 1.0 validation remains historical migration evidence only and does not establish current conformance or production eligibility.
 
 Current production acceptance requires fresh repository-local 1.5.1 mapping plus representative rendered/browser, responsive, accessibility, resilience, semantic-state, material/depth, motion, layout/density, interaction-state, performance, rollback, and target-environment evidence. Until those gates are accepted, Monitor remains production-blocked on the current design-system requirement.
 
