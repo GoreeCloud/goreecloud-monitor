@@ -3,7 +3,7 @@
 **Repository:** `GoreeCloud/monitor`  
 **Former repository identity in the Drive source:** `GoreeCloud/goreecloud-monitor`  
 **Project type:** First-party availability, endpoint-health, heartbeat, scheduled-job/dead-man, certificate, incident, and recovery-monitoring application  
-**Lifecycle:** Release Candidate source line / advanced pre-production acceptance candidate; production activation remains unaccepted  
+**Repository lifecycle declaration (legacy Contract 0.4):** `release-candidate`; canonical Contract 2.0 lifecycle reclassification remains pending and must be evidence-backed; advanced pre-production acceptance remains incomplete and production activation remains unaccepted  
 **Version:** `0.1.0`  
 **Migration baseline:** `46897de12f514a43da3a668e3e9c952e63e9dea6`  
 **License:** `AGPL-3.0-only` for current GoreeCloud-owned source; previously distributed MIT-licensed copies retain their prior grant  
